@@ -1,0 +1,5 @@
+{
+  "name": "TeikonPOS",
+  "description": "Complete POS system with Inventory, Sales, Financials, and Breakeven analysis.",
+  "requestFramePermissions": []
+}
