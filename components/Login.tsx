@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Lock, User, LogIn, AlertCircle } from 'lucide-react';
 import Button from './Button';
@@ -42,7 +43,7 @@ const Login: React.FC = () => {
             </div>
             
             <h2 className="text-2xl font-extrabold text-center text-gray-900 dark:text-white mb-2">
-              TeikonPOS
+              Teikon
             </h2>
             <p className="text-center text-gray-500 dark:text-gray-400 mb-8">
               Sesión Segura (se cierra al salir del navegador)

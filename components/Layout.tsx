@@ -44,7 +44,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => 
               <ShieldCheck size={24} />
             </div>
             <div>
-              <h1 className="text-xl font-black tracking-tighter">TeikonPOS</h1>
+              <h1 className="text-xl font-black tracking-tighter">Teikon</h1>
               <p className="text-[10px] font-bold text-blue-500 uppercase tracking-widest leading-none">
                 Dept: {currentUser?.department}
               </p>

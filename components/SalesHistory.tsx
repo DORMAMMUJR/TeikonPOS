@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useStore } from '../context/StoreContext';
 import { Sale } from '../types';
@@ -109,7 +110,7 @@ const SalesHistory: React.FC = () => {
           <div className="space-y-4">
             <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg border border-gray-200 dark:border-gray-600 font-mono text-sm">
               <div className="text-center mb-4 border-b border-gray-300 pb-2 border-dashed">
-                <h3 className="font-bold text-lg dark:text-white">TeikonPOS</h3>
+                <h3 className="font-bold text-lg dark:text-white">Teikon</h3>
                 <p className="text-gray-500 dark:text-gray-400">Ticket #{selectedSale.id.slice(0, 8)}</p>
                 <p className="text-gray-500 dark:text-gray-400">{new Date(selectedSale.date).toLocaleString()}</p>
               </div>
