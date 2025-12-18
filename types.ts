@@ -1,43 +1,52 @@
 export type Role = 'admin' | 'seller';
 
+export interface User {
+  id: string;
+  username: string;
+  role: Role;
+  department: string;
+}
+
 export interface Product {
   id: string;
   sku: string;
   name: string;
   category: string;
-  costPrice: number; // Costo de compra
-  salePrice: number; // Precio de venta
+  costPrice: number;
+  salePrice: number;
   stock: number;
   minStock: number;
-  taxRate: number; // Porcentaje (ej. 0.16)
+  taxRate: number;
   isActive: boolean;
-  image?: string; // Base64 or URL
+  image?: string;
+  ownerId: string; // ID del usuario propietario del registro
 }
 
 export interface InventoryMovement {
   id: string;
-  date: string; // ISO String
+  date: string;
   type: 'IN' | 'OUT' | 'ADJUST';
   productId: string;
   quantity: number;
-  cost: number; // Snapshot of cost at time of movement
+  cost: number;
   reason: string;
+  ownerId: string; // Aislamiento
 }
 
 export interface SaleDetail {
   productId: string;
   productName: string;
   quantity: number;
-  unitPrice: number; // Snapshot of price
-  unitCost: number; // Snapshot of cost
-  discount: number; // Monto de descuento
-  subtotal: number; // (qty * price) - discount
+  unitPrice: number;
+  unitCost: number;
+  discount: number;
+  subtotal: number;
 }
 
 export interface Sale {
   id: string;
   date: string;
-  sellerId: string; // "Admin" or "Seller"
+  sellerId: string;
   subtotal: number;
   totalDiscount: number;
   taxTotal: number;
@@ -45,9 +54,10 @@ export interface Sale {
   status: 'ACTIVE' | 'CANCELLED';
   paymentMethod: 'CASH' | 'CARD' | 'TRANSFER';
   items: SaleDetail[];
+  ownerId: string; // Aislamiento
 }
 
 export interface FinancialSettings {
   monthlyFixedCosts: number;
-  targetMargin: number; // e.g., 0.35 for 35%
+  targetMargin: number;
 }

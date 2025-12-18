@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StoreProvider } from './context/StoreContext';
+import { StoreProvider, useStore } from './context/StoreContext';
 import Layout from './components/Layout';
 import Dashboard from './components/Dashboard';
 import POS from './components/POS';
@@ -9,12 +9,11 @@ import SalesHistory from './components/SalesHistory';
 import Login from './components/Login';
 
 const AppContent: React.FC = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const { currentUser } = useStore();
   const [activeTab, setActiveTab] = useState('dashboard');
 
-  // Si no está autenticado, mostramos la pantalla de login únicamente
-  if (!isAuthenticated) {
-    return <Login onLoginSuccess={() => setIsAuthenticated(true)} />;
+  if (!currentUser) {
+    return <Login />;
   }
 
   const renderContent = () => {

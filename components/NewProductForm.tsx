@@ -1,10 +1,12 @@
+
 import React, { useState, useEffect } from 'react';
 import { Product } from '../types';
 import Button from './Button';
 
 interface NewProductFormProps {
   inventory: Product[];
-  onSave: (product: Product) => void;
+  // Fix: changed signature to accept only the fields provided by this form
+  onSave: (product: Pick<Product, 'sku' | 'name' | 'stock'>) => void;
   onCancel: () => void;
 }
 
@@ -36,6 +38,7 @@ const NewProductForm: React.FC<NewProductFormProps> = ({ inventory, onSave, onCa
         return;
     }
     
+    // Fix: the passed object now matches Pick<Product, 'sku' | 'name' | 'stock'>
     onSave({
       sku: sku.trim(),
       name: name.trim(),

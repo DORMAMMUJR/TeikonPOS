@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useStore } from '../context/StoreContext';
 import { Product } from '../types';
@@ -15,20 +16,31 @@ const ProductList: React.FC = () => {
     e.preventDefault();
     if (!editingProduct.sku || !editingProduct.name) return;
 
+    // Fix: Ensure all required fields for a Product are accounted for.
+    // addProduct expects Omit<Product, 'id' | 'ownerId'>
     const productData = {
-      ...editingProduct,
+      sku: editingProduct.sku,
+      name: editingProduct.name,
+      category: editingProduct.category || '',
       stock: editingProduct.stock || 0,
       costPrice: editingProduct.costPrice || 0,
       salePrice: editingProduct.salePrice || 0,
       minStock: editingProduct.minStock || 0,
+      taxRate: editingProduct.taxRate || 0, // Default tax rate if not present
       isActive: editingProduct.isActive !== undefined ? editingProduct.isActive : true,
       image: editingProduct.image || undefined
-    } as Product;
+    };
 
     if (editingProduct.id) {
-      updateProduct(productData);
+      // Fix: For updates, we need the full Product including its id and ownerId.
+      updateProduct({ 
+        ...productData, 
+        id: editingProduct.id,
+        ownerId: editingProduct.ownerId || ''
+      } as Product);
     } else {
-      addProduct({ ...productData, id: crypto.randomUUID() });
+      // Fix: addProduct generates id and ownerId internally, so we pass the data without them.
+      addProduct(productData);
     }
     setIsModalOpen(false);
   };

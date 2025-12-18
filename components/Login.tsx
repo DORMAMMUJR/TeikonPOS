@@ -1,20 +1,29 @@
 import React, { useState } from 'react';
 import { Lock, User, LogIn, AlertCircle } from 'lucide-react';
 import Button from './Button';
+import { useStore } from '../context/StoreContext';
+import { User as UserType } from '../types';
 
-interface LoginProps {
-  onLoginSuccess: () => void;
-}
-
-const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
+const Login: React.FC = () => {
+  const { login } = useStore();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState(false);
 
+  // Usuarios de prueba con aislamiento de datos
+  const USERS_DB: Record<string, UserType & { pass: string }> = {
+    'admin': { id: 'usr-1', username: 'admin', role: 'admin', department: 'General', pass: '1234' },
+    'lentes_user': { id: 'usr-2', username: 'lentes_user', role: 'seller', department: 'Lentes', pass: 'lentes123' }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (username === 'admin' && password === '1234') {
-      onLoginSuccess();
+    const user = USERS_DB[username];
+    
+    if (user && user.pass === password) {
+      // No pasamos la contraseña al contexto por seguridad
+      const { pass, ...userData } = user;
+      login(userData);
     } else {
       setError(true);
       setTimeout(() => setError(false), 3000);
@@ -36,7 +45,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
               TeikonPOS
             </h2>
             <p className="text-center text-gray-500 dark:text-gray-400 mb-8">
-              Ingresa tus credenciales para acceder al sistema
+              Sesión Segura (se cierra al salir del navegador)
             </p>
 
             <form onSubmit={handleSubmit} className="space-y-6">
@@ -52,7 +61,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     className="w-full pl-10 pr-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none dark:text-white transition-all"
-                    placeholder="Tu usuario"
+                    placeholder="admin o lentes_user"
                   />
                 </div>
               </div>
@@ -69,7 +78,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     className="w-full pl-10 pr-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none dark:text-white transition-all"
-                    placeholder="••••••••"
+                    placeholder="1234 o lentes123"
                   />
                 </div>
               </div>
@@ -94,7 +103,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
           </div>
           
           <div className="p-4 bg-gray-50 dark:bg-gray-700/50 text-center border-t border-gray-100 dark:border-gray-700">
-            <span className="text-xs text-gray-400">© 2025 TeikonPOS - Gestión Segura</span>
+            <span className="text-xs text-gray-400">Aislamiento de Datos Activo</span>
           </div>
         </div>
       </div>
