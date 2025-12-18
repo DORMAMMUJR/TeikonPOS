@@ -6,9 +6,16 @@ import POS from './components/POS';
 import ProductList from './components/ProductList';
 import Settings from './components/Settings';
 import SalesHistory from './components/SalesHistory';
+import Login from './components/Login';
 
 const AppContent: React.FC = () => {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [activeTab, setActiveTab] = useState('dashboard');
+
+  // Si no está autenticado, mostramos la pantalla de login únicamente
+  if (!isAuthenticated) {
+    return <Login onLoginSuccess={() => setIsAuthenticated(true)} />;
+  }
 
   const renderContent = () => {
     switch(activeTab) {
