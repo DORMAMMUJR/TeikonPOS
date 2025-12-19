@@ -5,44 +5,69 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TEIKON | CORE OS</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
       :root {
-        --bg-primary: #F3F4F6;
-        --bg-panel: #FFFFFF;
-        --text-main: #111827;
-        --text-muted: #6B7280;
-        --border-color: #E5E7EB;
-        --accent: #8b5cf6;
+        --bg-primary: #f8fafc; /* Slate 50 - Fondo limpio */
+        --bg-panel: #ffffff;   /* Blanco Puro */
+        --text-main: #1e293b;  /* Slate 800 - Contraste alto */
+        --text-muted: #64748b; /* Slate 500 */
+        --border-color: rgba(0, 0, 0, 0.05);
       }
 
       .dark {
-        --bg-primary: #000000;
-        --bg-panel: #050505;
-        --text-main: #FFFFFF;
-        --text-muted: #9CA3AF;
-        --border-color: rgba(255, 255, 255, 0.1);
+        --bg-primary: #0f172a; /* Slate 900 */
+        --bg-panel: #1e293b;   /* Slate 800 */
+        --text-main: #f8fafc;
+        --text-muted: #94a3b8;
+        --border-color: rgba(255, 255, 255, 0.08);
       }
 
       body { 
         font-family: 'Inter', sans-serif; 
         background-color: var(--bg-primary); 
         color: var(--text-main);
-        transition: background-color 0.4s ease, color 0.4s ease;
+        transition: background-color 0.4s ease;
+        -webkit-font-smoothing: antialiased;
       }
 
-      .cut-corner {
-        clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
-      }
-      .cut-corner-sm {
-        clip-path: polygon(5px 0, 100% 0, 100% calc(100% - 5px), calc(100% - 5px) 100%, 0 100%, 0 5px);
+      .card-premium {
+        background-color: var(--bg-panel);
+        border: 1px solid var(--border-color);
+        border-radius: 1.25rem;
+        box-shadow: 0 4px 12px -1px rgba(0, 0, 0, 0.05);
       }
 
-      ::-webkit-scrollbar { width: 4px; height: 4px; }
+      .dark .card-premium {
+        box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.5);
+      }
+
+      /* Animación del Expanding Pill */
+      .nav-pill-label {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        max-width: 0;
+        opacity: 0;
+        overflow: hidden;
+        white-space: nowrap;
+      }
+
+      .active-pill .nav-pill-label {
+        max-width: 150px;
+        opacity: 1;
+        margin-left: 8px;
+      }
+
+      ::-webkit-scrollbar { width: 5px; height: 5px; }
       ::-webkit-scrollbar-track { background: transparent; }
-      ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
-      .dark ::-webkit-scrollbar-thumb { background: #555; }
+      ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 10px; }
+      .dark ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); }
+
+      input[type="number"]::-webkit-inner-spin-button,
+      input[type="number"]::-webkit-outer-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+      }
     </style>
     <script>
       tailwind.config = {
@@ -56,6 +81,10 @@
                 text: 'var(--text-main)',
                 muted: 'var(--text-muted)',
                 border: 'var(--border-color)',
+                emerald: '#10b981',
+                blue: '#3b82f6',
+                purple: '#8b5cf6',
+                pink: '#ec4899'
               }
             }
           }
@@ -73,7 +102,7 @@
 }
 </script>
 </head>
-<body class="bg-brand-bg text-brand-text selection:bg-brand-text selection:text-brand-bg">
+<body class="bg-brand-bg text-brand-text">
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
 </body>

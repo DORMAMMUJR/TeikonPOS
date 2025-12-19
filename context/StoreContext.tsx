@@ -138,15 +138,33 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const updateSettings = (newSettings: FinancialSettings) => setSettings(newSettings);
 
   const getDashboardStats = (period: 'day' | 'month') => {
-    const activeSales = sales.filter(s => s.status === 'ACTIVE');
-    const totalRevenue = activeSales.reduce((acc, s) => acc + s.total, 0);
-    const totalCost = activeSales.reduce((acc, s) => acc + s.items.reduce((iAcc, item) => iAcc + (item.quantity * item.unitCost), 0), 0);
+    const now = new Date();
+    const todayStr = now.toISOString().split('T')[0];
+    const monthStr = now.toISOString().slice(0, 7); // YYYY-MM
+
+    // Filtrar ventas por estado ACTIVO y por el periodo solicitado
+    const filteredSales = sales.filter(s => {
+      if (s.status !== 'ACTIVE') return false;
+      const saleDate = s.date.split('T')[0];
+      
+      if (period === 'day') return saleDate === todayStr;
+      if (period === 'month') return saleDate.startsWith(monthStr);
+      return true;
+    });
+
+    const totalRevenue = filteredSales.reduce((acc, s) => acc + s.total, 0);
+    
+    // Cálculo de Costo de Mercancía Vendida (COGS)
+    const totalCost = filteredSales.reduce((acc, s) => 
+      acc + s.items.reduce((iAcc, item) => iAcc + (item.quantity * item.unitCost), 0)
+    , 0);
     
     return {
-      salesCount: activeSales.length,
+      salesCount: filteredSales.length,
       totalRevenue,
-      totalProfit: totalRevenue - totalCost,
-      ticketAverage: activeSales.length > 0 ? totalRevenue / activeSales.length : 0
+      totalCost,
+      totalProfit: totalRevenue - totalCost, // Esto es Utilidad Bruta real
+      ticketAverage: filteredSales.length > 0 ? totalRevenue / filteredSales.length : 0
     };
   };
 

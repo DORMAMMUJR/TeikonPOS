@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { AlertCircle, ShieldAlert } from 'lucide-react';
+import { ShieldAlert } from 'lucide-react';
 import Button from './Button';
 import { useStore } from '../context/StoreContext';
 import { User as UserType } from '../types';
@@ -33,54 +33,48 @@ const Login: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-black px-4 overflow-hidden relative transition-colors duration-700">
-      {/* Elementos decorativos minimalistas */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-10">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-px h-full bg-white/20"></div>
-        <div className="absolute top-1/2 left-0 w-full h-px bg-white/20"></div>
-      </div>
+    <div className="min-h-screen flex items-center justify-center bg-brand-bg px-4 overflow-hidden relative">
+      {/* Luces de fondo sutiles */}
+      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-brand-purple/5 blur-[120px] rounded-full -mr-40 -mt-40"></div>
+      <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-brand-pink/5 blur-[120px] rounded-full -ml-40 -mb-40"></div>
 
-      <div className="max-w-sm w-full relative z-10">
-        <div className="flex flex-col items-center mb-12">
-          <TeikonLogo size={140} className="mb-8" />
-          <TeikonWordmark height={45} className="text-white" />
-          <div className="h-[2px] w-12 bg-purple-500 mt-6 shadow-[0_0_15px_rgba(168,85,247,0.8)]"></div>
+      <div className="max-w-xs w-full relative z-10">
+        <div className="flex flex-col items-center mb-10 text-center">
+          <TeikonLogo size={100} className="mb-6" />
+          <TeikonWordmark height={30} className="text-slate-900 dark:text-white" />
+          <p className="text-[10px] font-black text-brand-muted uppercase tracking-[0.4em] mt-6">Secure Gateway</p>
         </div>
 
-        <div className="bg-black p-8 border border-white/10 cut-corner shadow-2xl shadow-purple-900/10">
-          <form onSubmit={handleSubmit} className="space-y-8">
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.3em]">
-                IDENTIFICADOR
-              </label>
+        <div className="bg-white dark:bg-slate-800/80 backdrop-blur-md p-8 border border-slate-200 dark:border-brand-border rounded-2xl shadow-2xl">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-1.5">
+              <label className="text-[9px] font-black text-brand-muted uppercase tracking-widest">Identificador</label>
               <input
                 type="text"
                 required
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="w-full bg-transparent border-b border-white/10 px-0 py-3 text-sm focus:border-purple-500 transition-all outline-none uppercase tracking-widest font-black text-white"
+                className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm focus:border-brand-purple transition-all outline-none uppercase font-black text-slate-900 dark:text-white placeholder:text-brand-muted/20"
                 placeholder="USUARIO"
               />
             </div>
 
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.3em]">
-                CLAVE DE ACCESO
-              </label>
+            <div className="space-y-1.5">
+              <label className="text-[9px] font-black text-brand-muted uppercase tracking-widest">Clave</label>
               <input
                 type="password"
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-transparent border-b border-white/10 px-0 py-3 text-sm focus:border-purple-500 transition-all outline-none font-black text-white"
+                className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm focus:border-brand-purple transition-all outline-none font-black text-slate-900 dark:text-white placeholder:text-brand-muted/20"
                 placeholder="••••••••"
               />
             </div>
 
             {error && (
-              <div className="flex items-center gap-2 text-white bg-red-900/40 p-3 text-[9px] font-black uppercase tracking-widest cut-corner-sm border border-red-500 animate-bounce">
+              <div className="flex items-center gap-2 text-red-500 bg-red-500/10 p-3 text-[9px] font-black uppercase rounded-lg border border-red-500/20">
                 <ShieldAlert size={14} />
-                <span>ACCESO DENEGADO</span>
+                <span>Credenciales Invalidas</span>
               </div>
             )}
 
@@ -88,15 +82,15 @@ const Login: React.FC = () => {
               type="submit"
               variant="primary"
               fullWidth
-              className="py-4"
+              className="py-4 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-black border-none text-[10px] font-black tracking-widest shadow-xl"
             >
-              AUTENTICAR
+              ENTRAR
             </Button>
           </form>
         </div>
         
-        <p className="mt-8 text-center text-[9px] font-bold text-gray-400 uppercase tracking-[0.5em] opacity-50">
-          TEIKON CORE OS v2.5
+        <p className="mt-8 text-center text-[8px] font-bold text-brand-muted uppercase tracking-[0.4em] opacity-40">
+          TEIKON OS // V2.9 CORE
         </p>
       </div>
     </div>

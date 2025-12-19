@@ -2,7 +2,7 @@
 import React from 'react';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'ghost';
+  variant?: 'primary' | 'secondary' | 'ghost' | 'sales' | 'finance';
   fullWidth?: boolean;
 }
 
@@ -13,13 +13,14 @@ const Button: React.FC<ButtonProps> = ({
   className = '', 
   ...props 
 }) => {
-  const baseStyles = "inline-flex items-center justify-center px-6 py-3 text-[10px] font-black uppercase tracking-[0.25em] transition-all duration-300 disabled:opacity-30 cut-corner active:scale-95 border-2";
+  const baseStyles = "inline-flex items-center justify-center px-6 py-4 text-[11px] font-black uppercase tracking-[0.2em] transition-all duration-300 disabled:opacity-30 rounded-xl active:scale-95 border-2 shadow-sm";
   
   const variants = {
-    // Primary siempre usa el contraste invertido al fondo
-    primary: "bg-brand-text text-brand-bg border-brand-text hover:bg-brand-bg hover:text-brand-text shadow-[0_0_15px_rgba(0,0,0,0.1)] dark:shadow-[0_0_15px_rgba(255,255,255,0.1)]",
-    secondary: "bg-transparent text-brand-text border-brand-text hover:bg-brand-text hover:text-brand-bg",
-    ghost: "bg-transparent text-brand-text border-transparent hover:border-brand-text",
+    primary: "bg-brand-text text-brand-bg border-brand-text hover:bg-brand-text/90 shadow-brand-text/10",
+    secondary: "bg-transparent text-brand-text border-brand-text/20 hover:border-brand-text/50",
+    ghost: "bg-transparent text-brand-muted border-transparent hover:text-brand-text hover:bg-white/5",
+    sales: "bg-brand-emerald text-slate-900 border-brand-emerald hover:bg-emerald-400 shadow-emerald-500/20",
+    finance: "bg-brand-blue text-white border-brand-blue hover:bg-blue-400 shadow-blue-500/20",
   };
 
   const widthClass = fullWidth ? "w-full" : "";
