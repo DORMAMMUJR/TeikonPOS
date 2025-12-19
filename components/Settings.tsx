@@ -38,10 +38,13 @@ const Settings: React.FC = () => {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="card-premium p-6 border-l-4 border-brand-blue space-y-6">
-          <div className="flex items-center gap-2 text-brand-blue mb-2">
-            <Calculator size={18} />
-            <h3 className="text-xs font-black uppercase tracking-widest">Estructura de Costos</h3>
+        {/* ESTRUCTURA DE COSTOS (THEMED BLUE) */}
+        <div className="card-premium p-6 border-t-4 border-t-brand-blue space-y-6 bg-white dark:bg-slate-800">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2 bg-brand-blue/10 rounded-xl">
+              <Calculator size={18} className="text-brand-blue" />
+            </div>
+            <h3 className="text-xs font-black uppercase tracking-widest text-slate-800 dark:text-white">Estructura de Costos</h3>
           </div>
           
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -64,44 +67,47 @@ const Settings: React.FC = () => {
               />
             </div>
           </div>
-          <Button onClick={handleSaveSettings} className="bg-brand-blue hover:bg-blue-400 text-white border-none rounded-lg py-3 text-[9px] font-black" fullWidth>Guardar Configuración</Button>
+          <button onClick={handleSaveSettings} className="w-full py-4 bg-brand-blue hover:bg-blue-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-brand-blue/20 transition-all active:scale-95">
+            Guardar Configuración
+          </button>
         </div>
 
-        <div className="card-premium p-6 flex flex-col justify-between border-l-4 border-brand-blue bg-blue-50/50 dark:bg-brand-blue/5">
+        {/* TERMINAL ACTIVA (THEMED BLUE) */}
+        <div className="card-premium p-6 flex flex-col justify-between border-t-4 border-t-brand-blue bg-blue-50/30 dark:bg-brand-blue/5">
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <h3 className="text-xs font-black uppercase tracking-widest text-brand-blue">Terminal Activa</h3>
-              <span className="bg-brand-blue text-white px-2 py-0.5 rounded text-[8px] font-black uppercase">Online</span>
+              <span className="bg-brand-blue text-white px-2 py-0.5 rounded text-[8px] font-black uppercase shadow-sm">Online</span>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
-               <div className="p-3 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm">
+               <div className="p-3 bg-white dark:bg-slate-900 rounded-lg border border-brand-blue/10 shadow-sm">
                  <p className="text-[8px] font-bold text-brand-muted uppercase">Inicio</p>
                  <p className="text-[11px] font-black text-slate-800 dark:text-white">{new Date(currentSession?.startTime || '').toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}</p>
                </div>
-               <div className="p-3 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm">
+               <div className="p-3 bg-white dark:bg-slate-900 rounded-lg border border-brand-blue/10 shadow-sm">
                  <p className="text-[8px] font-bold text-brand-muted uppercase">Fondo</p>
                  <p className="text-[11px] font-black text-slate-800 dark:text-white">${currentSession?.startBalance}</p>
                </div>
             </div>
 
-            <div className="p-4 bg-white dark:bg-slate-900 rounded-lg border-l-2 border-brand-blue shadow-sm">
+            <div className="p-4 bg-white dark:bg-slate-900 rounded-xl border-l-4 border-brand-blue shadow-sm">
               <p className="text-[9px] font-bold text-brand-muted uppercase tracking-widest">Efectivo Teórico</p>
               <p className="text-2xl font-black text-brand-blue">${expectedCash.toLocaleString()}</p>
             </div>
           </div>
 
-          <Button 
+          <button 
             onClick={() => setIsCloseModalOpen(true)} 
-            className="mt-6 border-red-500/50 text-red-500 hover:bg-red-500 hover:text-white bg-transparent dark:bg-transparent rounded-lg py-3 text-[9px] font-black"
-            fullWidth 
+            className="mt-6 w-full py-4 border-2 border-red-500/30 text-red-500 hover:bg-red-500 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95"
           >
             ARQUEO Y CIERRE DE TURNO
-          </Button>
+          </button>
         </div>
       </div>
 
-      <div className="card-premium overflow-hidden border-l-4 border-brand-blue shadow-sm">
+      {/* AUDITORÍA (THEMED BLUE) */}
+      <div className="card-premium overflow-hidden border-t-4 border-t-brand-blue shadow-sm bg-white dark:bg-slate-800">
         <div className="p-4 border-b border-brand-border bg-slate-50 dark:bg-slate-900/40 flex items-center justify-between">
           <h3 className="text-[10px] font-black uppercase tracking-widest flex items-center gap-2 text-slate-900 dark:text-white">
             <History size={16} className="text-brand-blue" /> Auditoría de Cierres
@@ -109,20 +115,20 @@ const Settings: React.FC = () => {
         </div>
         <div className="overflow-x-auto no-scrollbar">
           <table className="min-w-full divide-y divide-brand-border">
-            <thead className="bg-slate-50 dark:bg-slate-900/80">
+            <thead className="bg-blue-50/50 dark:bg-blue-950/20">
               <tr>
-                <th className="px-4 py-3 text-left text-[9px] font-black text-brand-muted uppercase tracking-widest">Fecha</th>
-                <th className="px-4 py-3 text-right text-[9px] font-black text-brand-muted uppercase tracking-widest">Teórico</th>
-                <th className="px-4 py-3 text-right text-[9px] font-black text-brand-muted uppercase tracking-widest">Físico</th>
-                <th className="px-4 py-3 text-right text-[9px] font-black text-brand-muted uppercase tracking-widest">Diff</th>
-                <th className="px-4 py-3 text-center text-[9px] font-black text-brand-muted uppercase tracking-widest">Status</th>
+                <th className="px-4 py-3 text-left text-[9px] font-black text-brand-blue uppercase tracking-widest">Fecha</th>
+                <th className="px-4 py-3 text-right text-[9px] font-black text-brand-blue uppercase tracking-widest">Teórico</th>
+                <th className="px-4 py-3 text-right text-[9px] font-black text-brand-blue uppercase tracking-widest">Físico</th>
+                <th className="px-4 py-3 text-right text-[9px] font-black text-brand-blue uppercase tracking-widest">Diff</th>
+                <th className="px-4 py-3 text-center text-[9px] font-black text-brand-blue uppercase tracking-widest">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-brand-border">
               {closedSessions.map(session => {
                 const diff = (session.endBalanceReal || 0) - session.expectedBalance;
                 return (
-                  <tr key={session.id} className="hover:bg-slate-100 dark:hover:bg-brand-blue/5 transition-colors">
+                  <tr key={session.id} className="hover:bg-blue-500/5 transition-colors">
                     <td className="px-4 py-3 text-[10px] text-brand-muted font-medium">
                       {new Date(session.endTime!).toLocaleDateString()}
                     </td>
@@ -186,8 +192,8 @@ const Settings: React.FC = () => {
           </div>
 
           <div className="flex gap-3 pt-2">
-            <Button variant="secondary" fullWidth className="rounded-xl py-3 text-[9px] font-black text-slate-800 dark:text-white border-slate-200 dark:border-slate-700" onClick={() => setIsCloseModalOpen(false)}>Reanudar</Button>
-            <Button fullWidth className="rounded-xl py-3 bg-brand-blue text-white border-none text-[9px] font-black" onClick={handleConfirmClose}>Cerrar Turno</Button>
+            <button className="flex-1 px-6 py-4 text-[9px] font-black uppercase tracking-widest rounded-xl border-2 border-slate-200 dark:border-slate-800 text-slate-800 dark:text-white" onClick={() => setIsCloseModalOpen(false)}>Reanudar</button>
+            <button className="flex-1 px-6 py-4 bg-brand-blue text-white rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg shadow-brand-blue/20" onClick={handleConfirmClose}>Cerrar Turno</button>
           </div>
         </div>
       </Modal>

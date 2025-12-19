@@ -77,14 +77,14 @@ const POS: React.FC = () => {
 
   return (
     <div className="flex flex-col lg:flex-row gap-6 h-[calc(100vh-280px)]">
-      {/* PANEL DE SELECCIÓN */}
-      <div className="lg:w-2/3 flex flex-col card-premium overflow-hidden">
-        <div className="p-4 border-b border-brand-border bg-slate-50 dark:bg-slate-900/40">
+      {/* PANEL DE SELECCIÓN (THEMED EMERALD) */}
+      <div className="lg:w-2/3 flex flex-col card-premium overflow-hidden border-t-4 border-t-brand-emerald">
+        <div className="p-4 border-b border-brand-border bg-emerald-50 dark:bg-emerald-950/20">
           <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-emerald" size={18} />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-emerald h-4 w-4" />
             <input 
               ref={searchInputRef}
-              className="w-full pl-12 pr-6 py-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:border-brand-emerald outline-none transition-all text-sm font-bold text-slate-900 dark:text-white placeholder:text-brand-muted/40 uppercase tracking-widest"
+              className="w-full pl-12 pr-6 py-4 bg-white dark:bg-slate-900 border border-emerald-200 dark:border-emerald-800/40 rounded-xl focus:border-brand-emerald outline-none transition-all text-sm font-bold text-slate-900 dark:text-white placeholder:text-brand-muted/40 uppercase tracking-widest shadow-sm"
               placeholder="ESCANEAR SKU O BUSCAR PRODUCTO..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
@@ -102,12 +102,12 @@ const POS: React.FC = () => {
           </div>
         </div>
         
-        <div className="flex-1 overflow-y-auto p-4 grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3 content-start">
+        <div className="flex-1 overflow-y-auto p-4 grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3 content-start no-scrollbar">
           {filteredProducts.map(p => (
             <div 
               key={p.id} 
               onClick={() => addToCart(p)} 
-              className="p-3 bg-slate-50 dark:bg-slate-900/30 border border-slate-200 dark:border-slate-700 rounded-xl cursor-pointer hover:border-brand-emerald hover:bg-slate-100 dark:hover:bg-slate-900/60 transition-all group relative"
+              className="p-3 bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 rounded-xl cursor-pointer hover:border-brand-emerald hover:bg-emerald-500/5 transition-all group relative shadow-sm"
             >
               <div className="h-28 bg-white dark:bg-slate-900 rounded-lg mb-3 flex items-center justify-center overflow-hidden border border-slate-100 dark:border-slate-800">
                 {p.image ? (
@@ -128,18 +128,18 @@ const POS: React.FC = () => {
         </div>
       </div>
 
-      {/* PANEL DE CARRITO */}
-      <div className="lg:w-1/3 flex flex-col card-premium overflow-hidden">
-        <div className="p-4 border-b border-brand-border flex justify-between items-center bg-brand-emerald/5">
+      {/* PANEL DE CARRITO (THEMED EMERALD) */}
+      <div className="lg:w-1/3 flex flex-col card-premium overflow-hidden border-t-4 border-t-brand-emerald shadow-lg">
+        <div className="p-4 border-b border-brand-border flex justify-between items-center bg-emerald-50 dark:bg-emerald-950/30">
           <h3 className="text-[11px] font-black uppercase tracking-widest text-brand-emerald flex items-center gap-2">
             <ShoppingCart size={16} /> Carrito de Venta
           </h3>
-          <span className="bg-brand-emerald text-white dark:text-slate-900 px-3 py-1 rounded-full text-[10px] font-black">{cart.length}</span>
+          <span className="bg-brand-emerald text-white px-3 py-1 rounded-full text-[10px] font-black">{cart.length}</span>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-3 space-y-2">
+        <div className="flex-1 overflow-y-auto p-3 space-y-2 no-scrollbar">
           {cart.map(item => (
-            <div key={item.productId} className="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-900/40 rounded-xl border border-slate-200 dark:border-slate-800">
+            <div key={item.productId} className="flex justify-between items-center p-3 bg-white dark:bg-slate-900/40 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-emerald-200 dark:hover:border-emerald-800/40 transition-colors">
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate uppercase">{item.productName}</p>
                 <p className="text-[10px] font-medium text-brand-muted">${item.unitPrice} unit.</p>
@@ -163,7 +163,7 @@ const POS: React.FC = () => {
           )}
         </div>
 
-        <div className="p-6 border-t border-brand-border bg-slate-50 dark:bg-slate-900/60">
+        <div className="p-6 border-t border-brand-border bg-emerald-50/50 dark:bg-slate-900/60">
           <div className="flex justify-between items-end mb-6">
             <span className="text-xs font-black text-brand-muted uppercase tracking-widest">Importe Total</span>
             <span className="text-4xl font-black text-brand-emerald">${total.toFixed(2)}</span>
@@ -181,7 +181,7 @@ const POS: React.FC = () => {
 
       <Modal isOpen={isCheckoutOpen} onClose={() => setIsCheckoutOpen(false)} title="FINALIZAR OPERACIÓN">
         <div className="space-y-6">
-          <div className="text-center p-6 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700">
+          <div className="text-center p-6 bg-emerald-50 dark:bg-slate-900 rounded-2xl border border-emerald-100 dark:border-emerald-900/30">
             <p className="text-[10px] font-black text-brand-muted uppercase tracking-widest mb-2">Total a Cobrar</p>
             <p className="text-5xl font-black text-brand-emerald">${total.toFixed(2)}</p>
           </div>

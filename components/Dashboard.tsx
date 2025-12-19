@@ -26,9 +26,12 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="space-y-8">
-      {/* TARJETA DE RESULTADO NETO (CLEAN LIGHT/DARK) */}
-      <div className="card-premium p-6 md:p-8 space-y-6 relative overflow-hidden bg-white dark:bg-slate-800 shadow-sm border border-slate-200 dark:border-slate-700">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+      {/* TARJETA DE RESULTADO NETO (THEMED PURPLE) */}
+      <div className="card-premium p-6 md:p-8 space-y-6 relative overflow-hidden bg-white dark:bg-slate-800 shadow-sm border border-slate-200 dark:border-slate-700 border-t-4 border-t-brand-purple">
+        {/* Sutil resplandor de fondo */}
+        <div className="absolute top-0 right-0 w-64 h-64 bg-brand-purple/5 blur-3xl -mr-20 -mt-20 pointer-events-none"></div>
+
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative z-10">
           <div className="space-y-1">
             <h4 className="text-[10px] font-black text-brand-muted uppercase tracking-[0.2em]">Utilidad Neta del Día</h4>
             <div className="flex items-baseline gap-2">
@@ -51,13 +54,13 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 relative z-10">
            <div className="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-slate-100 dark:border-slate-800">
              <p className="text-[10px] font-black text-brand-muted uppercase tracking-widest mb-1">Costo Operativo Diario</p>
              <p className="text-xl font-black text-slate-900 dark:text-white">${dailyFixedCost.toFixed(2)}</p>
            </div>
-           <div className="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-slate-100 dark:border-slate-800">
-             <p className="text-[10px] font-black text-brand-muted uppercase tracking-widest mb-1">Utilidad Bruta Generada</p>
+           <div className="p-4 bg-brand-purple/5 dark:bg-brand-purple/10 rounded-2xl border border-brand-purple/20 dark:border-brand-purple/20">
+             <p className="text-[10px] font-black text-brand-purple uppercase tracking-widest mb-1">Utilidad Bruta Generada</p>
              <p className="text-xl font-black text-brand-purple">${dailyGrossProfit.toLocaleString()}</p>
            </div>
         </div>

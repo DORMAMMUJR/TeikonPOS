@@ -25,16 +25,18 @@ const SalesHistory: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-center gap-4 bg-slate-50 dark:bg-slate-900/30 p-8 rounded-3xl border border-brand-border shadow-sm">
+      <div className="flex flex-col sm:flex-row justify-between items-center gap-4 bg-pink-50 dark:bg-pink-950/10 p-8 rounded-3xl border border-pink-100 dark:border-pink-900/30 shadow-sm border-t-4 border-t-brand-pink">
         <div className="flex items-center gap-4">
-          <HistoryIcon className="h-8 w-8 text-brand-pink" />
+          <div className="p-3 bg-brand-pink text-white rounded-2xl shadow-lg shadow-brand-pink/20">
+            <HistoryIcon className="h-6 w-6" />
+          </div>
           <div>
             <h3 className="text-xl font-bold text-slate-900 dark:text-white">Bitácora Global</h3>
             <p className="text-[10px] text-brand-muted uppercase tracking-widest font-black">Registro cronológico de transacciones</p>
           </div>
         </div>
         <div className="relative w-full sm:w-80">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-muted h-5 w-5" />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-pink h-4 w-4" />
           <input 
             type="text" 
             placeholder="Buscar por ID o Fecha..." 
@@ -45,17 +47,17 @@ const SalesHistory: React.FC = () => {
         </div>
       </div>
 
-      <div className="card-premium overflow-hidden">
+      <div className="card-premium overflow-hidden border-t-2 border-t-brand-pink/20 shadow-lg">
         <div className="overflow-x-auto no-scrollbar">
           <table className="min-w-full divide-y divide-brand-border">
-            <thead className="bg-slate-50 dark:bg-slate-900/80">
+            <thead className="bg-pink-50/50 dark:bg-pink-950/20">
               <tr>
-                <th className="px-8 py-5 text-left text-[10px] font-black text-brand-muted uppercase tracking-widest">Fecha y Hora</th>
-                <th className="px-8 py-5 text-left text-[10px] font-black text-brand-muted uppercase tracking-widest">Transacción</th>
-                <th className="px-8 py-5 text-left text-[10px] font-black text-brand-muted uppercase tracking-widest">Agente</th>
-                <th className="px-8 py-5 text-right text-[10px] font-black text-brand-muted uppercase tracking-widest">Total</th>
-                <th className="px-8 py-5 text-center text-[10px] font-black text-brand-muted uppercase tracking-widest">Estado</th>
-                <th className="px-8 py-5 text-center text-[10px] font-black text-brand-muted uppercase tracking-widest">Acción</th>
+                <th className="px-8 py-5 text-left text-[10px] font-black text-brand-pink dark:text-pink-400 uppercase tracking-widest">Fecha y Hora</th>
+                <th className="px-8 py-5 text-left text-[10px] font-black text-brand-pink dark:text-pink-400 uppercase tracking-widest">Transacción</th>
+                <th className="px-8 py-5 text-left text-[10px] font-black text-brand-pink dark:text-pink-400 uppercase tracking-widest">Agente</th>
+                <th className="px-8 py-5 text-right text-[10px] font-black text-brand-pink dark:text-pink-400 uppercase tracking-widest">Total</th>
+                <th className="px-8 py-5 text-center text-[10px] font-black text-brand-pink dark:text-pink-400 uppercase tracking-widest">Estado</th>
+                <th className="px-8 py-5 text-center text-[10px] font-black text-brand-pink dark:text-pink-400 uppercase tracking-widest">Acción</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-brand-border">
@@ -133,9 +135,9 @@ const SalesHistory: React.FC = () => {
 
             <div className="flex gap-4">
                 {currentUserRole === 'admin' && selectedSale.status === 'ACTIVE' && (
-                  <Button variant="secondary" fullWidth onClick={() => handleCancel(selectedSale.id)} className="rounded-2xl border-red-500/50 text-red-500 hover:bg-red-500">
-                    <CornerUpLeft className="h-4 w-4 mr-2" /> Anular Transacción
-                  </Button>
+                  <button onClick={() => handleCancel(selectedSale.id)} className="flex-1 px-6 py-4 text-[11px] font-black uppercase tracking-[0.2em] transition-all duration-300 rounded-xl border-2 border-red-500/20 text-red-500 hover:bg-red-500 hover:text-white">
+                    Anular Transacción
+                  </button>
                 )}
                 <Button fullWidth className="rounded-2xl bg-brand-pink text-white border-none py-4" onClick={() => setSelectedSale(null)}>Cerrar</Button>
             </div>
