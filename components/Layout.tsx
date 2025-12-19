@@ -26,7 +26,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => 
     { id: 'dashboard', label: 'Inicio', icon: LayoutDashboard, color: 'bg-brand-purple' },
     { id: 'pos', label: 'Ventas', icon: ShoppingCart, color: 'bg-brand-emerald' },
     { id: 'history', label: 'Historial', icon: History, color: 'bg-brand-pink' },
-    { id: 'products', label: 'Inventario', icon: Package, color: 'bg-slate-600' },
+    { id: 'products', label: 'Inventario', icon: Package, color: 'bg-orange-600' },
     { id: 'settings', label: 'Admin', icon: Settings, adminOnly: true, color: 'bg-brand-blue' },
   ];
 
@@ -92,7 +92,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => 
           <div className="flex flex-col gap-2">
             {/* Texto discreto sobre la barra */}
             <div className="flex justify-between items-end px-1">
-              <span className="text-[9px] font-black uppercase tracking-[0.2em] text-brand-muted">Utilidad Diaria / Objetivo</span>
+              <span className="text-[9px] font-black uppercase tracking-[0.2em] text-brand-muted">Utilidad Bruta vs Gasto Operativo Diario</span>
               <span className="text-[10px] font-black text-slate-800 dark:text-white font-mono">
                 ${currentProfit.toFixed(0)} / <span className="text-brand-muted opacity-60">${dailyTarget.toFixed(0)}</span>
               </span>
@@ -114,7 +114,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => 
 
             {/* Porcentaje discreto debajo */}
             <div className="flex justify-end">
-              <span className="text-[9px] font-black text-[#A020F0] tracking-widest">{progressPercent.toFixed(1)}% COMPLETADO</span>
+              <span className="text-[9px] font-black text-[#A020F0] tracking-widest">{progressPercent.toFixed(1)}% PUNTO DE EQUILIBRIO</span>
             </div>
           </div>
         </div>
