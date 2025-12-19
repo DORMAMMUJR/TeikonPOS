@@ -1,7 +1,10 @@
 
-import React, { useState, useEffect } from 'react';
-import { LayoutDashboard, ShoppingCart, Package, Settings, LogOut, UserCircle, Moon, Sun, TrendingUp, History, ShieldCheck } from 'lucide-react';
+import React from 'react';
+import { LayoutDashboard, ShoppingCart, Package, Settings, LogOut, History, Target, Sun, Moon } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
+import { useTheme } from '../context/ThemeContext';
+import TeikonLogo from './TeikonLogo';
+import TeikonWordmark from './TeikonWordmark';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -11,60 +14,80 @@ interface LayoutProps {
 
 const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => {
   const { currentUser, logout, getDashboardStats, settings } = useStore();
-  const [darkMode, setDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
+  const { theme, toggleTheme } = useTheme();
 
   const stats = getDashboardStats('month');
-  const breakevenTarget = settings.targetMargin > 0 ? settings.monthlyFixedCosts / settings.targetMargin : 0;
-  const progressPercent = breakevenTarget > 0 ? (stats.totalRevenue / breakevenTarget) * 100 : 0;
+  const breakEvenRevenue = settings.monthlyFixedCosts / (settings.targetMargin || 1);
+  const breakEvenProgress = Math.min((stats.totalRevenue / breakEvenRevenue) * 100, 100);
 
-  useEffect(() => {
-    if (darkMode) {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
-    }
-  }, [darkMode]);
+  const isHealthy = breakEvenProgress >= 50;
+  const barColorClass = isHealthy ? 'bg-green-500' : 'bg-red-500';
+  const glowShadow = isHealthy 
+    ? '0 0 15px rgba(34, 197, 94, 0.6)' 
+    : '0 0 15px rgba(239, 68, 68, 0.6)';
 
   const navItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, color: 'bg-indigo-500' },
-    { id: 'pos', label: 'Ventas', icon: ShoppingCart, color: 'bg-emerald-500' },
-    { id: 'history', label: 'Historial', icon: History, color: 'bg-purple-500' },
-    { id: 'products', label: 'Productos', icon: Package, color: 'bg-blue-500' },
-    { id: 'settings', label: 'Finanzas', icon: Settings, adminOnly: true, color: 'bg-slate-500' },
+    { id: 'dashboard', label: 'METRICAS', icon: LayoutDashboard },
+    { id: 'pos', label: 'PUNTO DE VENTA', icon: ShoppingCart },
+    { id: 'history', label: 'HISTORIAL DE VENTAS', icon: History },
+    { id: 'products', label: 'INVENTARIO', icon: Package },
+    { id: 'settings', label: 'FINANZAS', icon: Settings, adminOnly: true },
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-300">
-      <header className="bg-white dark:bg-gray-800 shadow-sm border-b dark:border-gray-700 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex flex-col md:flex-row items-center gap-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-600 rounded-lg text-white">
-              <ShieldCheck size={24} />
+    <div className="min-h-screen bg-brand-bg text-brand-text transition-all duration-500 flex flex-col">
+      <header className="bg-brand-bg border-b border-brand-border sticky top-0 z-50 pt-8 pb-4">
+        <div className="max-w-7xl mx-auto px-4 relative">
+          
+          {/* Theme Toggle Button */}
+          <button 
+            onClick={toggleTheme}
+            className="absolute top-0 right-4 p-3 bg-brand-panel border border-brand-border cut-corner-sm hover:scale-110 transition-transform active:scale-90"
+          >
+            {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
+          </button>
+
+          <div className="flex flex-col items-center justify-center space-y-4">
+            <div className="relative group">
+              <div className="absolute inset-0 bg-brand-text/5 blur-3xl rounded-full"></div>
+              <TeikonLogo size={70} className="relative transition-all duration-700 hover:scale-105" />
             </div>
-            <div>
-              <h1 className="text-xl font-black tracking-tighter">Teikon</h1>
-              <p className="text-[10px] font-bold text-blue-500 uppercase tracking-widest leading-none">
-                Dept: {currentUser?.department}
-              </p>
+            
+            <TeikonWordmark height={30} className="text-brand-text" />
+            
+            <div className="flex items-center gap-3 text-[8px] font-black text-brand-muted uppercase tracking-[0.5em]">
+              <div className="w-8 h-[1px] bg-brand-border"></div>
+              <span>OPERADOR : {currentUser?.department || 'CORE'}</span>
+              <div className="w-8 h-[1px] bg-brand-border"></div>
             </div>
           </div>
 
-          <div className="flex-1 w-full md:px-8">
-            <div className="flex justify-between items-center mb-1 text-[10px] font-bold uppercase text-gray-400">
-              <span>Progreso de Meta</span>
-              <span>{progressPercent.toFixed(0)}%</span>
+          <div className="mt-8 max-w-md mx-auto px-4">
+            <div className="flex justify-between items-end mb-1 px-1">
+              <span className="text-[7px] font-black uppercase tracking-widest text-brand-muted flex items-center gap-1">
+                <Target size={8} className="text-brand-text" /> UMBRAL DE RENTABILIDAD
+              </span>
+              <span className={`text-[9px] font-black uppercase tracking-widest ${isHealthy ? 'text-green-500' : 'text-red-500'}`}>
+                {breakEvenProgress.toFixed(1)}%
+              </span>
             </div>
-            <div className="h-2 w-full bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+            <div className="relative h-2.5 w-full bg-brand-text/10 cut-corner-sm overflow-hidden border border-brand-border">
               <div 
-                className="h-full bg-blue-500 transition-all duration-1000" 
-                style={{ width: `${Math.min(progressPercent, 100)}%` }}
+                className={`absolute top-0 left-0 h-full ${barColorClass} transition-all duration-1000 ease-out`}
+                style={{ 
+                  width: `${breakEvenProgress}%`, 
+                  zIndex: 10,
+                  boxShadow: glowShadow
+                }}
+              />
+              <div 
+                className="absolute top-0 bottom-0 w-[1.5px] bg-brand-text z-20 shadow-[0_0_5px_currentColor]"
+                style={{ left: '99%' }} 
               />
             </div>
           </div>
 
-          <nav className="flex items-center gap-2">
+          <nav className="flex justify-center items-center gap-4 md:gap-8 mt-6 overflow-x-auto no-scrollbar pb-2">
             {navItems.map(item => {
               if (item.adminOnly && currentUser?.role !== 'admin') return null;
               const active = activeTab === item.id;
@@ -72,29 +95,38 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => 
                 <button
                   key={item.id}
                   onClick={() => onTabChange(item.id)}
-                  className={`p-2 rounded-lg flex items-center gap-2 transition-all ${
-                    active ? `${item.color} text-white shadow-lg` : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500'
+                  className={`px-3 py-2 text-[9px] font-black uppercase tracking-[0.25em] transition-all border-b-2 whitespace-nowrap ${
+                    active 
+                      ? 'border-brand-text text-brand-text' 
+                      : 'border-transparent text-brand-muted hover:text-brand-text'
                   }`}
                 >
-                  <item.icon size={18} />
-                  <span className={`text-xs font-bold ${active ? 'block' : 'hidden lg:block'}`}>{item.label}</span>
+                  <span className="hidden sm:inline">{item.label}</span>
+                  <item.icon size={16} className="sm:hidden" />
                 </button>
               );
             })}
-            <div className="w-px h-6 bg-gray-200 dark:bg-gray-700 mx-1" />
-            <button onClick={() => setDarkMode(!darkMode)} className="p-2 text-gray-400 hover:text-yellow-500 transition-colors">
-              {darkMode ? <Sun size={20} /> : <Moon size={20} />}
-            </button>
-            <button onClick={logout} className="p-2 text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors">
-              <LogOut size={20} />
+            <div className="w-[1px] h-4 bg-brand-border mx-2"></div>
+            <button 
+              onClick={logout} 
+              className="p-2 text-brand-muted hover:text-red-500 transition-colors"
+              title="Cerrar Sesión"
+            >
+              <LogOut size={16} />
             </button>
           </nav>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto p-4 md:p-8">
+      <main className="max-w-7xl mx-auto p-4 md:p-10 w-full animate-in fade-in duration-1000">
         {children}
       </main>
+      
+      <footer className="mt-auto border-t border-brand-border p-6 text-center">
+        <p className="text-[8px] font-bold text-brand-muted uppercase tracking-[0.6em]">
+          TEIKON OS // SECURE PROTOCOL TERMINAL
+        </p>
+      </footer>
     </div>
   );
 };

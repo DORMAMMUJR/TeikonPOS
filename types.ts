@@ -1,3 +1,4 @@
+
 export type Role = 'admin' | 'seller';
 
 export interface User {
@@ -5,6 +6,19 @@ export interface User {
   username: string;
   role: Role;
   department: string;
+}
+
+export interface CashSession {
+  id: string;
+  startTime: string;
+  endTime?: string;
+  startBalance: number;
+  expectedBalance: number;
+  endBalanceReal?: number;
+  cashSales: number;
+  refunds: number;
+  status: 'OPEN' | 'CLOSED';
+  ownerId: string;
 }
 
 export interface Product {
@@ -19,18 +33,7 @@ export interface Product {
   taxRate: number;
   isActive: boolean;
   image?: string;
-  ownerId: string; // ID del usuario propietario del registro
-}
-
-export interface InventoryMovement {
-  id: string;
-  date: string;
-  type: 'IN' | 'OUT' | 'ADJUST';
-  productId: string;
-  quantity: number;
-  cost: number;
-  reason: string;
-  ownerId: string; // Aislamiento
+  ownerId: string;
 }
 
 export interface SaleDetail {
@@ -54,7 +57,7 @@ export interface Sale {
   status: 'ACTIVE' | 'CANCELLED';
   paymentMethod: 'CASH' | 'CARD' | 'TRANSFER';
   items: SaleDetail[];
-  ownerId: string; // Aislamiento
+  ownerId: string;
 }
 
 export interface FinancialSettings {

@@ -1,40 +1,79 @@
 
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Teikon</title>
+    <title>TEIKON | CORE OS</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      :root {
+        --bg-primary: #F3F4F6;
+        --bg-panel: #FFFFFF;
+        --text-main: #111827;
+        --text-muted: #6B7280;
+        --border-color: #E5E7EB;
+        --accent: #8b5cf6;
+      }
+
+      .dark {
+        --bg-primary: #000000;
+        --bg-panel: #050505;
+        --text-main: #FFFFFF;
+        --text-muted: #9CA3AF;
+        --border-color: rgba(255, 255, 255, 0.1);
+      }
+
+      body { 
+        font-family: 'Inter', sans-serif; 
+        background-color: var(--bg-primary); 
+        color: var(--text-main);
+        transition: background-color 0.4s ease, color 0.4s ease;
+      }
+
+      .cut-corner {
+        clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+      }
+      .cut-corner-sm {
+        clip-path: polygon(5px 0, 100% 0, 100% calc(100% - 5px), calc(100% - 5px) 100%, 0 100%, 0 5px);
+      }
+
+      ::-webkit-scrollbar { width: 4px; height: 4px; }
+      ::-webkit-scrollbar-track { background: transparent; }
+      ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
+      .dark ::-webkit-scrollbar-thumb { background: #555; }
+    </style>
     <script>
       tailwind.config = {
         darkMode: 'class',
         theme: {
           extend: {
             colors: {
-              gray: {
-                900: '#111827',
-                800: '#1f2937',
-                700: '#374151',
+              brand: {
+                bg: 'var(--bg-primary)',
+                panel: 'var(--bg-panel)',
+                text: 'var(--text-main)',
+                muted: 'var(--text-muted)',
+                border: 'var(--border-color)',
               }
             }
           }
         }
       }
     </script>
-    <script src="https://unpkg.com/lucide@latest"></script>
 <script type="importmap">
 {
   "imports": {
+    "react/": "https://esm.sh/react@^19.2.3/",
     "react": "https://esm.sh/react@^19.2.3",
     "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
-    "react/": "https://esm.sh/react@^19.2.3/",
-    "lucide-react": "https://esm.sh/lucide-react@^0.561.0"
+    "lucide-react": "https://esm.sh/lucide-react@^0.562.0"
   }
 }
 </script>
 </head>
-<body class="bg-gray-50 text-gray-800 dark:bg-gray-900 dark:text-gray-100 transition-colors duration-300">
+<body class="bg-brand-bg text-brand-text selection:bg-brand-text selection:text-brand-bg">
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
 </body>

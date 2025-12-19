@@ -1,9 +1,11 @@
 
 import React, { useState } from 'react';
-import { Lock, User, LogIn, AlertCircle } from 'lucide-react';
+import { AlertCircle, ShieldAlert } from 'lucide-react';
 import Button from './Button';
 import { useStore } from '../context/StoreContext';
 import { User as UserType } from '../types';
+import TeikonLogo from './TeikonLogo';
+import TeikonWordmark from './TeikonWordmark';
 
 const Login: React.FC = () => {
   const { login } = useStore();
@@ -11,18 +13,17 @@ const Login: React.FC = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState(false);
 
-  // Usuarios de prueba con aislamiento de datos
   const USERS_DB: Record<string, UserType & { pass: string }> = {
-    'admin': { id: 'usr-1', username: 'admin', role: 'admin', department: 'General', pass: '1234' },
-    'lentes_user': { id: 'usr-2', username: 'lentes_user', role: 'seller', department: 'Lentes', pass: 'lentes123' }
+    'ADMIN': { id: 'usr-1', username: 'admin', role: 'admin', department: 'CORE', pass: '1234' },
+    'LENTES_USER': { id: 'usr-2', username: 'lentes_user', role: 'seller', department: 'OPTICA', pass: 'lentes123' }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const user = USERS_DB[username];
-    
+    const normalizedUsername = username.trim().toUpperCase();
+    const user = USERS_DB[normalizedUsername];
+
     if (user && user.pass === password) {
-      // No pasamos la contraseña al contexto por seguridad
       const { pass, ...userData } = user;
       login(userData);
     } else {
@@ -32,81 +33,71 @@ const Login: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900 px-4 transition-colors duration-300">
-      <div className="max-w-md w-full">
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl overflow-hidden border border-gray-200 dark:border-gray-700">
-          <div className="p-8">
-            <div className="flex justify-center mb-6">
-              <div className="p-4 bg-blue-100 dark:bg-blue-900/30 rounded-full text-blue-600 dark:text-blue-400">
-                <Lock size={32} />
-              </div>
-            </div>
-            
-            <h2 className="text-2xl font-extrabold text-center text-gray-900 dark:text-white mb-2">
-              Teikon
-            </h2>
-            <p className="text-center text-gray-500 dark:text-gray-400 mb-8">
-              Sesión Segura (se cierra al salir del navegador)
-            </p>
+    <div className="min-h-screen flex items-center justify-center bg-black px-4 overflow-hidden relative transition-colors duration-700">
+      {/* Elementos decorativos minimalistas */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-10">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-px h-full bg-white/20"></div>
+        <div className="absolute top-1/2 left-0 w-full h-px bg-white/20"></div>
+      </div>
 
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div>
-                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
-                  Usuario
-                </label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                  <input
-                    type="text"
-                    required
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none dark:text-white transition-all"
-                    placeholder="admin o lentes_user"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
-                  Contraseña
-                </label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                  <input
-                    type="password"
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none dark:text-white transition-all"
-                    placeholder="1234 o lentes123"
-                  />
-                </div>
-              </div>
-
-              {error && (
-                <div className="flex items-center gap-2 text-red-600 dark:text-red-400 text-sm font-bold animate-pulse">
-                  <AlertCircle size={16} />
-                  <span>Acceso denegado. Revisa tus datos.</span>
-                </div>
-              )}
-
-              <Button
-                type="submit"
-                variant="primary"
-                fullWidth
-                className="py-3 text-lg"
-              >
-                <LogIn className="mr-2" size={20} />
-                Entrar al Sistema
-              </Button>
-            </form>
-          </div>
-          
-          <div className="p-4 bg-gray-50 dark:bg-gray-700/50 text-center border-t border-gray-100 dark:border-gray-700">
-            <span className="text-xs text-gray-400">Aislamiento de Datos Activo</span>
-          </div>
+      <div className="max-w-sm w-full relative z-10">
+        <div className="flex flex-col items-center mb-12">
+          <TeikonLogo size={140} className="mb-8" />
+          <TeikonWordmark height={45} className="text-white" />
+          <div className="h-[2px] w-12 bg-purple-500 mt-6 shadow-[0_0_15px_rgba(168,85,247,0.8)]"></div>
         </div>
+
+        <div className="bg-black p-8 border border-white/10 cut-corner shadow-2xl shadow-purple-900/10">
+          <form onSubmit={handleSubmit} className="space-y-8">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.3em]">
+                IDENTIFICADOR
+              </label>
+              <input
+                type="text"
+                required
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                className="w-full bg-transparent border-b border-white/10 px-0 py-3 text-sm focus:border-purple-500 transition-all outline-none uppercase tracking-widest font-black text-white"
+                placeholder="USUARIO"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.3em]">
+                CLAVE DE ACCESO
+              </label>
+              <input
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full bg-transparent border-b border-white/10 px-0 py-3 text-sm focus:border-purple-500 transition-all outline-none font-black text-white"
+                placeholder="••••••••"
+              />
+            </div>
+
+            {error && (
+              <div className="flex items-center gap-2 text-white bg-red-900/40 p-3 text-[9px] font-black uppercase tracking-widest cut-corner-sm border border-red-500 animate-bounce">
+                <ShieldAlert size={14} />
+                <span>ACCESO DENEGADO</span>
+              </div>
+            )}
+
+            <Button
+              type="submit"
+              variant="primary"
+              fullWidth
+              className="py-4"
+            >
+              AUTENTICAR
+            </Button>
+          </form>
+        </div>
+        
+        <p className="mt-8 text-center text-[9px] font-bold text-gray-400 uppercase tracking-[0.5em] opacity-50">
+          TEIKON CORE OS v2.5
+        </p>
       </div>
     </div>
   );

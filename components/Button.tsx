@@ -1,7 +1,8 @@
+
 import React from 'react';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'success' | 'danger' | 'ghost' | 'warning' | 'info';
+  variant?: 'primary' | 'secondary' | 'ghost';
   fullWidth?: boolean;
 }
 
@@ -12,16 +13,13 @@ const Button: React.FC<ButtonProps> = ({
   className = '', 
   ...props 
 }) => {
-  const baseStyles = "inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-bold rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 transform active:scale-95";
+  const baseStyles = "inline-flex items-center justify-center px-6 py-3 text-[10px] font-black uppercase tracking-[0.25em] transition-all duration-300 disabled:opacity-30 cut-corner active:scale-95 border-2";
   
   const variants = {
-    primary: "text-white bg-blue-600 hover:bg-blue-700 focus:ring-blue-500 dark:bg-blue-600 dark:hover:bg-blue-500",
-    secondary: "text-gray-700 bg-white border-gray-300 hover:bg-gray-50 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-600",
-    success: "text-white bg-green-600 hover:bg-green-700 focus:ring-green-500 dark:bg-green-600 dark:hover:bg-green-500",
-    danger: "text-white bg-red-600 hover:bg-red-700 focus:ring-red-500 dark:bg-red-600 dark:hover:bg-red-500",
-    warning: "text-white bg-yellow-500 hover:bg-yellow-600 focus:ring-yellow-500",
-    info: "text-white bg-cyan-500 hover:bg-cyan-600 focus:ring-cyan-500",
-    ghost: "text-gray-500 hover:text-gray-700 hover:bg-gray-100 shadow-none dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white",
+    // Primary siempre usa el contraste invertido al fondo
+    primary: "bg-brand-text text-brand-bg border-brand-text hover:bg-brand-bg hover:text-brand-text shadow-[0_0_15px_rgba(0,0,0,0.1)] dark:shadow-[0_0_15px_rgba(255,255,255,0.1)]",
+    secondary: "bg-transparent text-brand-text border-brand-text hover:bg-brand-text hover:text-brand-bg",
+    ghost: "bg-transparent text-brand-text border-transparent hover:border-brand-text",
   };
 
   const widthClass = fullWidth ? "w-full" : "";

@@ -1,17 +1,20 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { Product, Sale, InventoryMovement, FinancialSettings, Role, User } from '../types';
+import { Product, Sale, FinancialSettings, Role, User, CashSession } from '../types';
 
 interface StoreContextType {
   products: Product[];
   sales: Sale[];
-  movements: InventoryMovement[];
+  allSessions: CashSession[];
   settings: FinancialSettings;
   currentUser: User | null;
   currentUserRole: Role | undefined;
+  currentSession: CashSession | null;
   
   login: (user: User) => void;
   logout: () => void;
+  openSession: (startBalance: number) => void;
+  closeSession: (endBalance: number) => void;
   addProduct: (product: Omit<Product, 'ownerId' | 'id'>) => void;
   updateProduct: (product: Product) => void;
   processSale: (sale: Omit<Sale, 'ownerId'>) => void;
@@ -23,29 +26,24 @@ interface StoreContextType {
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
 
 export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  // GESTIÓN DE SESIÓN: sessionStorage garantiza que la sesión muera al cerrar el navegador
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
     const session = sessionStorage.getItem('user_session');
     return session ? JSON.parse(session) : null;
   });
 
-  // BASE DE DATOS PERSISTENTE: localStorage actúa como nuestro disco duro
   const [allProducts, setAllProducts] = useState<Product[]>(() => JSON.parse(localStorage.getItem('products') || '[]'));
   const [allSales, setAllSales] = useState<Sale[]>(() => JSON.parse(localStorage.getItem('sales') || '[]'));
-  const [allMovements, setAllMovements] = useState<InventoryMovement[]>(() => JSON.parse(localStorage.getItem('movements') || '[]'));
+  const [allSessions, setAllSessions] = useState<CashSession[]>(() => JSON.parse(localStorage.getItem('cash_sessions') || '[]'));
   const [settings, setSettings] = useState<FinancialSettings>(() => JSON.parse(localStorage.getItem('settings') || '{"monthlyFixedCosts": 10000, "targetMargin": 0.3}'));
 
-  // AISLAMIENTO DE DATOS: Filtro automático basado en el usuario logueado
-  // Ningún componente fuera de este contexto puede ver datos de otros usuarios
   const products = allProducts.filter(p => p.ownerId === currentUser?.id);
   const sales = allSales.filter(s => s.ownerId === currentUser?.id);
-  const movements = allMovements.filter(m => m.ownerId === currentUser?.id);
+  const currentSession = allSessions.find(s => s.ownerId === currentUser?.id && s.status === 'OPEN') || null;
   const currentUserRole = currentUser?.role;
 
-  // Sincronización con "Base de Datos"
   useEffect(() => localStorage.setItem('products', JSON.stringify(allProducts)), [allProducts]);
   useEffect(() => localStorage.setItem('sales', JSON.stringify(allSales)), [allSales]);
-  useEffect(() => localStorage.setItem('movements', JSON.stringify(allMovements)), [allMovements]);
+  useEffect(() => localStorage.setItem('cash_sessions', JSON.stringify(allSessions)), [allSessions]);
   useEffect(() => localStorage.setItem('settings', JSON.stringify(settings)), [settings]);
 
   const login = (user: User) => {
@@ -58,36 +56,60 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     sessionStorage.removeItem('user_session');
   };
 
+  const openSession = (startBalance: number) => {
+    if (!currentUser) return;
+    const newSession: CashSession = {
+      id: crypto.randomUUID(),
+      startTime: new Date().toISOString(),
+      startBalance,
+      expectedBalance: startBalance,
+      cashSales: 0,
+      refunds: 0,
+      status: 'OPEN',
+      ownerId: currentUser.id
+    };
+    setAllSessions(prev => [...prev, newSession]);
+  };
+
+  const closeSession = (endBalanceReal: number) => {
+    if (!currentSession) return;
+    const expected = currentSession.startBalance + currentSession.cashSales - currentSession.refunds;
+    
+    setAllSessions(prev => prev.map(s => s.id === currentSession.id ? { 
+      ...s, 
+      status: 'CLOSED', 
+      endTime: new Date().toISOString(),
+      expectedBalance: expected,
+      endBalanceReal
+    } : s));
+  };
+
   const addProduct = (productData: Omit<Product, 'ownerId' | 'id'>) => {
     if (!currentUser) return;
-    const newProduct: Product = {
-      ...productData,
-      id: crypto.randomUUID(),
-      ownerId: currentUser.id // Vinculación obligatoria al usuario
-    };
+    const newProduct: Product = { ...productData, id: crypto.randomUUID(), ownerId: currentUser.id };
     setAllProducts(prev => [...prev, newProduct]);
   };
 
   const updateProduct = (updated: Product) => {
-    // Verificación de seguridad: El usuario debe ser el dueño
     if (updated.ownerId !== currentUser?.id) return;
     setAllProducts(prev => prev.map(p => p.id === updated.id ? updated : p));
   };
 
   const processSale = (saleData: Omit<Sale, 'ownerId'>) => {
-    if (!currentUser) return;
+    if (!currentUser || !currentSession) return;
     const sale: Sale = { ...saleData, ownerId: currentUser.id };
     
     setAllSales(prev => [...prev, sale]);
 
-    // Lógica de inventario vinculada
+    if (sale.paymentMethod === 'CASH') {
+      setAllSessions(prev => prev.map(s => s.id === currentSession.id ? { ...s, cashSales: s.cashSales + sale.total } : s));
+    }
+
     setAllProducts(prevProducts => {
       const nextProducts = [...prevProducts];
       sale.items.forEach(item => {
-        const idx = nextProducts.findIndex(p => p.id === item.productId && p.ownerId === currentUser.id);
-        if (idx !== -1) {
-          nextProducts[idx] = { ...nextProducts[idx], stock: nextProducts[idx].stock - item.quantity };
-        }
+        const idx = nextProducts.findIndex(p => p.id === item.productId);
+        if (idx !== -1) nextProducts[idx] = { ...nextProducts[idx], stock: nextProducts[idx].stock - item.quantity };
       });
       return nextProducts;
     });
@@ -95,9 +117,14 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
   const cancelSale = (saleId: string) => {
     const sale = allSales.find(s => s.id === saleId);
-    if (!sale || sale.status === 'CANCELLED' || sale.ownerId !== currentUser?.id) return;
+    if (!sale || sale.status === 'CANCELLED' || !currentSession) return;
 
     setAllSales(prev => prev.map(s => s.id === saleId ? { ...s, status: 'CANCELLED' } : s));
+
+    if (sale.paymentMethod === 'CASH') {
+      setAllSessions(prev => prev.map(s => s.id === currentSession.id ? { ...s, refunds: s.refunds + sale.total } : s));
+    }
+
     setAllProducts(prevProducts => {
       const nextProducts = [...prevProducts];
       sale.items.forEach(item => {
@@ -125,8 +152,8 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
   return (
     <StoreContext.Provider value={{
-      products, sales, movements, settings, currentUser, currentUserRole,
-      login, logout, addProduct, updateProduct, processSale, cancelSale, updateSettings, getDashboardStats
+      products, sales, allSessions, settings, currentUser, currentUserRole, currentSession,
+      login, logout, openSession, closeSession, addProduct, updateProduct, processSale, cancelSale, updateSettings, getDashboardStats
     }}>
       {children}
     </StoreContext.Provider>

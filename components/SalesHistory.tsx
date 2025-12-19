@@ -4,160 +4,130 @@ import { useStore } from '../context/StoreContext';
 import { Sale } from '../types';
 import Modal from './Modal';
 import Button from './Button';
-import { Search, FileText, XCircle, Calendar, DollarSign } from 'lucide-react';
+import { Search, FileText, XCircle, History as HistoryIcon, CornerUpLeft } from 'lucide-react';
 
 const SalesHistory: React.FC = () => {
   const { sales, cancelSale, currentUserRole } = useStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
 
-  // Filter sales reverse chronological
   const filteredSales = sales
     .filter(s => s.id.toLowerCase().includes(searchTerm.toLowerCase()) || s.date.includes(searchTerm))
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   const handleCancel = (saleId: string) => {
-    if (confirm('¿Estás seguro de cancelar esta venta? El stock será devuelto.')) {
+    if (confirm('¿CONFIRMAR DEVOLUCIÓN? El dinero se restará de caja y los productos volverán al stock.')) {
       cancelSale(saleId);
       setSelectedSale(null);
     }
   };
 
   return (
-    <div className="space-y-4">
-      {/* Header & Search */}
-      <div className="flex flex-col sm:flex-row justify-between items-center gap-4 bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-          <HistoryIcon className="h-6 w-6 text-purple-500" />
-          Historial de Ventas
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-center gap-4 bg-brand-panel p-6 border border-brand-border cut-corner">
+        <h2 className="text-xl font-black text-brand-text flex items-center gap-4 uppercase tracking-widest">
+          <HistoryIcon className="h-6 w-6" />
+          REGISTRO DE OPERACIONES
         </h2>
         <div className="relative w-full sm:w-72">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-muted h-4 w-4" />
           <input 
             type="text" 
-            placeholder="Buscar por ID o Fecha..." 
-            className="w-full pl-9 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-purple-500 focus:outline-none"
+            placeholder="ID TRANSACCIÓN / FECHA" 
+            className="w-full pl-12 pr-4 py-3 bg-brand-bg border border-brand-border cut-corner-sm text-brand-text focus:border-brand-text focus:outline-none text-[10px] font-black uppercase tracking-widest"
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
           />
         </div>
       </div>
 
-      {/* Sales List */}
-      <div className="bg-white dark:bg-gray-800 shadow-lg rounded-xl overflow-hidden border border-gray-100 dark:border-gray-700 transition-colors">
+      <div className="bg-brand-panel border border-brand-border cut-corner overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-            <thead className="bg-gray-50 dark:bg-gray-700">
+          <table className="min-w-full divide-y divide-brand-border">
+            <thead className="bg-brand-text/5">
               <tr>
-                <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-300 uppercase tracking-wider">Fecha</th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-300 uppercase tracking-wider">ID Venta</th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-300 uppercase tracking-wider">Items</th>
-                <th className="px-6 py-4 text-right text-xs font-bold text-gray-500 dark:text-gray-300 uppercase tracking-wider">Total</th>
-                <th className="px-6 py-4 text-center text-xs font-bold text-gray-500 dark:text-gray-300 uppercase tracking-wider">Estado</th>
-                <th className="px-6 py-4 text-center text-xs font-bold text-gray-500 dark:text-gray-300 uppercase tracking-wider">Acciones</th>
+                <th className="px-6 py-4 text-left text-[8px] font-black text-brand-muted uppercase tracking-widest">CRONOLOGÍA</th>
+                <th className="px-6 py-4 text-left text-[8px] font-black text-brand-muted uppercase tracking-widest">ID UNICO</th>
+                <th className="px-6 py-4 text-left text-[8px] font-black text-brand-muted uppercase tracking-widest">ITEMS</th>
+                <th className="px-6 py-4 text-right text-[8px] font-black text-brand-muted uppercase tracking-widest">TOTAL</th>
+                <th className="px-6 py-4 text-center text-[8px] font-black text-brand-muted uppercase tracking-widest">ESTADO</th>
+                <th className="px-6 py-4 text-center text-[8px] font-black text-brand-muted uppercase tracking-widest">TICKET</th>
               </tr>
             </thead>
-            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+            <tbody className="divide-y divide-brand-border">
               {filteredSales.map(sale => (
-                <tr key={sale.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                <tr key={sale.id} className={`transition-all ${sale.status === 'CANCELLED' ? 'opacity-40 grayscale' : 'hover:bg-brand-text/5'}`}>
+                  <td className="px-6 py-4 whitespace-nowrap text-[10px] font-bold text-brand-muted">
                     {new Date(sale.date).toLocaleString()}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-500 dark:text-gray-400">
-                    {sale.id.slice(0, 8)}...
+                  <td className="px-6 py-4 whitespace-nowrap text-[10px] font-black text-brand-text font-mono">
+                    {sale.id.slice(0, 8).toUpperCase()}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                    {sale.items.reduce((acc, item) => acc + item.quantity, 0)} productos
+                  <td className="px-6 py-4 whitespace-nowrap text-[10px] font-bold text-brand-text uppercase">
+                    {sale.items.reduce((acc, item) => acc + item.quantity, 0)} UNIDADES
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-bold text-gray-900 dark:text-white">
+                  <td className={`px-6 py-4 whitespace-nowrap text-sm text-right font-black ${sale.status === 'CANCELLED' ? 'line-through' : 'text-brand-text'}`}>
                     ${sale.total.toFixed(2)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-center">
-                    <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                    <span className={`px-3 py-1 text-[8px] font-black uppercase cut-corner-sm ${
                       sale.status === 'ACTIVE' 
-                        ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' 
-                        : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300'
+                        ? 'bg-green-500 text-black' 
+                        : 'bg-red-500 text-white'
                     }`}>
-                      {sale.status === 'ACTIVE' ? 'Completado' : 'Cancelado'}
+                      {sale.status === 'ACTIVE' ? 'OPERATIVO' : 'REEMBOLSADO'}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-center">
-                    <Button variant="ghost" onClick={() => setSelectedSale(sale)}>
-                      <FileText className="h-5 w-5 text-blue-500" />
-                    </Button>
+                    <button onClick={() => setSelectedSale(sale)} className="text-brand-muted hover:text-brand-text transition-colors">
+                      <FileText size={18} />
+                    </button>
                   </td>
                 </tr>
               ))}
-              {filteredSales.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
-                    No se encontraron ventas.
-                  </td>
-                </tr>
-              )}
             </tbody>
           </table>
         </div>
       </div>
 
-      {/* Ticket Modal */}
-      <Modal 
-        isOpen={!!selectedSale} 
-        onClose={() => setSelectedSale(null)} 
-        title="Detalle del Ticket"
-      >
+      <Modal isOpen={!!selectedSale} onClose={() => setSelectedSale(null)} title="DETALLES DE TRANSACCIÓN">
         {selectedSale && (
-          <div className="space-y-4">
-            <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg border border-gray-200 dark:border-gray-600 font-mono text-sm">
-              <div className="text-center mb-4 border-b border-gray-300 pb-2 border-dashed">
-                <h3 className="font-bold text-lg dark:text-white">Teikon</h3>
-                <p className="text-gray-500 dark:text-gray-400">Ticket #{selectedSale.id.slice(0, 8)}</p>
-                <p className="text-gray-500 dark:text-gray-400">{new Date(selectedSale.date).toLocaleString()}</p>
+          <div className="space-y-6">
+            <div className="bg-brand-bg p-8 border border-brand-border cut-corner font-mono text-xs space-y-4">
+              <div className="text-center border-b border-brand-border pb-4 border-dashed">
+                <h3 className="font-black text-lg">TEIKON OS</h3>
+                <p className="opacity-50">TICKET: {selectedSale.id.toUpperCase()}</p>
+                <p className="opacity-50">{new Date(selectedSale.date).toLocaleString()}</p>
               </div>
               
-              <div className="space-y-2 mb-4">
+              <div className="space-y-2">
                 {selectedSale.items.map((item, idx) => (
-                  <div key={idx} className="flex justify-between dark:text-gray-200">
-                    <span>{item.quantity} x {item.productName}</span>
+                  <div key={idx} className="flex justify-between">
+                    <span>{item.quantity} x {item.productName.toUpperCase()}</span>
                     <span>${item.subtotal.toFixed(2)}</span>
                   </div>
                 ))}
               </div>
 
-              <div className="border-t border-gray-300 border-dashed pt-2 space-y-1">
-                 <div className="flex justify-between text-gray-500 dark:text-gray-400">
-                    <span>Subtotal</span>
-                    <span>${selectedSale.subtotal.toFixed(2)}</span>
-                 </div>
-                 {selectedSale.totalDiscount > 0 && (
-                    <div className="flex justify-between text-green-600 dark:text-green-400">
-                        <span>Descuento</span>
-                        <span>-${selectedSale.totalDiscount.toFixed(2)}</span>
-                    </div>
-                 )}
-                 <div className="flex justify-between font-bold text-lg dark:text-white pt-1">
-                    <span>TOTAL</span>
-                    <span>${selectedSale.total.toFixed(2)}</span>
-                 </div>
+              <div className="border-t border-brand-border border-dashed pt-4 flex justify-between font-black text-lg">
+                <span>TOTAL</span>
+                <span className={selectedSale.status === 'CANCELLED' ? 'line-through text-red-500' : ''}>
+                  ${selectedSale.total.toFixed(2)}
+                </span>
               </div>
               
-              <div className="mt-4 text-center text-xs text-gray-400">
-                 Atendido por: {selectedSale.sellerId === 'admin' ? 'Administrador' : 'Vendedor'}
+              <div className="text-center text-[10px] opacity-40 uppercase pt-4">
+                MÉTODO: {selectedSale.paymentMethod} | AGENTE: {selectedSale.sellerId.toUpperCase()}
               </div>
             </div>
 
-            <div className="flex gap-3 justify-end">
+            <div className="flex gap-4">
                 {currentUserRole === 'admin' && selectedSale.status === 'ACTIVE' && (
-                  <Button variant="danger" onClick={() => handleCancel(selectedSale.id)}>
-                    <XCircle className="h-4 w-4 mr-2" /> Cancelar Venta
+                  <Button variant="secondary" fullWidth onClick={() => handleCancel(selectedSale.id)} className="border-red-500 text-red-500">
+                    <CornerUpLeft className="h-4 w-4 mr-2" /> EJECUTAR DEVOLUCIÓN
                   </Button>
                 )}
-                <Button variant="secondary" onClick={() => window.print()}>
-                  Imprimir
-                </Button>
-                <Button variant="primary" onClick={() => setSelectedSale(null)}>
-                  Cerrar
-                </Button>
+                <Button variant="primary" fullWidth onClick={() => setSelectedSale(null)}>CERRAR</Button>
             </div>
           </div>
         )}
@@ -165,13 +135,5 @@ const SalesHistory: React.FC = () => {
     </div>
   );
 };
-
-const HistoryIcon = ({ className }: { className?: string }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <path d="M3 3v5h5" />
-      <path d="M3.05 13A9 9 0 1 0 6 5.3L3 8" />
-      <path d="M12 7v5l4 2" />
-    </svg>
-  );
 
 export default SalesHistory;

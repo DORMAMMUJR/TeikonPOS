@@ -1,6 +1,7 @@
+
 import React from 'react';
 import { Product } from '../types';
-import { PackageOpen } from 'lucide-react';
+import { PackageOpen, AlertTriangle } from 'lucide-react';
 
 interface InventoryTableProps {
   inventory: Product[];
@@ -46,13 +47,21 @@ const InventoryTable: React.FC<InventoryTableProps> = ({ inventory }) => {
                       {product.name}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-semibold">
-                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        product.stock > 10 ? 'bg-green-100 text-green-800' : 
-                        product.stock > 0 ? 'bg-yellow-100 text-yellow-800' : 
-                        'bg-red-100 text-red-800'
-                      }`}>
-                        {product.stock}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                          product.stock < 0 ? 'bg-red-600 text-white animate-pulse' :
+                          product.stock > 10 ? 'bg-green-100 text-green-800' : 
+                          product.stock > 0 ? 'bg-yellow-100 text-yellow-800' : 
+                          'bg-red-100 text-red-800'
+                        }`}>
+                          {product.stock}
+                        </span>
+                        {product.stock < 0 && (
+                          <span className="text-[10px] text-red-600 font-black uppercase flex items-center gap-1">
+                            <AlertTriangle size={10} /> DESCUADRE
+                          </span>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}

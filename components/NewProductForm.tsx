@@ -110,7 +110,8 @@ const NewProductForm: React.FC<NewProductFormProps> = ({ inventory, onSave, onCa
       <div className="mt-5 sm:mt-6 sm:grid sm:grid-cols-2 sm:gap-3 sm:grid-flow-row-dense">
         <Button 
           type="submit" 
-          variant="success" 
+          // Fixed variant: changed from 'success' to 'primary' as 'success' is not valid
+          variant="primary" 
           fullWidth
           disabled={!!error || !sku || !name}
           className="sm:col-start-2"
