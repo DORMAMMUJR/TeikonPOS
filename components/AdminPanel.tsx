@@ -49,11 +49,10 @@ interface AdminPanelProps {
 
 const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
   const [activeView, setActiveView] = useState<'dashboard' | 'stores' | 'support'>('dashboard');
-  const [isDarkMode, setIsDarkMode] = useState(true);
+  const [isDarkMode, setIsDarkMode] = useState(false); // Inicializamos en claro
   const [searchTerm, setSearchTerm] = useState('');
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   
-  // Mock Store Data
   const [stores, setStores] = useState<StoreData[]>([
     { id: 'ST-001', name: 'Óptica Visionary', owner: 'Carlos Mendez', plan: 'Premium', status: 'active', lastActive: 'Justo ahora' },
     { id: 'ST-002', name: 'Teikon Concept Store', owner: 'Laura Sanz', plan: 'Enterprise', status: 'active', lastActive: 'hace 2 horas' },
@@ -63,7 +62,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
     { id: 'ST-006', name: 'Farmacia Salud+', owner: 'Elena Gil', plan: 'Enterprise', status: 'active', lastActive: 'hace 5 minutos' },
   ]);
 
-  // Load tickets from localStorage
   useEffect(() => {
     const loadTickets = () => {
       const raw = localStorage.getItem('teikon_tickets');
@@ -88,16 +86,14 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
     ));
   };
 
-  // Theme-specific styles
   const themeClasses = {
-    bg: isDarkMode ? 'bg-[#1E3A4A]' : 'bg-gray-50',
+    bg: isDarkMode ? 'bg-[#1E3A4A]' : 'bg-slate-50',
     text: isDarkMode ? 'text-slate-100' : 'text-slate-800',
-    card: isDarkMode ? 'bg-[#264a5e] border-white/10' : 'bg-white border-gray-200 shadow-sm',
-    header: isDarkMode ? 'bg-[#264a5e]/80 border-white/10' : 'bg-white border-gray-200 shadow-sm',
-    sidebar: isDarkMode ? 'bg-[#1E3A4A] border-white/10' : 'bg-white border-gray-200',
+    card: isDarkMode ? 'bg-[#264a5e] border-white/10' : 'bg-white border-slate-200 shadow-sm',
+    sidebar: isDarkMode ? 'bg-[#1E3A4A] border-white/10' : 'bg-white border-slate-200',
     subtext: isDarkMode ? 'text-slate-400' : 'text-slate-500',
     navItem: isDarkMode ? 'text-slate-500' : 'text-gray-400',
-    navActive: isDarkMode ? 'bg-[#325e75] text-white shadow-xl' : 'bg-gray-100 text-slate-900 shadow-md',
+    navActive: isDarkMode ? 'bg-[#325e75] text-white shadow-xl' : 'bg-slate-100 text-slate-900 shadow-md',
   };
 
   const navItems = [
@@ -114,10 +110,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
         </div>
         <div>
           <h2 className={`text-2xl font-black uppercase tracking-widest ${themeClasses.text}`}>Sistemas Operativos</h2>
-          <p className="text-sm font-bold uppercase tracking-[0.2em] mt-2 text-emerald-500/80">Protocolo de seguridad activo y nominal</p>
+          <p className="text-sm font-bold uppercase tracking-[0.2em] mt-2 text-emerald-500/80">Protocolo de seguridad activo</p>
         </div>
       </div>
-
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         {[
           { label: 'Revenue Global', value: '$248.5K', icon: TrendingUp, color: 'text-emerald-400' },
@@ -141,17 +136,16 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
         <input 
           type="text"
           placeholder="BUSCAR TIENDA POR NOMBRE O ID..."
-          className={`w-full ${isDarkMode ? 'bg-[#1e323d]' : 'bg-white'} border ${themeClasses.card} rounded-2xl py-5 pl-16 pr-8 text-xs font-bold ${themeClasses.text} outline-none focus:border-emerald-500/50 transition-all placeholder:text-slate-600 uppercase tracking-widest`}
+          className={`w-full ${isDarkMode ? 'bg-[#1e323d]' : 'bg-slate-50'} border ${themeClasses.card} rounded-2xl py-5 pl-16 pr-8 text-xs font-bold ${themeClasses.text} outline-none focus:border-emerald-500/50 transition-all placeholder:text-slate-400 uppercase tracking-widest`}
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
       </div>
-
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {stores.filter(s => s.name.toLowerCase().includes(searchTerm.toLowerCase())).map((store) => (
           <div 
             key={store.id} 
-            className={`${themeClasses.card} border rounded-[2rem] p-6 relative overflow-hidden transition-all duration-300 ${isDarkMode ? 'hover:bg-white/5' : 'hover:shadow-lg'}`}
+            className={`${themeClasses.card} border rounded-[2rem] p-6 relative overflow-hidden transition-all duration-300 hover:shadow-lg`}
           >
             {/* Status Pill Condicional */}
             <div className="absolute top-6 right-6">
@@ -160,13 +154,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                 ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' 
                 : 'bg-red-500/10 text-red-500 border-red-500/20'
               }`}>
-                {store.status === 'active' ? 'Activa' : 'Suspendida'}
+                {store.status === 'active' ? 'ACTIVA' : 'SUSPENDIDA'}
               </span>
             </div>
-
-            {/* Header */}
             <div className="flex items-center gap-4 mb-6">
-              <div className={`p-3 rounded-2xl ${isDarkMode ? 'bg-black/20' : 'bg-gray-100'} ${store.status === 'active' ? 'text-emerald-500' : 'text-red-500'}`}>
+              <div className={`p-3 rounded-2xl ${isDarkMode ? 'bg-black/20' : 'bg-slate-100'} ${store.status === 'active' ? 'text-emerald-500' : 'text-red-500'}`}>
                 <Store size={24} />
               </div>
               <div>
@@ -174,12 +166,10 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                 <span className={`text-[10px] font-black uppercase tracking-widest ${themeClasses.subtext}`}>{store.id}</span>
               </div>
             </div>
-
-            {/* Body */}
             <div className="space-y-4 mb-8">
               <div className="flex items-center gap-3">
                 <User size={14} className={themeClasses.subtext} />
-                <span className={`text-xs font-bold ${themeClasses.text}`}>Propietario: {store.owner}</span>
+                <span className={`text-xs font-bold ${themeClasses.text}`}>Dueño: {store.owner}</span>
               </div>
               <div className="flex items-center gap-3">
                 <Zap size={14} className={themeClasses.subtext} />
@@ -190,11 +180,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                 <span className={`text-xs font-bold ${themeClasses.text}`}>Visto: {store.lastActive}</span>
               </div>
             </div>
-
-            {/* Footer / Toggle switch */}
-            <div className={`pt-6 border-t ${isDarkMode ? 'border-white/10' : 'border-gray-100'} flex items-center justify-between`}>
+            <div className={`pt-6 border-t ${isDarkMode ? 'border-white/10' : 'border-slate-100'} flex items-center justify-between`}>
               <span className={`text-[10px] font-black uppercase tracking-widest ${themeClasses.subtext}`}>
-                {store.status === 'active' ? 'BLOQUEAR ACCESO' : 'REHABILITAR ACCESO'}
+                ESTADO DE ACCESO
               </span>
               <button 
                 onClick={() => toggleStoreStatus(store.id)}
@@ -219,33 +207,20 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex justify-between items-center mb-4 px-2">
         <div>
-          <h3 className={`text-xs font-black uppercase tracking-[0.3em] ${themeClasses.subtext}`}>Tickets de Soporte en Tiempo Real</h3>
-          <p className={`text-[9px] font-bold uppercase tracking-widest mt-1 ${themeClasses.subtext}`}>Gestión Centralizada de Incidentes</p>
+          <h3 className={`text-xs font-black uppercase tracking-[0.3em] ${themeClasses.subtext}`}>Tickets de Soporte</h3>
+          <p className={`text-[9px] font-bold uppercase tracking-widest mt-1 ${themeClasses.subtext}`}>Gestión Centralizada</p>
         </div>
         <div className="flex items-center gap-4">
           <span className="flex items-center gap-1.5 text-[9px] font-black text-red-500 bg-red-500/5 px-3 py-1 rounded-full uppercase">
             <Circle size={8} className="fill-current" /> {tickets.filter(t => t.status === 'pending').length} Pendientes
           </span>
-          <button 
-            onClick={() => {
-               if(confirm('¿Limpiar historial de tickets resueltos?')) {
-                 const onlyPending = tickets.filter(t => t.status === 'pending');
-                 setTickets(onlyPending);
-                 localStorage.setItem('teikon_tickets', JSON.stringify(onlyPending));
-               }
-            }}
-            className={`text-[10px] font-black uppercase tracking-widest transition-colors ${themeClasses.subtext} hover:text-emerald-500`}
-          >
-            Limpiar Archivo
-          </button>
         </div>
       </div>
-      
       <div className="grid grid-cols-1 gap-4">
         {tickets.length === 0 ? (
           <div className="py-20 flex flex-col items-center justify-center text-center opacity-20 space-y-4">
             <Ticket size={64} className={themeClasses.text} />
-            <p className={`text-xs font-black uppercase tracking-[0.4em] ${themeClasses.text}`}>Sin reportes registrados</p>
+            <p className={`text-xs font-black uppercase tracking-[0.4em] ${themeClasses.text}`}>Sin reportes</p>
           </div>
         ) : (
           tickets.map((ticket) => (
@@ -257,7 +232,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                 <div className="min-w-0">
                   <div className="flex items-center gap-3 mb-1">
                     <span className={`text-[10px] font-black uppercase tracking-widest ${themeClasses.subtext}`}>{ticket.storeName}</span>
-                    <span className={`w-1 h-1 rounded-full ${isDarkMode ? 'bg-white/10' : 'bg-gray-300'}`}></span>
                     <span className={`text-[10px] font-black uppercase tracking-tighter ${themeClasses.subtext}`}>REF: {ticket.id}</span>
                   </div>
                   <h4 className={`text-sm font-black uppercase tracking-tight line-clamp-1 mb-2 ${themeClasses.text}`}>Solicitante: {ticket.requesterName}</h4>
@@ -268,27 +242,18 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                     <span className={`flex items-center gap-1 text-[9px] font-black uppercase ${themeClasses.subtext}`}>
                       <Clock size={12} /> {ticket.date}
                     </span>
-                    <span className={`px-3 py-0.5 rounded-full text-[8px] font-black uppercase tracking-[0.2em] ${
-                      ticket.status === 'pending' ? 'bg-red-500/20 text-red-400 border border-red-500/20' : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/20'
-                    }`}>
-                      {ticket.status === 'pending' ? 'Pendiente' : 'Resuelto'}
-                    </span>
                   </div>
                 </div>
               </div>
-              
               <div className="flex items-center gap-4 shrink-0 w-full md:w-auto">
                 {ticket.status === 'pending' && (
                   <button 
                     onClick={() => markAsResolved(ticket.id)}
-                    className="flex-1 md:flex-none px-6 py-3 bg-emerald-600 hover:bg-emerald-50 text-white hover:text-emerald-600 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border border-emerald-600"
+                    className="flex-1 md:flex-none px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
                   >
-                    Resolver Ticket
+                    Resolver
                   </button>
                 )}
-                <button className={`p-3 transition-colors ${themeClasses.subtext} hover:text-emerald-500`}>
-                  <MoreVertical size={18} />
-                </button>
               </div>
             </div>
           ))
@@ -299,17 +264,13 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
 
   return (
     <div className={`flex h-screen font-sans selection:bg-emerald-500/30 transition-colors duration-300 ${themeClasses.bg} ${themeClasses.text}`}>
-      {/* Left Sidebar */}
       <aside className={`w-24 flex flex-col items-center py-10 gap-10 border-r transition-colors duration-300 ${themeClasses.sidebar}`}>
         <div className="flex flex-col items-center gap-6 mb-8 w-full">
-          <div className="p-3 bg-emerald-600 rounded-2xl shadow-[0_0_20px_rgba(16,185,129,0.3)]">
+          <div className="p-3 bg-emerald-600 rounded-2xl shadow-lg">
             <ShieldCheck size={28} className="text-white" />
           </div>
-          <div className="flex flex-col items-center mt-4">
-            <TeikonLogo size={48} className="drop-shadow-md" />
-          </div>
+          <TeikonLogo size={48} className="drop-shadow-md" />
         </div>
-
         <nav className="flex-1 flex flex-col gap-8">
           {navItems.map((item) => (
             <button
@@ -323,59 +284,27 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
               title={item.label}
             >
               <item.icon size={24} />
-              {activeView === item.id && (
-                <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-emerald-500 rounded-l-full" />
-              )}
             </button>
           ))}
         </nav>
-
-        <button 
-          onClick={onExit}
-          className="p-4 text-red-500/50 hover:text-red-500 transition-colors rounded-2xl hover:bg-red-500/5"
-          title="Cerrar Panel"
-        >
-          <LogOut size={24} />
-        </button>
+        <button onClick={onExit} className="p-4 text-red-500/50 hover:text-red-500 transition-colors"><LogOut size={24} /></button>
       </aside>
-
-      {/* Main Content Area */}
       <main className="flex-1 overflow-y-auto px-12 py-12 no-scrollbar">
         <header className="flex justify-between items-end mb-16">
           <div>
             <h1 className={`text-4xl font-black uppercase tracking-tighter ${themeClasses.text}`}>
-              {activeView === 'dashboard' && 'Dashboard Zen'}
-              {activeView === 'stores' && 'Gestión de Tiendas'}
-              {activeView === 'support' && 'Centro de Soporte'}
+              {activeView === 'dashboard' && 'PANEL DE CONTROL'}
+              {activeView === 'stores' && 'TIENDAS'}
+              {activeView === 'support' && 'SOPORTE'}
             </h1>
-            <p className={`text-[10px] font-black uppercase tracking-[0.4em] mt-3 ${themeClasses.subtext}`}>
-              Administración de Plataforma Teikon // Nodo 01
-            </p>
+            <p className={`text-[10px] font-black uppercase tracking-[0.4em] mt-3 ${themeClasses.subtext}`}>TEIKON OS // ADMIN MODE</p>
           </div>
-          
           <div className="flex items-center gap-6">
-            <button 
-              onClick={() => setIsDarkMode(!isDarkMode)}
-              className={`p-3 rounded-xl border transition-all duration-300 ${themeClasses.card} hover:scale-110`}
-              title={isDarkMode ? 'Modo Claro' : 'Modo Oscuro'}
-            >
+            <button onClick={() => setIsDarkMode(!isDarkMode)} className={`p-3 rounded-xl border ${themeClasses.card}`}>
               {isDarkMode ? <Sun size={20} className="text-amber-400" /> : <Moon size={20} className="text-indigo-500" />}
             </button>
-
-            <div className="hidden md:flex items-center gap-6">
-              <div className="text-right">
-                <p className={`text-[9px] font-black uppercase tracking-widest ${themeClasses.subtext}`}>Uptime</p>
-                <p className="text-xs font-bold text-emerald-500">99.99%</p>
-              </div>
-              <div className={`w-px h-8 ${isDarkMode ? 'bg-white/10' : 'bg-gray-200'}`}></div>
-              <div className="text-right">
-                <p className={`text-[9px] font-black uppercase tracking-widest ${themeClasses.subtext}`}>Response</p>
-                <p className={`text-xs font-bold ${themeClasses.text}`}>14ms</p>
-              </div>
-            </div>
           </div>
         </header>
-
         <div className="max-w-7xl mx-auto">
           {activeView === 'dashboard' && renderDashboard()}
           {activeView === 'stores' && renderStores()}

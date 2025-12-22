@@ -13,7 +13,8 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [theme, setTheme] = useState<Theme>(() => {
     const saved = localStorage.getItem('teikon_theme');
-    return (saved as Theme) || 'dark';
+    // Forzamos 'light' como primera opción si no hay guardada
+    return (saved as Theme) || 'light';
   });
 
   useEffect(() => {
