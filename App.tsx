@@ -10,14 +10,20 @@ import Settings from './components/Settings';
 import SalesHistory from './components/SalesHistory';
 import Login from './components/Login';
 import Button from './components/Button';
+import AdminPanel from './components/AdminPanel';
 import { Power } from 'lucide-react';
 
 const AppContent: React.FC = () => {
-  const { currentUser, currentSession, openSession } = useStore();
+  const { currentUser, currentSession, openSession, logout } = useStore();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [openingBalance, setOpeningBalance] = useState('');
 
   if (!currentUser) return <Login />;
+
+  // REDIRECCIÓN RBAC: Si es superuser, mostramos el AdminPanel
+  if ((currentUser as any).role === 'superuser') {
+    return <AdminPanel onExit={logout} />;
+  }
 
   if (!currentSession) {
     return (

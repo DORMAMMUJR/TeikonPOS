@@ -13,7 +13,7 @@ const TeikonWordmark: React.FC<TeikonWordmarkProps> = ({ height = 32, className 
       viewBox="0 0 320 60" 
       fill="none" 
       xmlns="http://www.w3.org/2000/svg" 
-      className={`drop-shadow-[0_0_8px_rgba(168,85,247,0.5)] transition-colors duration-500 ${className}`}
+      className={`drop-shadow-[0_0_10px_rgba(0,187,212,0.4)] transition-colors duration-500 ${className}`}
     >
       {/* T - Agresiva */}
       <path d="M5 5 H55 V18 H35 V55 H25 V18 H5 V5Z" className="fill-current" />

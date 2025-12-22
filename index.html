@@ -17,11 +17,11 @@
       }
 
       .dark {
-        --bg-primary: #0f172a; /* Slate 900 */
-        --bg-panel: #1e293b;   /* Slate 800 */
+        --bg-primary: #1E3A4A; /* Midnight Teal Specified */
+        --bg-panel: #264a5e;   /* Elevated Teal Panel */
         --text-main: #f8fafc;
         --text-muted: #94a3b8;
-        --border-color: rgba(255, 255, 255, 0.08);
+        --border-color: rgba(255, 255, 255, 0.12);
       }
 
       body { 
@@ -40,7 +40,8 @@
       }
 
       .dark .card-premium {
-        box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.5);
+        box-shadow: 0 10px 40px -5px rgba(0, 0, 0, 0.4);
+        background-color: var(--bg-panel);
       }
 
       /* Animación del Expanding Pill */
@@ -61,7 +62,7 @@
       ::-webkit-scrollbar { width: 5px; height: 5px; }
       ::-webkit-scrollbar-track { background: transparent; }
       ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 10px; }
-      .dark ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); }
+      .dark ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); }
 
       input[type="number"]::-webkit-inner-spin-button,
       input[type="number"]::-webkit-outer-spin-button {

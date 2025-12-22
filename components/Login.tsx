@@ -1,17 +1,19 @@
 
 import React, { useState } from 'react';
-import { ShieldAlert } from 'lucide-react';
+import { ShieldAlert, Terminal } from 'lucide-react';
 import Button from './Button';
 import { useStore } from '../context/StoreContext';
 import { User as UserType } from '../types';
 import TeikonLogo from './TeikonLogo';
 import TeikonWordmark from './TeikonWordmark';
+import DevLoginModal from './DevLoginModal';
 
 const Login: React.FC = () => {
   const { login } = useStore();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState(false);
+  const [showDevModal, setShowDevModal] = useState(false);
 
   const USERS_DB: Record<string, UserType & { pass: string }> = {
     'ADMIN': { id: 'usr-1', username: 'admin', role: 'admin', department: 'CORE', pass: '1234' },
@@ -32,6 +34,12 @@ const Login: React.FC = () => {
     }
   };
 
+  const handleDevSuccess = () => {
+    // Al autenticarse como DEV, logueamos al usuario con rol SUPERUSER que ya tiene acceso al Admin Panel
+    login({ id: 'dev-root', username: 'dev_engineer', role: 'superuser', department: 'ENGINEERING' } as any);
+    setShowDevModal(false);
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-brand-bg px-4 overflow-hidden relative">
       {/* Luces de fondo sutiles */}
@@ -42,10 +50,10 @@ const Login: React.FC = () => {
         <div className="flex flex-col items-center mb-10 text-center">
           <TeikonLogo size={100} className="mb-6" />
           <TeikonWordmark height={30} className="text-slate-900 dark:text-white" />
-          <p className="text-[10px] font-black text-brand-muted uppercase tracking-[0.4em] mt-6">Secure Gateway</p>
+          <p className="text-[10px] font-black text-brand-muted uppercase tracking-[0.4em] mt-6">Inventario Digital</p>
         </div>
 
-        <div className="bg-white dark:bg-slate-800/80 backdrop-blur-md p-8 border border-slate-200 dark:border-brand-border rounded-2xl shadow-2xl">
+        <div className="bg-white dark:bg-brand-panel backdrop-blur-md p-8 border border-slate-200 dark:border-brand-border rounded-2xl shadow-2xl">
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-1.5">
               <label className="text-[9px] font-black text-brand-muted uppercase tracking-widest">Identificador</label>
@@ -54,7 +62,7 @@ const Login: React.FC = () => {
                 required
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm focus:border-brand-purple transition-all outline-none uppercase font-black text-slate-900 dark:text-white placeholder:text-brand-muted/20"
+                className="w-full bg-slate-50 dark:bg-black/20 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm focus:border-brand-purple transition-all outline-none uppercase font-black text-slate-900 dark:text-white placeholder:text-brand-muted/20"
                 placeholder="USUARIO"
               />
             </div>
@@ -66,7 +74,7 @@ const Login: React.FC = () => {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm focus:border-brand-purple transition-all outline-none font-black text-slate-900 dark:text-white placeholder:text-brand-muted/20"
+                className="w-full bg-slate-50 dark:bg-black/20 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm focus:border-brand-purple transition-all outline-none font-black text-slate-900 dark:text-white placeholder:text-brand-muted/20"
                 placeholder="••••••••"
               />
             </div>
@@ -89,10 +97,25 @@ const Login: React.FC = () => {
           </form>
         </div>
         
-        <p className="mt-8 text-center text-[8px] font-bold text-brand-muted uppercase tracking-[0.4em] opacity-40">
-          TEIKON OS // V2.9 CORE
-        </p>
+        <div className="mt-8 flex flex-col items-center gap-4">
+          <p className="text-center text-[8px] font-bold text-brand-muted uppercase tracking-[0.4em] opacity-40">
+            TEIKON OS // V2.9 CORE
+          </p>
+          <button 
+            onClick={() => setShowDevModal(true)}
+            className="flex items-center gap-2 text-[8px] font-black text-slate-400 hover:text-indigo-500 transition-colors uppercase tracking-[0.3em] opacity-30 hover:opacity-100"
+          >
+            <Terminal size={12} /> Acceso Desarrollador
+          </button>
+        </div>
       </div>
+
+      {showDevModal && (
+        <DevLoginModal 
+          onSuccess={handleDevSuccess}
+          onClose={() => setShowDevModal(false)}
+        />
+      )}
     </div>
   );
 };

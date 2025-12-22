@@ -1,10 +1,11 @@
 
-import React from 'react';
-import { LayoutDashboard, ShoppingCart, Package, Settings, LogOut, History, Sun, Moon } from 'lucide-react';
+import React, { useState } from 'react';
+import { LayoutDashboard, ShoppingCart, Package, Settings, LogOut, History, Sun, Moon, LifeBuoy } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import { useTheme } from '../context/ThemeContext';
 import TeikonLogo from './TeikonLogo';
 import TeikonWordmark from './TeikonWordmark';
+import SupportTicketModal from './SupportTicketModal';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -15,6 +16,7 @@ interface LayoutProps {
 const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => {
   const { currentUser, logout, settings, getDashboardStats } = useStore();
   const { theme, toggleTheme } = useTheme();
+  const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
 
   // Lógica de Meta Operativa simplificada (Read-Only)
   const stats = getDashboardStats('day');
@@ -43,7 +45,6 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => 
 
   return (
     <div className="min-h-screen bg-brand-bg text-brand-text flex flex-col transition-colors duration-500">
-      {/* HEADER PRINCIPAL (SIN CAMBIOS) */}
       <header className="bg-brand-panel border-b border-brand-border sticky top-0 z-[60] px-4 md:px-6 h-16 flex items-center justify-between shadow-sm">
         <div className="flex items-center gap-3 shrink-0">
           <TeikonLogo size={32} />
@@ -76,6 +77,15 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => 
         </nav>
 
         <div className="flex items-center gap-2 shrink-0">
+          <button 
+            onClick={() => setIsSupportModalOpen(true)}
+            className="flex items-center gap-2 h-10 px-3 rounded-full text-brand-muted hover:text-indigo-500 hover:bg-indigo-500/5 transition-all font-bold"
+            title="Soporte Técnico"
+          >
+            <LifeBuoy size={18} />
+            <span className="text-[10px] font-black uppercase tracking-widest hidden md:inline">Soporte</span>
+          </button>
+          <div className="h-4 w-px bg-brand-border mx-1"></div>
           <button onClick={toggleTheme} className="p-2 text-brand-muted hover:text-brand-text transition-colors rounded-lg">
             {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
           </button>
@@ -86,11 +96,9 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => 
         </div>
       </header>
 
-      {/* SUB-HEADER SIMPLIFICADO: BARRA DE PROGRESO PROTAGONISTA */}
       <div className="bg-brand-panel border-b border-brand-border py-6 shadow-sm">
         <div className="max-w-7xl mx-auto px-6">
           <div className="flex flex-col gap-2">
-            {/* Texto discreto sobre la barra */}
             <div className="flex justify-between items-end px-1">
               <span className="text-[9px] font-black uppercase tracking-[0.2em] text-brand-muted">Utilidad Bruta vs Gasto Operativo Diario</span>
               <span className="text-[10px] font-black text-slate-800 dark:text-white font-mono">
@@ -98,21 +106,17 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => 
               </span>
             </div>
 
-            {/* Barra de Progreso Robusta */}
             <div className="h-4 w-full bg-slate-100 dark:bg-slate-900 rounded-lg relative overflow-hidden shadow-inner border border-black/5 dark:border-white/5">
-              {/* Relleno Morado Neón #A020F0 */}
               <div 
                 className="h-full bg-[#A020F0] transition-all duration-1000 ease-out shadow-[0_0_15px_rgba(160,32,240,0.6)]"
                 style={{ width: `${progressPercent}%` }}
               />
-              {/* Marcador Vertical Brillante */}
               <div 
                 className="absolute top-0 bottom-0 w-[2px] bg-white shadow-[0_0_10px_white] transition-all duration-1000 ease-out z-10"
                 style={{ left: `calc(${progressPercent}% - 1px)` }}
               />
             </div>
 
-            {/* Porcentaje discreto debajo */}
             <div className="flex justify-end">
               <span className="text-[9px] font-black text-[#A020F0] tracking-widest">{progressPercent.toFixed(1)}% PUNTO DE EQUILIBRIO</span>
             </div>
@@ -145,6 +149,8 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => 
           TEIKON OS // CORE INTELLIGENCE v2.9.1
         </div>
       </footer>
+
+      <SupportTicketModal isOpen={isSupportModalOpen} onClose={() => setIsSupportModalOpen(false)} />
     </div>
   );
 };
