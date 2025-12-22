@@ -1,16 +1,32 @@
 
 import React, { useState } from 'react';
 import { useStore } from '../context/StoreContext';
-import Button from './Button';
+import { useTheme } from '../context/ThemeContext';
 import Modal from './Modal';
-import { Wallet, Calculator, History, AlertTriangle, Scale } from 'lucide-react';
+import { 
+  Wallet, 
+  Calculator, 
+  History, 
+  AlertTriangle, 
+  Sun, 
+  Moon, 
+  LifeBuoy, 
+  LogOut, 
+  Settings as SettingsIcon,
+  ChevronRight,
+  ShieldCheck,
+  Terminal
+} from 'lucide-react';
+import SupportTicketModal from './SupportTicketModal';
 
 const Settings: React.FC = () => {
-  const { settings, updateSettings, currentSession, closeSession, allSessions, currentUser } = useStore();
+  const { settings, updateSettings, currentSession, closeSession, allSessions, currentUser, logout } = useStore();
+  const { theme, toggleTheme } = useTheme();
+  
   const [fixedCosts, setFixedCosts] = useState(settings.monthlyFixedCosts);
   const [margin, setMargin] = useState(settings.targetMargin * 100);
-  
   const [isCloseModalOpen, setIsCloseModalOpen] = useState(false);
+  const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
   const [actualCash, setActualCash] = useState('');
 
   const expectedCash = currentSession 
@@ -21,7 +37,7 @@ const Settings: React.FC = () => {
 
   const handleSaveSettings = () => {
     updateSettings({ monthlyFixedCosts: fixedCosts, targetMargin: margin / 100 });
-    alert("ESTRATEGIA ACTUALIZADA");
+    // Aquí podrías añadir un toast de notificación
   };
 
   const handleConfirmClose = () => {
@@ -36,149 +52,173 @@ const Settings: React.FC = () => {
     .sort((a, b) => new Date(b.endTime!).getTime() - new Date(a.endTime!).getTime());
 
   return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* ESTRUCTURA DE COSTOS (THEMED BLUE) */}
-        <div className="card-premium p-6 border-t-4 border-t-brand-blue space-y-6 bg-white dark:bg-slate-800">
-          <div className="flex items-center gap-3 mb-2">
+    <div className="max-w-4xl mx-auto space-y-6 pb-20">
+      
+      {/* SECCIÓN: APARIENCIA & PREFERENCIAS */}
+      <div className="card-premium p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="p-2 bg-brand-purple/10 rounded-xl">
+            <Sun size={18} className="text-brand-purple" />
+          </div>
+          <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-800 dark:text-white">Apariencia del Sistema</h3>
+        </div>
+
+        <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-100 dark:border-slate-800">
+          <div className="flex items-center gap-4">
+            <div className={`p-2 rounded-lg ${theme === 'dark' ? 'bg-indigo-500/10 text-indigo-400' : 'bg-amber-500/10 text-amber-500'}`}>
+              {theme === 'dark' ? <Moon size={18} /> : <Sun size={18} />}
+            </div>
+            <div>
+              <p className="text-xs font-black uppercase tracking-widest text-slate-800 dark:text-white">Modo Oscuro</p>
+              <p className="text-[10px] font-bold text-slate-400 uppercase mt-0.5">Optimizar para baja iluminación</p>
+            </div>
+          </div>
+          
+          {/* Custom Toggle Switch */}
+          <button 
+            onClick={toggleTheme}
+            className={`w-14 h-8 rounded-full transition-all duration-300 relative px-1 flex items-center ${
+              theme === 'dark' ? 'bg-indigo-600' : 'bg-slate-300 dark:bg-slate-800'
+            }`}
+          >
+            <div className={`w-6 h-6 bg-white rounded-full shadow-md transform transition-transform duration-300 ${
+              theme === 'dark' ? 'translate-x-6' : 'translate-x-0'
+            }`} />
+          </button>
+        </div>
+      </div>
+
+      {/* SECCIÓN: OPERACIONES FINANCIERAS */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="card-premium p-6 border-t-4 border-t-brand-blue bg-white dark:bg-slate-900 shadow-sm">
+          <div className="flex items-center gap-3 mb-6">
             <div className="p-2 bg-brand-blue/10 rounded-xl">
               <Calculator size={18} className="text-brand-blue" />
             </div>
-            <h3 className="text-xs font-black uppercase tracking-widest text-slate-800 dark:text-white">Estructura de Costos</h3>
+            <h3 className="text-xs font-black uppercase tracking-widest text-slate-800 dark:text-white">Metas & Costos</h3>
           </div>
           
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-4">
             <div className="space-y-1">
-              <label className="block text-[9px] font-bold text-brand-muted uppercase mb-1">Costo Fijo Mensual</label>
+              <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Costo Fijo Mensual</label>
               <input
                 type="number"
                 value={fixedCosts}
                 onChange={(e) => setFixedCosts(parseFloat(e.target.value))}
-                className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-3 text-sm font-bold text-slate-900 dark:text-white outline-none focus:border-brand-blue shadow-inner"
+                className="w-full h-12 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 text-sm font-black text-slate-900 dark:text-white outline-none focus:border-brand-blue transition-all"
               />
             </div>
             <div className="space-y-1">
-              <label className="block text-[9px] font-bold text-brand-muted uppercase mb-1">Margen Objetivo %</label>
+              <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Margen Objetivo (%)</label>
               <input
                 type="number"
                 value={margin}
                 onChange={(e) => setMargin(parseFloat(e.target.value))}
-                className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-3 text-sm font-bold text-slate-900 dark:text-white outline-none focus:border-brand-blue shadow-inner"
+                className="w-full h-12 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 text-sm font-black text-slate-900 dark:text-white outline-none focus:border-brand-blue transition-all"
               />
             </div>
+            <button 
+              onClick={handleSaveSettings}
+              className="w-full h-12 bg-brand-blue text-white rounded-xl text-[10px] font-black uppercase tracking-[0.2em] shadow-lg shadow-brand-blue/20 hover:bg-brand-blue/90 transition-all active:scale-95"
+            >
+              Guardar Cambios
+            </button>
           </div>
-          <button onClick={handleSaveSettings} className="w-full py-4 bg-brand-blue hover:bg-blue-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-brand-blue/20 transition-all active:scale-95">
-            Guardar Configuración
-          </button>
         </div>
 
-        {/* TERMINAL ACTIVA (THEMED BLUE) */}
-        <div className="card-premium p-6 flex flex-col justify-between border-t-4 border-t-brand-blue bg-blue-50/30 dark:bg-brand-blue/5">
+        <div className="card-premium p-6 flex flex-col justify-between border-t-4 border-t-brand-emerald bg-white dark:bg-slate-900 shadow-sm">
           <div className="space-y-6">
             <div className="flex items-center justify-between">
-              <h3 className="text-xs font-black uppercase tracking-widest text-brand-blue">Terminal Activa</h3>
-              <span className="bg-brand-blue text-white px-2 py-0.5 rounded text-[8px] font-black uppercase shadow-sm">Online</span>
+              <h3 className="text-xs font-black uppercase tracking-widest text-brand-emerald">Arqueo de Caja</h3>
+              <span className="bg-brand-emerald/10 text-brand-emerald px-3 py-1 rounded-full text-[8px] font-black uppercase border border-brand-emerald/20">Turno Activo</span>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-               <div className="p-3 bg-white dark:bg-slate-900 rounded-lg border border-brand-blue/10 shadow-sm">
-                 <p className="text-[8px] font-bold text-brand-muted uppercase">Inicio</p>
-                 <p className="text-[11px] font-black text-slate-800 dark:text-white">{new Date(currentSession?.startTime || '').toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}</p>
-               </div>
-               <div className="p-3 bg-white dark:bg-slate-900 rounded-lg border border-brand-blue/10 shadow-sm">
-                 <p className="text-[8px] font-bold text-brand-muted uppercase">Fondo</p>
-                 <p className="text-[11px] font-black text-slate-800 dark:text-white">${currentSession?.startBalance}</p>
-               </div>
-            </div>
-
-            <div className="p-4 bg-white dark:bg-slate-900 rounded-xl border-l-4 border-brand-blue shadow-sm">
-              <p className="text-[9px] font-bold text-brand-muted uppercase tracking-widest">Efectivo Teórico</p>
-              <p className="text-2xl font-black text-brand-blue">${expectedCash.toLocaleString()}</p>
+            <div className="p-4 bg-emerald-500/5 dark:bg-emerald-500/10 rounded-2xl border border-brand-emerald/10">
+              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Efectivo Teórico</p>
+              <p className="text-3xl font-black text-brand-emerald tracking-tighter">${expectedCash.toLocaleString()}</p>
             </div>
           </div>
 
           <button 
             onClick={() => setIsCloseModalOpen(true)} 
-            className="mt-6 w-full py-4 border-2 border-red-500/30 text-red-500 hover:bg-red-500 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95"
+            className="mt-6 w-full h-14 border-2 border-red-500/20 text-red-500 hover:bg-red-500 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-all active:scale-95 flex items-center justify-center gap-2"
           >
-            ARQUEO Y CIERRE DE TURNO
+            <ShieldCheck size={16} /> Finalizar Jornada
           </button>
         </div>
       </div>
 
-      {/* AUDITORÍA (THEMED BLUE) */}
-      <div className="card-premium overflow-hidden border-t-4 border-t-brand-blue shadow-sm bg-white dark:bg-slate-800">
-        <div className="p-4 border-b border-brand-border bg-slate-50 dark:bg-slate-900/40 flex items-center justify-between">
-          <h3 className="text-[10px] font-black uppercase tracking-widest flex items-center gap-2 text-slate-900 dark:text-white">
-            <History size={16} className="text-brand-blue" /> Auditoría de Cierres
-          </h3>
+      {/* SECCIÓN: SOPORTE TÉCNICO */}
+      <div className="card-premium p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="p-2 bg-indigo-500/10 rounded-xl">
+            <LifeBuoy size={18} className="text-indigo-500" />
+          </div>
+          <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-800 dark:text-white">Ayuda & Soporte</h3>
         </div>
-        <div className="overflow-x-auto no-scrollbar">
-          <table className="min-w-full divide-y divide-brand-border">
-            <thead className="bg-blue-50/50 dark:bg-blue-950/20">
-              <tr>
-                <th className="px-4 py-3 text-left text-[9px] font-black text-brand-blue uppercase tracking-widest">Fecha</th>
-                <th className="px-4 py-3 text-right text-[9px] font-black text-brand-blue uppercase tracking-widest">Teórico</th>
-                <th className="px-4 py-3 text-right text-[9px] font-black text-brand-blue uppercase tracking-widest">Físico</th>
-                <th className="px-4 py-3 text-right text-[9px] font-black text-brand-blue uppercase tracking-widest">Diff</th>
-                <th className="px-4 py-3 text-center text-[9px] font-black text-brand-blue uppercase tracking-widest">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-brand-border">
-              {closedSessions.map(session => {
-                const diff = (session.endBalanceReal || 0) - session.expectedBalance;
-                return (
-                  <tr key={session.id} className="hover:bg-blue-500/5 transition-colors">
-                    <td className="px-4 py-3 text-[10px] text-brand-muted font-medium">
-                      {new Date(session.endTime!).toLocaleDateString()}
-                    </td>
-                    <td className="px-4 py-3 text-right text-[10px] font-black text-slate-800 dark:text-white">
-                      ${session.expectedBalance}
-                    </td>
-                    <td className="px-4 py-3 text-right text-[10px] font-black text-slate-800 dark:text-white">
-                      ${session.endBalanceReal}
-                    </td>
-                    <td className={`px-4 py-3 text-right text-[10px] font-black ${diff < 0 ? 'text-red-500' : diff > 0 ? 'text-amber-500' : 'text-brand-blue'}`}>
-                      {diff > 0 ? '+' : ''}{diff.toFixed(0)}
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                       <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase ${Math.abs(diff) < 1 ? 'bg-brand-blue/10 text-brand-blue' : 'bg-red-500/10 text-red-500'}`}>
-                          {Math.abs(diff) < 1 ? 'OK' : 'FAIL'}
-                       </span>
-                    </td>
-                  </tr>
-                );
-              })}
-              {closedSessions.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="px-4 py-10 text-center opacity-30 text-[9px] font-bold uppercase tracking-widest text-slate-400 dark:text-white">Sin registros</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+
+        <button 
+          onClick={() => setIsSupportModalOpen(true)}
+          className="w-full h-16 px-6 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-100 dark:border-slate-800 flex items-center justify-between group hover:border-indigo-500/30 transition-all"
+        >
+          <div className="flex items-center gap-4">
+            <div className="p-2 bg-indigo-500 rounded-lg text-white shadow-lg shadow-indigo-500/20">
+              <LifeBuoy size={18} />
+            </div>
+            <div className="text-left">
+              <p className="text-xs font-black uppercase tracking-widest text-slate-800 dark:text-white">Contactar Soporte</p>
+              <p className="text-[10px] font-bold text-slate-400 uppercase mt-0.5">Asistencia técnica y reporte de errores</p>
+            </div>
+          </div>
+          <ChevronRight size={18} className="text-slate-300 group-hover:text-indigo-500 transition-colors" />
+        </button>
       </div>
 
-      <Modal isOpen={isCloseModalOpen} onClose={() => setIsCloseModalOpen(false)} title="CONTEO DE EFECTIVO">
+      {/* SECCIÓN: CUENTA & SEGURIDAD */}
+      <div className="card-premium p-6 bg-red-500/5 dark:bg-red-500/10 border border-red-500/10 dark:border-red-500/20 shadow-sm">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="p-2 bg-red-500/10 rounded-xl">
+            <LogOut size={18} className="text-red-500" />
+          </div>
+          <h3 className="text-xs font-black uppercase tracking-[0.2em] text-red-500">Sesión & Cuenta</h3>
+        </div>
+
+        <button 
+          onClick={logout}
+          className="w-full h-16 px-6 bg-white dark:bg-slate-900 rounded-2xl border border-red-500/20 flex items-center justify-center gap-3 text-red-500 hover:bg-red-500 hover:text-white transition-all group active:scale-95 shadow-lg shadow-red-500/5"
+        >
+          <LogOut size={20} className="group-hover:-translate-x-1 transition-transform" />
+          <span className="text-xs font-black uppercase tracking-[0.3em]">Cerrar Sesión Segura</span>
+        </button>
+        
+        <p className="mt-6 text-center text-[9px] font-black text-slate-400 uppercase tracking-[0.5em] opacity-50">
+          TEIKON CORE OS // {new Date().getFullYear()}
+        </p>
+      </div>
+
+      {/* MODALES */}
+      <SupportTicketModal isOpen={isSupportModalOpen} onClose={() => setIsSupportModalOpen(false)} />
+
+      <Modal isOpen={isCloseModalOpen} onClose={() => setIsCloseModalOpen(false)} title="CIERRE DE TERMINAL">
         <div className="space-y-6">
-          <div className="grid grid-cols-2 gap-3">
-            <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 text-center shadow-sm">
-              <p className="text-[9px] font-bold text-brand-muted uppercase">Esperado</p>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="p-4 bg-slate-50 dark:bg-slate-950 rounded-xl border border-slate-100 dark:border-slate-800 text-center">
+              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Esperado</p>
               <p className="text-xl font-black text-brand-blue">${expectedCash.toLocaleString()}</p>
             </div>
-            <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 text-center shadow-sm">
-              <p className="text-[9px] font-bold text-brand-muted uppercase">Contable</p>
+            <div className="p-4 bg-slate-50 dark:bg-slate-950 rounded-xl border border-slate-100 dark:border-slate-800 text-center">
+              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Fecha</p>
               <p className="text-[11px] font-black text-slate-800 dark:text-white uppercase">{new Date().toLocaleDateString()}</p>
             </div>
           </div>
 
           <div className="space-y-2">
-            <label className="block text-[10px] font-bold text-brand-muted uppercase tracking-widest">Físico Real</label>
+            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Efectivo Físico Real</label>
             <div className="relative">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xl font-black text-brand-muted">$</span>
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xl font-black text-slate-300">$</span>
               <input 
                 type="number" autoFocus 
-                className="w-full pl-10 pr-4 py-4 text-3xl font-black bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:border-brand-blue text-slate-900 dark:text-white transition-all shadow-inner"
+                className="w-full h-16 pl-10 pr-4 text-3xl font-black bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl outline-none focus:border-brand-blue text-slate-900 dark:text-white transition-all shadow-inner"
                 placeholder="0.00"
                 value={actualCash} 
                 onChange={e => setActualCash(e.target.value)}
@@ -186,14 +226,16 @@ const Settings: React.FC = () => {
             </div>
           </div>
 
-          <div className={`p-4 rounded-xl border-2 flex justify-between items-center ${difference < 0 ? 'bg-red-500/10 border-red-500/30 text-red-500' : 'bg-brand-blue/10 border-brand-blue/30 text-brand-blue'}`}>
-            <span className="text-[10px] font-black uppercase tracking-widest">{difference < 0 ? 'Faltante' : 'Sobrante'}</span>
+          <div className={`p-4 rounded-xl border-2 flex justify-between items-center transition-all ${
+            difference < 0 ? 'bg-red-500/5 border-red-500/20 text-red-500' : 'bg-emerald-500/5 border-emerald-500/20 text-emerald-500'
+          }`}>
+            <span className="text-[10px] font-black uppercase tracking-widest">{difference < 0 ? 'Faltante de Caja' : 'Sobrante / Balance'}</span>
             <span className="text-xl font-black">${Math.abs(difference).toFixed(2)}</span>
           </div>
 
-          <div className="flex gap-3 pt-2">
-            <button className="flex-1 px-6 py-4 text-[9px] font-black uppercase tracking-widest rounded-xl border-2 border-slate-200 dark:border-slate-800 text-slate-800 dark:text-white" onClick={() => setIsCloseModalOpen(false)}>Reanudar</button>
-            <button className="flex-1 px-6 py-4 bg-brand-blue text-white rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg shadow-brand-blue/20" onClick={handleConfirmClose}>Cerrar Turno</button>
+          <div className="flex gap-4 pt-4">
+            <button className="flex-1 h-12 text-[10px] font-black uppercase tracking-widest rounded-xl border-2 border-slate-200 dark:border-slate-800 text-slate-500" onClick={() => setIsCloseModalOpen(false)}>Cancelar</button>
+            <button className="flex-1 h-12 bg-red-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-red-600/20" onClick={handleConfirmClose}>Cerrar Turno</button>
           </div>
         </div>
       </Modal>

@@ -85,14 +85,6 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => 
             <LifeBuoy size={18} />
             <span className="text-[10px] font-black uppercase tracking-widest hidden md:inline">Soporte</span>
           </button>
-          <div className="h-4 w-px bg-brand-border mx-1"></div>
-          <button onClick={toggleTheme} className="p-2 text-brand-muted hover:text-brand-text transition-colors rounded-lg">
-            {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-          </button>
-          <div className="h-4 w-px bg-brand-border mx-1"></div>
-          <button onClick={logout} className="p-2 text-brand-muted hover:text-red-500 transition-colors rounded-lg">
-            <LogOut size={18} />
-          </button>
         </div>
       </header>
 
