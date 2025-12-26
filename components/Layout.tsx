@@ -45,7 +45,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => 
 
   return (
     <div className="min-h-screen bg-brand-bg text-brand-text flex flex-col transition-colors duration-500">
-      <header className="bg-brand-panel border-b border-brand-border sticky top-0 z-[60] px-4 md:px-6 h-16 flex items-center justify-between shadow-sm">
+      <header className="bg-brand-panel border-b border-brand-border sticky top-0 z-[60] px-4 md:px-6 h-16 flex items-center justify-between shadow-sm gap-4">
         <div className="flex items-center gap-3 shrink-0">
           <TeikonLogo size={32} />
           <div className="hidden lg:block">
@@ -53,7 +53,8 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => 
           </div>
         </div>
 
-        <nav className="flex items-center gap-2">
+        {/* Navegación Refactorizada: Scroll horizontal en móviles */}
+        <nav className="flex items-center gap-2 overflow-x-auto no-scrollbar whitespace-nowrap py-2">
           {navItems.map(item => {
             if (item.adminOnly && currentUser?.role !== 'admin') return null;
             const active = activeTab === item.id;
@@ -61,7 +62,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => 
               <button
                 key={item.id}
                 onClick={() => onTabChange(item.id)}
-                className={`flex items-center h-10 px-3 rounded-full font-bold transition-all duration-300 group ${
+                className={`flex items-center h-10 px-3 rounded-full font-bold transition-all duration-300 group shrink-0 ${
                   active 
                     ? `active-pill ${item.color} text-white shadow-lg` 
                     : 'text-brand-muted hover:bg-black/5 dark:hover:bg-white/5'
@@ -83,7 +84,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => 
             title="Soporte Técnico"
           >
             <LifeBuoy size={18} />
-            <span className="text-[10px] font-black uppercase tracking-widest hidden md:inline">Soporte</span>
+            <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Soporte</span>
           </button>
         </div>
       </header>

@@ -34,7 +34,7 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const [allProducts, setAllProducts] = useState<Product[]>(() => JSON.parse(localStorage.getItem('products') || '[]'));
   const [allSales, setAllSales] = useState<Sale[]>(() => JSON.parse(localStorage.getItem('sales') || '[]'));
   const [allSessions, setAllSessions] = useState<CashSession[]>(() => JSON.parse(localStorage.getItem('cash_sessions') || '[]'));
-  const [settings, setSettings] = useState<FinancialSettings>(() => JSON.parse(localStorage.getItem('settings') || '{"monthlyFixedCosts": 10000, "targetMargin": 0.3}'));
+  const [settings, setSettings] = useState<FinancialSettings>(() => JSON.parse(localStorage.getItem('settings') || '{"monthlyFixedCosts": 10000}'));
 
   const products = allProducts.filter(p => p.ownerId === currentUser?.id);
   const sales = allSales.filter(s => s.ownerId === currentUser?.id);
@@ -140,9 +140,8 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const getDashboardStats = (period: 'day' | 'month') => {
     const now = new Date();
     const todayStr = now.toISOString().split('T')[0];
-    const monthStr = now.toISOString().slice(0, 7); // YYYY-MM
+    const monthStr = now.toISOString().slice(0, 7);
 
-    // Filtrar ventas por estado ACTIVO y por el periodo solicitado
     const filteredSales = sales.filter(s => {
       if (s.status !== 'ACTIVE') return false;
       const saleDate = s.date.split('T')[0];
@@ -154,7 +153,6 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
     const totalRevenue = filteredSales.reduce((acc, s) => acc + s.total, 0);
     
-    // Cálculo de Costo de Mercancía Vendida (COGS)
     const totalCost = filteredSales.reduce((acc, s) => 
       acc + s.items.reduce((iAcc, item) => iAcc + (item.quantity * item.unitCost), 0)
     , 0);
@@ -163,7 +161,7 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       salesCount: filteredSales.length,
       totalRevenue,
       totalCost,
-      totalProfit: totalRevenue - totalCost, // Esto es Utilidad Bruta real
+      totalProfit: totalRevenue - totalCost,
       ticketAverage: filteredSales.length > 0 ? totalRevenue / filteredSales.length : 0
     };
   };

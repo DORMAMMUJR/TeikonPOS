@@ -62,5 +62,4 @@ export interface Sale {
 
 export interface FinancialSettings {
   monthlyFixedCosts: number;
-  targetMargin: number;
 }
