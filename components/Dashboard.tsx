@@ -1,16 +1,16 @@
 
 import React from 'react';
 import { useStore } from '../context/StoreContext';
-import { DollarSign, ShoppingBag, TrendingUp, AlertTriangle, Box, Target, ShieldAlert, CheckCircle2 } from 'lucide-react';
+import { DollarSign, ShoppingBag, TrendingUp, AlertTriangle, Box, Target, ShieldAlert, CheckCircle2, Briefcase } from 'lucide-react';
 
 const Dashboard: React.FC = () => {
-  const { getDashboardStats, products, settings } = useStore();
+  const { getDashboardStats, products, settings, calculateTotalInventoryValue } = useStore();
   
   const stats = getDashboardStats('day');
   const dailyFixedCost = (settings?.monthlyFixedCosts || 0) / 30;
   const dailyGrossProfit = stats?.totalProfit || 0;
   const netDailyProfit = dailyGrossProfit - dailyFixedCost;
-  const goalProgress = Math.min((dailyGrossProfit / (dailyFixedCost || 1)) * 100, 100);
+  const totalInventoryValue = calculateTotalInventoryValue();
   
   const isProfitable = netDailyProfit > 0;
   const isBreakeven = Math.abs(netDailyProfit) < 0.01; 
@@ -19,7 +19,7 @@ const Dashboard: React.FC = () => {
 
   const kpis = [
     { label: 'Facturación Hoy', val: `$${(stats?.totalRevenue || 0).toLocaleString()}`, icon: ShoppingBag, color: 'text-brand-emerald' },
-    { label: 'Valor del Ticket', val: `$${(stats?.ticketAverage || 0).toFixed(0)}`, icon: Box, color: 'text-brand-blue' },
+    { label: 'Capital Inventario', val: `$${totalInventoryValue.toLocaleString()}`, icon: Briefcase, color: 'text-orange-500' },
     { label: 'Órdenes Totales', val: stats?.salesCount || 0, icon: Target, color: 'text-brand-purple' },
     { label: 'Inversión Mercancía', val: `$${(stats?.totalCost || 0).toLocaleString()}`, icon: DollarSign, color: 'text-slate-400' },
   ];

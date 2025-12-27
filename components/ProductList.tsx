@@ -1,15 +1,19 @@
+
 import React, { useState } from 'react';
 import { useStore } from '../context/StoreContext';
 import { Product } from '../types';
 import Button from './Button';
 import Modal from './Modal';
-import { Edit, Plus, Search, Image as ImageIcon, Upload, TrendingUp, DollarSign } from 'lucide-react';
+import { Edit, Plus, Search, Image as ImageIcon, Upload, TrendingUp, DollarSign, PieChart } from 'lucide-react';
 
 const ProductList: React.FC = () => {
-  const { products, addProduct, updateProduct, currentUserRole } = useStore();
+  const { products, addProduct, updateProduct, currentUserRole, calculateTotalInventoryValue } = useStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Partial<Product>>({});
+
+  const totalInvestment = calculateTotalInventoryValue();
+  const totalUnits = products.reduce((acc, p) => acc + (p.stock || 0), 0);
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
@@ -90,6 +94,32 @@ const ProductList: React.FC = () => {
 
   return (
     <div className="space-y-4">
+      {/* RESUMEN FINANCIERO DE INVENTARIO */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="card-premium p-4 flex items-center justify-between bg-white dark:bg-slate-900 border-l-4 border-l-orange-500">
+           <div className="flex items-center gap-3">
+             <div className="p-2 bg-orange-100 dark:bg-orange-500/10 rounded-lg text-orange-600">
+               <DollarSign size={20} />
+             </div>
+             <div>
+               <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Valor de Inversión Total</p>
+               <p className="text-xl font-black text-slate-900 dark:text-white">${totalInvestment.toLocaleString()}</p>
+             </div>
+           </div>
+        </div>
+        <div className="card-premium p-4 flex items-center justify-between bg-white dark:bg-slate-900 border-l-4 border-l-brand-blue">
+           <div className="flex items-center gap-3">
+             <div className="p-2 bg-blue-100 dark:bg-blue-500/10 rounded-lg text-brand-blue">
+               <PieChart size={20} />
+             </div>
+             <div>
+               <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Stock Físico Total</p>
+               <p className="text-xl font-black text-slate-900 dark:text-white">{totalUnits.toLocaleString()} <span className="text-[10px] opacity-40">Unidades</span></p>
+             </div>
+           </div>
+        </div>
+      </div>
+
       <div className="flex flex-col md:flex-row justify-between items-stretch md:items-center gap-4 bg-orange-50 dark:bg-orange-900/10 p-4 rounded-xl border border-orange-100 dark:border-orange-900/30">
         <div className="relative w-full md:w-80">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-orange-500 h-4 w-4" />

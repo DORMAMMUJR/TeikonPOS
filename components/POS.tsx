@@ -140,12 +140,47 @@ const POS: React.FC = () => {
         
         <div className="flex-1 overflow-y-auto p-4 grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4 no-scrollbar">
           {filteredProducts.map(p => (
-            <div key={p.id} onClick={() => addToCart(p)} className={`p-3 bg-slate-50 dark:bg-slate-950/50 border-2 rounded-[1.5rem] cursor-pointer transition-all active:scale-95 ${lastAddedId === p.id ? 'border-brand-emerald' : 'border-transparent'}`}>
-              <div className="aspect-square bg-white dark:bg-slate-900 rounded-[1rem] mb-3 flex items-center justify-center overflow-hidden border border-slate-100 dark:border-slate-800">
-                {p.image ? <img src={p.image} className="h-full w-full object-cover" alt={p.name} /> : <ImageOff className="text-slate-200" size={32} />}
+            <div 
+              key={p.id} 
+              onClick={() => addToCart(p)} 
+              className={`group relative p-2.5 bg-white dark:bg-slate-800 border-2 rounded-2xl cursor-pointer transition-all duration-200 active:scale-[0.97] hover:shadow-lg ${
+                lastAddedId === p.id 
+                  ? 'border-brand-emerald ring-4 ring-brand-emerald/10' 
+                  : 'border-slate-100 dark:border-slate-700 hover:border-brand-emerald/40'
+              }`}
+            >
+              {/* Imagen Prominente */}
+              <div className="relative aspect-square w-full bg-slate-50 dark:bg-slate-900 rounded-xl mb-3 flex items-center justify-center overflow-hidden border border-slate-100 dark:border-slate-700">
+                {p.image ? (
+                  <img src={p.image} className="h-full w-full object-cover group-hover:scale-110 transition-transform duration-500" alt={p.name} />
+                ) : (
+                  <ImageOff className="text-slate-200 dark:text-slate-700" size={32} />
+                )}
+                
+                {/* Badge de Stock en Imagen */}
+                <div className={`absolute top-2 right-2 px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-tighter ${
+                  p.stock <= p.minStock 
+                    ? 'bg-red-500 text-white animate-pulse' 
+                    : 'bg-black/40 dark:bg-white/10 text-white backdrop-blur-sm'
+                }`}>
+                  {p.stock} DISP.
+                </div>
               </div>
-              <h4 className="text-xs font-black text-slate-800 dark:text-slate-100 line-clamp-2 min-h-[2rem] uppercase">{p.name}</h4>
-              <p className="text-lg font-black text-brand-emerald mt-2">${(p.salePrice || 0).toLocaleString()}</p>
+
+              {/* Información de Producto con Alto Contraste */}
+              <div className="px-1 space-y-1">
+                <h4 className="text-[11px] font-black text-slate-900 dark:text-white line-clamp-2 min-h-[2.2rem] leading-tight uppercase tracking-tight">
+                  {p.name}
+                </h4>
+                <div className="flex justify-between items-center pt-1">
+                  <p className="text-lg font-black text-brand-emerald tracking-tighter">
+                    ${(p.salePrice || 0).toLocaleString()}
+                  </p>
+                  <div className="p-1.5 bg-brand-emerald/10 text-brand-emerald rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Plus size={14} />
+                  </div>
+                </div>
+              </div>
             </div>
           ))}
         </div>

@@ -21,11 +21,11 @@ interface StoreContextType {
   cancelSale: (saleId: string) => void;
   updateSettings: (settings: FinancialSettings) => void;
   getDashboardStats: (period: 'day' | 'month') => any;
+  calculateTotalInventoryValue: () => number;
 }
 
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
 
-// Producto Semilla para Pruebas
 const SEED_PRODUCTS: Product[] = [
   {
     id: 'seed-papas-001',
@@ -34,12 +34,12 @@ const SEED_PRODUCTS: Product[] = [
     category: 'Snacks',
     costPrice: 15,
     salePrice: 22,
-    unitProfit: 7, // $22 - $15
+    unitProfit: 7,
     stock: 12,
     minStock: 3,
     taxRate: 0,
     isActive: true,
-    ownerId: 'usr-1' // Vinculado al admin por defecto
+    ownerId: 'usr-1'
   }
 ];
 
@@ -52,7 +52,7 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const [allProducts, setAllProducts] = useState<Product[]>(() => {
     const saved = localStorage.getItem('products');
     if (saved) return JSON.parse(saved);
-    return SEED_PRODUCTS; // Cargar semilla si no hay datos
+    return SEED_PRODUCTS;
   });
 
   const [allSales, setAllSales] = useState<Sale[]>(() => JSON.parse(localStorage.getItem('sales') || '[]'));
@@ -106,6 +106,14 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     } : s));
   };
 
+  const calculateTotalInventoryValue = () => {
+    return products.reduce((acc, product) => {
+      const cost = Number(product.costPrice) || 0;
+      const currentStock = Number(product.stock) || 0;
+      return acc + (cost * currentStock);
+    }, 0);
+  };
+
   const processSaleAndContributeToGoal = async (cartItems: CartItem[], paymentMethod: 'CASH' | 'CARD' | 'TRANSFER'): Promise<SaleResult> => {
     if (!currentUser || !currentSession) return { totalRevenueAdded: 0, totalProfitAdded: 0, success: false };
 
@@ -117,7 +125,6 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       let itemProfit = 0;
 
       if (!item.unitCost || item.unitCost <= 0) {
-        console.warn(`[TEIKON FINANCIAL] Missing Cost for item: ${item.name}. Assuming 100% margin.`);
         itemProfit = itemRevenue;
       } else {
         itemProfit = (item.sellingPrice - item.unitCost) * item.quantity;
@@ -251,7 +258,7 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   return (
     <StoreContext.Provider value={{
       products, sales, allSessions, settings, currentUser, currentUserRole: currentUser?.role, currentSession,
-      login, logout, openSession, closeSession, addProduct, updateProduct, processSaleAndContributeToGoal, cancelSale, updateSettings, getDashboardStats
+      login, logout, openSession, closeSession, addProduct, updateProduct, processSaleAndContributeToGoal, cancelSale, updateSettings, getDashboardStats, calculateTotalInventoryValue
     }}>
       {children}
     </StoreContext.Provider>
