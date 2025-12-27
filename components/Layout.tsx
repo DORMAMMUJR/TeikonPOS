@@ -12,8 +12,6 @@ import {
   LifeBuoy, 
   Menu,
   ChevronLeft,
-  ChevronRight,
-  TrendingUp,
   X
 } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
@@ -39,7 +37,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => 
   const stats = getDashboardStats('day');
   const dailyTarget = settings.monthlyFixedCosts / 30;
   const currentProfit = stats.totalProfit;
-  const progressPercent = Math.min(Math.max((currentProfit / dailyTarget) * 100, 0), 100);
+  const progressPercent = dailyTarget > 0 ? Math.min(Math.max((currentProfit / dailyTarget) * 100, 0), 100) : 0;
 
   const navItems = [
     { id: 'dashboard', label: 'Inicio', icon: LayoutDashboard, color: 'text-brand-purple' },
@@ -66,45 +64,46 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => 
   };
 
   return (
-    <div className="flex h-screen bg-brand-bg text-brand-text overflow-hidden transition-colors duration-500 flex-col md:flex-row">
+    <div className="flex h-[100dvh] bg-brand-bg text-brand-text overflow-hidden transition-colors duration-500 flex-col md:flex-row">
       
       {/* --- 1. BARRA SUPERIOR (Solo visible en Celular) --- */}
-      <div className="md:hidden bg-brand-panel border-b border-brand-border p-4 flex justify-between items-center shrink-0 z-50">
-        <div className="flex items-center gap-3">
-          <TeikonLogo size={32} />
-          <TeikonWordmark height={16} className="text-slate-900 dark:text-white" />
+      <div className="md:hidden bg-brand-panel border-b border-brand-border px-4 py-3 flex justify-between items-center shrink-0 z-[60] shadow-sm">
+        <div className="flex items-center gap-2">
+          <TeikonLogo size={28} />
+          <TeikonWordmark height={14} className="text-slate-900 dark:text-white" />
         </div>
         <button 
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          className="p-2 text-brand-text rounded-lg active:bg-slate-100 dark:active:bg-slate-800"
+          className="p-2 text-brand-text rounded-lg active:bg-slate-100 dark:active:bg-slate-800 focus:outline-none"
         >
           {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
         </button>
       </div>
 
-      {/* --- 2. SIDEBAR (Menú Desplegable en Móvil / Barra Lateral en PC) --- */}
+      {/* --- 2. SIDEBAR (Drawer Móvil / Sidebar Desktop) --- */}
       <aside 
         className={`
           flex flex-col bg-brand-panel border-r border-brand-border transition-all duration-300 z-[70] shrink-0
-          /* Lógica Móvil */
+          /* Móvil: Fixed Overlay */
           ${isMobileMenuOpen ? 'fixed inset-0 w-full' : 'hidden'}
-          /* Lógica Escritorio */
-          md:relative md:flex md:h-screen md:w-auto md:block
+          /* Desktop: Relative Flex */
+          md:relative md:flex md:h-full md:translate-x-0
           ${isCollapsed ? 'md:w-20' : 'md:w-64'}
         `}
       >
-        {/* Botón Cerrar (Solo Móvil) */}
-        <div className="md:hidden flex justify-end p-6 pb-2">
-           <button 
-             onClick={() => setIsMobileMenuOpen(false)}
-             className="p-3 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-500"
-           >
-             <X size={24} />
-           </button>
+        {/* Botón Cerrar (Solo Móvil - Header interno del drawer) */}
+        <div className="md:hidden flex justify-between items-center p-4 border-b border-brand-border">
+            <span className="text-xs font-black uppercase tracking-widest text-brand-muted">Menú Principal</span>
+            <button 
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="p-2 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-500"
+            >
+                <X size={20} />
+            </button>
         </div>
 
         {/* Header del Sidebar (Solo Desktop) */}
-        <div className="hidden md:flex h-20 items-center px-4 border-b border-brand-border shrink-0 overflow-hidden">
+        <div className="hidden md:flex h-20 items-center px-4 border-b border-brand-border shrink-0 overflow-hidden whitespace-nowrap">
           <div className={`flex items-center flex-1 transition-opacity duration-300 ${isCollapsed ? 'opacity-0 w-0' : 'opacity-100 w-auto'}`}>
             <TeikonLogo size={32} className="shrink-0" />
             <div className="ml-3">
@@ -122,13 +121,13 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => 
         {/* Navegación Principal */}
         <nav className="flex-1 overflow-y-auto no-scrollbar py-6 px-3 space-y-2">
           {navItems.map(item => {
-            if (item.adminOnly && currentUser?.role !== 'admin') return null;
+            if (item.adminOnly && currentUser?.role !== 'admin' && currentUser?.role !== 'superuser') return null;
             const active = activeTab === item.id;
             return (
               <button
                 key={item.id}
                 onClick={() => handleMobileNav(item.id)}
-                className={`flex items-center w-full rounded-2xl transition-all duration-150 ease-in-out group min-h-[50px] active:scale-[0.97] ${
+                className={`flex items-center w-full rounded-2xl transition-all duration-150 ease-in-out group min-h-[52px] active:scale-[0.97] ${
                   active 
                     ? 'bg-slate-900 dark:bg-white text-white dark:text-black shadow-lg shadow-black/10' 
                     : 'text-brand-muted hover:bg-black/5 dark:hover:bg-white/5'
@@ -139,7 +138,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => 
                 md:${isCollapsed ? 'justify-center px-0' : 'px-4 gap-4'}
                 `}
               >
-                <item.icon size={20} className={`shrink-0 ${active ? 'text-inherit' : item.color}`} />
+                <item.icon size={22} className={`shrink-0 ${active ? 'text-inherit' : item.color}`} />
                 
                 <span className={`text-xs font-black uppercase tracking-widest truncate 
                   /* Mobile: siempre visible */
@@ -150,10 +149,8 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => 
                   {item.label}
                 </span>
 
-                {active && (
-                  <div className={`ml-auto w-1.5 h-1.5 rounded-full bg-brand-emerald animate-pulse 
-                    block md:${isCollapsed ? 'hidden' : 'block'}
-                  `} />
+                {active && !isCollapsed && (
+                  <div className="ml-auto w-1.5 h-1.5 rounded-full bg-brand-emerald animate-pulse hidden md:block" />
                 )}
               </button>
             );
@@ -161,7 +158,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => 
         </nav>
 
         {/* Footer del Sidebar */}
-        <div className="p-3 border-t border-brand-border space-y-2 bg-black/5 dark:bg-white/5">
+        <div className="p-3 border-t border-brand-border space-y-2 bg-black/5 dark:bg-white/5 shrink-0">
           <button 
             onClick={() => { setIsSupportModalOpen(true); setIsMobileMenuOpen(false); }}
             className={`flex items-center w-full rounded-xl py-3 text-brand-muted hover:text-indigo-500 hover:bg-indigo-500/5 transition-all font-bold active:scale-95 px-4 gap-4 md:${isCollapsed ? 'justify-center px-0' : 'px-4 gap-4'}`}
@@ -189,27 +186,27 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => 
       </aside>
 
       {/* --- 3. ÁREA DE CONTENIDO PRINCIPAL --- */}
-      <div className="flex-1 flex flex-col overflow-hidden relative w-full">
+      <div className="flex-1 flex flex-col min-w-0 relative w-full h-full">
         
-        {/* Top Header Dinámico */}
-        <header className="h-20 bg-brand-panel border-b border-brand-border flex items-center justify-between px-6 md:px-8 shrink-0 shadow-sm z-50">
-          <div className="flex flex-col">
-            <h2 className="text-lg md:text-xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">
+        {/* Top Header Desktop (Info Bar) */}
+        <header className="h-16 md:h-20 bg-brand-panel border-b border-brand-border flex items-center justify-between px-4 md:px-8 shrink-0 z-40">
+          <div className="flex flex-col min-w-0">
+            <h2 className="text-base md:text-xl font-black text-slate-900 dark:text-white uppercase tracking-tighter truncate">
               {getPageTitle()}
             </h2>
             <div className="flex items-center gap-3 mt-0.5">
-              <span className="text-[8px] font-black text-brand-muted uppercase tracking-[0.2em]">
+              <span className="text-[8px] font-black text-brand-muted uppercase tracking-[0.2em] truncate">
                 {currentUser?.storeName || 'SISTEMA'}
               </span>
             </div>
           </div>
 
-          <div className="flex flex-col items-end gap-1.5 max-w-[200px] md:max-w-[300px] w-full hidden sm:flex">
+          <div className="flex flex-col items-end gap-1.5 max-w-[150px] md:max-w-[300px] w-full hidden sm:flex">
             <div className="flex justify-between w-full text-[8px] font-black uppercase tracking-widest text-brand-muted">
-              <span>Utilidad vs Meta</span>
+              <span>Meta Diaria</span>
               <span className="text-slate-900 dark:text-white">${currentProfit.toFixed(0)} / ${dailyTarget.toFixed(0)}</span>
             </div>
-            <div className="h-2.5 w-full bg-slate-100 dark:bg-slate-900 rounded-full relative overflow-hidden shadow-inner border border-black/5 dark:border-white/5">
+            <div className="h-2 w-full bg-slate-100 dark:bg-slate-900 rounded-full relative overflow-hidden shadow-inner border border-black/5 dark:border-white/5">
               <div 
                 className="h-full bg-brand-purple transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(139,92,246,0.4)]"
                 style={{ width: `${progressPercent}%` }}
@@ -218,13 +215,15 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => 
           </div>
         </header>
 
-        {/* Scrollable Content */}
-        <main className="flex-1 overflow-y-auto p-4 md:p-10 no-scrollbar space-y-6 md:space-y-10">
-          {children}
+        {/* Main Scrollable Area */}
+        <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-8 custom-scrollbar scroll-smooth">
+          <div className="max-w-7xl mx-auto space-y-6 md:space-y-10 min-h-full pb-20">
+            {children}
 
-          <footer className="pt-10 md:pt-20 pb-10 border-t border-brand-border text-[9px] font-black text-brand-muted uppercase tracking-[0.5em] text-center opacity-20">
-            TEIKON OS // CORE INTELLIGENCE v2.9.1
-          </footer>
+            <footer className="pt-8 pb-4 border-t border-brand-border text-[9px] font-black text-brand-muted uppercase tracking-[0.5em] text-center opacity-30 select-none">
+              TEIKON OS // CORE INTELLIGENCE v2.9.2
+            </footer>
+          </div>
         </main>
       </div>
 

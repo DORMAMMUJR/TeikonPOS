@@ -4,10 +4,10 @@ import { useStore } from '../context/StoreContext';
 import { Product } from '../types';
 import Button from './Button';
 import Modal from './Modal';
-import { Edit, Plus, Search, Image as ImageIcon, Upload, TrendingUp, DollarSign, PieChart } from 'lucide-react';
+import { Edit, Plus, Search, Image as ImageIcon, Upload, TrendingUp, DollarSign, PieChart, AlertTriangle } from 'lucide-react';
 
 const ProductList: React.FC = () => {
-  const { products, addProduct, updateProduct, currentUserRole, calculateTotalInventoryValue } = useStore();
+  const { products, addProduct, updateProduct, calculateTotalInventoryValue } = useStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Partial<Product>>({});
@@ -93,50 +93,99 @@ const ProductList: React.FC = () => {
     : 0;
 
   return (
-    <div className="space-y-4">
-      {/* RESUMEN FINANCIERO DE INVENTARIO */}
+    <div className="space-y-6">
+      {/* HEADER KPI SECTION */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="card-premium p-4 flex items-center justify-between bg-white dark:bg-slate-900 border-l-4 border-l-orange-500 animate-fade-in-up">
-           <div className="flex items-center gap-3">
-             <div className="p-2 bg-orange-100 dark:bg-orange-500/10 rounded-lg text-orange-600">
-               <DollarSign size={20} />
+        <div className="card-premium p-5 flex items-center justify-between bg-white dark:bg-slate-900 border-l-4 border-l-orange-500">
+           <div className="flex items-center gap-4">
+             <div className="p-3 bg-orange-100 dark:bg-orange-500/10 rounded-xl text-orange-600">
+               <DollarSign size={24} />
              </div>
              <div>
-               <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Valor de Inversión Total</p>
-               <p className="text-xl font-black text-slate-900 dark:text-white">${totalInvestment.toLocaleString()}</p>
+               <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Valor de Inversión</p>
+               <p className="text-2xl font-black text-slate-900 dark:text-white">${totalInvestment.toLocaleString()}</p>
              </div>
            </div>
         </div>
-        <div className="card-premium p-4 flex items-center justify-between bg-white dark:bg-slate-900 border-l-4 border-l-brand-blue animate-fade-in-up" style={{ animationDelay: '100ms' }}>
-           <div className="flex items-center gap-3">
-             <div className="p-2 bg-blue-100 dark:bg-blue-500/10 rounded-lg text-brand-blue">
-               <PieChart size={20} />
+        <div className="card-premium p-5 flex items-center justify-between bg-white dark:bg-slate-900 border-l-4 border-l-brand-blue">
+           <div className="flex items-center gap-4">
+             <div className="p-3 bg-blue-100 dark:bg-blue-500/10 rounded-xl text-brand-blue">
+               <PieChart size={24} />
              </div>
              <div>
-               <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Stock Físico Total</p>
-               <p className="text-xl font-black text-slate-900 dark:text-white">{totalUnits.toLocaleString()} <span className="text-[10px] opacity-40">Unidades</span></p>
+               <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Unidades Totales</p>
+               <p className="text-2xl font-black text-slate-900 dark:text-white">{totalUnits.toLocaleString()}</p>
              </div>
            </div>
         </div>
       </div>
 
-      <div className="flex flex-col md:flex-row justify-between items-stretch md:items-center gap-4 bg-orange-50 dark:bg-orange-900/10 p-4 rounded-xl border border-orange-100 dark:border-orange-900/30 animate-fade-in-up" style={{ animationDelay: '200ms' }}>
-        <div className="relative w-full md:w-80">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-orange-500 h-4 w-4" />
+      {/* SEARCH BAR & ACTIONS */}
+      <div className="flex flex-col md:flex-row justify-between items-stretch md:items-center gap-4 bg-orange-50 dark:bg-orange-950/20 p-4 rounded-2xl border border-orange-100 dark:border-orange-900/30">
+        <div className="relative w-full md:w-96">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-orange-500 h-5 w-5" />
           <input 
             type="text" 
-            placeholder="Buscar por SKU/Nombre..." 
-            className="w-full pl-10 pr-4 py-3 bg-white dark:bg-slate-900 border border-orange-200 dark:border-orange-800/40 rounded-lg text-sm font-bold text-slate-900 dark:text-white focus:outline-none focus:border-orange-500 shadow-sm"
+            placeholder="Buscar por SKU o Nombre..." 
+            className="w-full pl-12 pr-4 py-3.5 bg-white dark:bg-slate-900 border border-orange-200 dark:border-orange-800/40 rounded-xl text-sm font-bold text-slate-900 dark:text-white focus:outline-none focus:border-orange-500 shadow-sm transition-all"
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
           />
         </div>
-        <Button onClick={openNew} className="bg-orange-600 hover:bg-orange-500 text-white rounded-lg shadow-lg shadow-orange-600/20 active:scale-95 transition-all">
-          <Plus size={16} className="mr-2" /> AGREGAR ITEM
+        <Button onClick={openNew} className="bg-orange-600 hover:bg-orange-500 text-white rounded-xl shadow-lg shadow-orange-600/20 active:scale-95 transition-all py-3.5">
+          <Plus size={18} className="mr-2" /> AGREGAR ÍTEM
         </Button>
       </div>
 
-      <div className="card-premium overflow-hidden border-t-4 border-t-orange-500 animate-fade-in-up" style={{ animationDelay: '300ms' }}>
+      {/* MOBILE LIST VIEW (Cards) */}
+      <div className="block md:hidden space-y-4">
+        {filtered.map((p) => {
+           const margin = p.salePrice > 0 ? ((p.salePrice - p.costPrice) / p.salePrice) * 100 : 0;
+           return (
+             <div key={p.id} onClick={() => openEdit(p)} className="card-premium bg-white dark:bg-slate-900 p-4 active:scale-[0.98] transition-transform border border-slate-200 dark:border-slate-800">
+               <div className="flex gap-4">
+                  <div className="h-20 w-20 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-800 shrink-0 border border-slate-200 dark:border-slate-700">
+                    {p.image ? (
+                      <img src={p.image} className="h-full w-full object-cover" alt={p.name} />
+                    ) : (
+                      <div className="h-full w-full flex items-center justify-center text-slate-300">
+                         <ImageIcon size={24} />
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex justify-between items-start">
+                      <h4 className="font-black text-sm text-slate-900 dark:text-white uppercase truncate pr-2">{p.name}</h4>
+                      <span className="text-[10px] font-black text-brand-muted bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md">{p.sku}</span>
+                    </div>
+                    <div className="flex items-end justify-between mt-2">
+                       <div>
+                         <p className="text-[10px] text-slate-500 font-bold uppercase">Precio Venta</p>
+                         <p className="text-xl font-black text-orange-500">${p.salePrice.toLocaleString()}</p>
+                       </div>
+                       <div className="text-right">
+                         <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase border ${p.stock <= p.minStock ? 'bg-red-500 text-white border-red-600' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700'}`}>
+                           Stock: {p.stock}
+                         </span>
+                       </div>
+                    </div>
+                  </div>
+               </div>
+               <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center">
+                  <span className="text-[10px] font-bold text-emerald-500 flex items-center gap-1">
+                    <TrendingUp size={12} /> MG: {margin.toFixed(1)}%
+                  </span>
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1">
+                    <Edit size={12} /> Editar
+                  </span>
+               </div>
+             </div>
+           );
+        })}
+      </div>
+
+      {/* DESKTOP TABLE VIEW */}
+      <div className="hidden md:block card-premium overflow-hidden border-t-4 border-t-orange-500">
         <div className="overflow-x-auto no-scrollbar">
           <table className="min-w-full divide-y divide-brand-border">
             <thead className="bg-orange-50/50 dark:bg-orange-950/10">
@@ -149,23 +198,23 @@ const ProductList: React.FC = () => {
                 <th className="px-6 py-4 text-center text-[9px] font-black text-orange-600 dark:text-orange-400 uppercase tracking-widest">Acción</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-brand-border">
+            <tbody className="divide-y divide-brand-border bg-white dark:bg-slate-900">
               {filtered.map((p, idx) => {
                 const margin = p.salePrice > 0 ? ((p.salePrice - p.costPrice) / p.salePrice) * 100 : 0;
                 return (
-                  <tr key={p.id} style={{ animationDelay: `${400 + (idx * 30)}ms` }} className="hover:bg-orange-500/5 transition-colors group animate-fade-in-up">
+                  <tr key={p.id} className="hover:bg-orange-500/5 transition-colors group">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-lg overflow-hidden border border-orange-100 dark:border-orange-900/20 shadow-sm shrink-0">
+                        <div className="h-10 w-10 rounded-lg overflow-hidden border border-orange-100 dark:border-orange-900/20 shadow-sm shrink-0 bg-slate-50 dark:bg-slate-800">
                           {p.image ? (
-                            <img src={p.image} className="h-full w-full object-cover" />
+                            <img src={p.image} className="h-full w-full object-cover" alt="" />
                           ) : (
-                            <div className="h-full w-full bg-slate-50 dark:bg-slate-900 flex items-center justify-center text-slate-200">
+                            <div className="h-full w-full flex items-center justify-center text-slate-300">
                                <ImageIcon size={18} />
                             </div>
                           )}
                         </div>
-                        <span className="text-[11px] font-bold text-slate-800 dark:text-slate-200 truncate max-w-[120px]">{p.name}</span>
+                        <span className="text-[11px] font-bold text-slate-800 dark:text-slate-200 truncate max-w-[150px]">{p.name}</span>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-[10px] font-black text-brand-muted uppercase tracking-tighter">{p.sku}</td>
@@ -177,12 +226,12 @@ const ProductList: React.FC = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-center">
-                        <span className={`px-2 py-1 rounded text-[9px] font-black uppercase ${p.stock < 0 ? 'bg-red-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}>
+                        <span className={`px-2 py-1 rounded text-[9px] font-black uppercase border ${p.stock <= p.minStock ? 'bg-red-500/10 text-red-500 border-red-500/20' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-transparent'}`}>
                           {p.stock}
                         </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-center">
-                      <button onClick={() => openEdit(p)} className="p-3 text-orange-500 hover:bg-orange-500/10 rounded-xl transition-all active:scale-90 min-h-[44px] min-w-[44px]">
+                      <button onClick={() => openEdit(p)} className="p-2 text-orange-500 hover:bg-orange-500/10 rounded-lg transition-all active:scale-90">
                         <Edit size={18} />
                       </button>
                     </td>
@@ -199,7 +248,7 @@ const ProductList: React.FC = () => {
           <div className="flex flex-col sm:flex-row items-center gap-6 p-4 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-100 dark:border-slate-800">
             <div className="h-24 w-24 bg-white dark:bg-slate-900 border border-orange-100 dark:border-orange-800/40 rounded-2xl flex items-center justify-center overflow-hidden shadow-md shrink-0">
               {editingProduct.image ? (
-                <img src={editingProduct.image} className="h-full w-full object-cover" />
+                <img src={editingProduct.image} className="h-full w-full object-cover" alt="Preview" />
               ) : (
                 <ImageIcon className="text-orange-200 dark:text-orange-800" size={32} />
               )}
@@ -216,17 +265,17 @@ const ProductList: React.FC = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1">
               <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">SKU</label>
-              <input required className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-xs font-bold focus:border-orange-500 outline-none" value={editingProduct.sku || ''} onChange={e => setEditingProduct(prev => ({...prev, sku: e.target.value}))} />
+              <input required className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-xs font-bold focus:border-orange-500 outline-none uppercase" value={editingProduct.sku || ''} onChange={e => setEditingProduct(prev => ({...prev, sku: e.target.value}))} />
             </div>
             <div className="space-y-1">
               <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Categoría</label>
-              <input className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-xs font-bold focus:border-orange-500 outline-none" value={editingProduct.category || ''} onChange={e => setEditingProduct(prev => ({...prev, category: e.target.value}))} />
+              <input className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-xs font-bold focus:border-orange-500 outline-none uppercase" value={editingProduct.category || ''} onChange={e => setEditingProduct(prev => ({...prev, category: e.target.value}))} />
             </div>
           </div>
           
           <div className="space-y-1">
             <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Nombre</label>
-            <input required className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-xs font-bold focus:border-orange-500 outline-none" value={editingProduct.name || ''} onChange={e => setEditingProduct(prev => ({...prev, name: e.target.value}))} />
+            <input required className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-xs font-bold focus:border-orange-500 outline-none uppercase" value={editingProduct.name || ''} onChange={e => setEditingProduct(prev => ({...prev, name: e.target.value}))} />
           </div>
 
           <div className="grid grid-cols-2 gap-3 p-4 bg-emerald-500/5 dark:bg-emerald-500/10 rounded-2xl border border-emerald-500/10">
@@ -258,7 +307,7 @@ const ProductList: React.FC = () => {
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
               <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">
-                {editingProduct.id ? 'Ajuste de Stock' : 'Stock Inicial'}
+                {editingProduct.id ? 'Ajuste Stock' : 'Stock Inicial'}
               </label>
               <input 
                 type="number" 

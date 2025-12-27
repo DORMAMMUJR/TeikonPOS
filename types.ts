@@ -1,5 +1,5 @@
 
-export type Role = 'admin' | 'seller';
+export type Role = 'admin' | 'seller' | 'superuser';
 
 export interface User {
   id: string;
@@ -49,12 +49,19 @@ export interface SaleDetail {
   subtotal: number;
 }
 
+// Interfaz para procesar la venta (Backend logic)
 export interface CartItem {
   name: string;
   sellingPrice: number;
   unitCost: number;
   quantity: number;
   productId?: string;
+}
+
+// Interfaz extendida para el Estado del UI del POS
+export interface CartItemState extends CartItem {
+  productId: string; // Obligatorio en el UI
+  subtotal: number;
 }
 
 export interface SaleResult {
