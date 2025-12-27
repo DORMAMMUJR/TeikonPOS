@@ -1,16 +1,17 @@
+
 import React, { useState } from 'react';
 import { useStore } from '../context/StoreContext';
 import { Sale } from '../types';
-import Modal from './Modal';
+import Modal from './平衡Modal';
 import Button from './Button';
-import { Search, FileText, History as HistoryIcon, Printer, Share2, Check } from 'lucide-react';
-import TeikonWordmark from './TeikonWordmark';
+import PrintableTicket from './PrintableTicket';
+// Added X to the lucide-react import list to fix the compilation error on line 94
+import { Search, FileText, History as HistoryIcon, X } from 'lucide-react';
 
 const SalesHistory: React.FC = () => {
   const { sales, cancelSale, currentUserRole } = useStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
-  const [copied, setCopied] = useState(false);
 
   const filteredSales = sales
     .filter(s => s.id.toLowerCase().includes(searchTerm.toLowerCase()) || s.date.includes(searchTerm))
@@ -20,36 +21,6 @@ const SalesHistory: React.FC = () => {
     if (confirm('¿CONFIRMAR DEVOLUCIÓN? Los productos volverán al stock y el dinero saldrá de caja.')) {
       cancelSale(saleId);
       setSelectedSale(null);
-    }
-  };
-
-  const handlePrint = () => {
-    window.print();
-  };
-
-  const handleShare = async () => {
-    if (!selectedSale) return;
-    
-    const shareText = `Ticket TEIKON #${selectedSale.id.slice(0, 8).toUpperCase()} - Total: $${selectedSale.total.toFixed(2)}\nFecha: ${new Date(selectedSale.date).toLocaleString()}\nAtendido por: ${selectedSale.sellerId}`;
-
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: 'Recibo de Venta TEIKON',
-          text: shareText,
-          url: window.location.href,
-        });
-      } catch (err) {
-        console.error('Error al compartir:', err);
-      }
-    } else {
-      try {
-        await navigator.clipboard.writeText(shareText);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-      } catch (err) {
-        console.error('Error al copiar:', err);
-      }
     }
   };
 
@@ -115,9 +86,17 @@ const SalesHistory: React.FC = () => {
                     </span>
                   </td>
                   <td className="px-8 py-5 whitespace-nowrap text-center">
-                    <button onClick={() => setSelectedSale(sale)} className="p-2 text-brand-muted hover:text-brand-pink transition-colors">
-                      <FileText size={20} />
-                    </button>
+                    <div className="flex justify-center gap-2">
+                      <button onClick={() => setSelectedSale(sale)} className="p-3 text-brand-muted hover:text-brand-pink transition-colors">
+                        <FileText size={20} />
+                      </button>
+                      {currentUserRole === 'admin' && sale.status === 'ACTIVE' && (
+                        <button onClick={() => handleCancel(sale.id)} className="p-3 text-red-400 hover:text-red-600 transition-colors">
+                          {/* Fixed: X component is now correctly imported from lucide-react */}
+                          <X size={20} className="hidden" /> {/* Para accesibilidad, pero el botón de cancelar está en el flujo de ver ticket usualmente, aquí lo dejamos simple */}
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -126,86 +105,19 @@ const SalesHistory: React.FC = () => {
         </div>
       </div>
 
-      {/* TICKET PARA IMPRESIÓN (MÉTODO NUCLEAR) */}
+      {/* COMPONENTE DE TICKET UNIFICADO */}
       {selectedSale && (
-        <div id="printable-ticket" className="hidden print:block font-mono text-xs text-black bg-white">
-          <div className="text-center border-b border-black border-dashed pb-4 mb-4">
-            <h1 className="text-lg font-black uppercase">TEIKON OS</h1>
-            <p className="text-[10px] uppercase">Comprobante de Venta</p>
-            <p className="text-[9px] mt-1">FOLIO: {selectedSale.id.slice(0,13).toUpperCase()}</p>
-            <p className="text-[9px]">{new Date(selectedSale.date).toLocaleString()}</p>
-          </div>
-          
-          <div className="space-y-1 mb-4">
-            {selectedSale.items.map((item, idx) => (
-              <div key={idx} className="flex justify-between gap-2">
-                <span className="flex-1">{item.quantity}x {item.productName.toUpperCase()}</span>
-                <span>${item.subtotal.toFixed(2)}</span>
-              </div>
-            ))}
-          </div>
-
-          <div className="border-t border-black border-dashed pt-2 flex justify-between font-black text-sm">
-            <span>TOTAL</span>
-            <span>${selectedSale.total.toFixed(2)}</span>
-          </div>
-
-          <div className="text-center text-[8px] mt-6 pt-4 border-t border-black border-dotted">
-            <p>MÉTODO: {selectedSale.paymentMethod}</p>
-            <p>ATENDIDO POR: {selectedSale.sellerId.toUpperCase()}</p>
-            <p className="mt-4 font-bold">¡GRACIAS POR SU PREFERENCIA!</p>
-          </div>
-        </div>
+        <PrintableTicket 
+          items={selectedSale.items}
+          total={selectedSale.total}
+          paymentMethod={selectedSale.paymentMethod}
+          sellerId={selectedSale.sellerId}
+          folio={selectedSale.id.slice(0, 8)}
+          date={new Date(selectedSale.date).toLocaleString()}
+          autoPrint={false} // En el historial no se imprime automáticamente
+          onClose={() => setSelectedSale(null)}
+        />
       )}
-
-      <Modal isOpen={!!selectedSale} onClose={() => setSelectedSale(null)} title="RECIBO DE TRANSACCIÓN">
-        {selectedSale && (
-          <div className="space-y-8 p-2">
-            <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-200 dark:border-brand-border font-mono text-sm space-y-6 shadow-inner">
-              <div className="text-center border-b border-brand-border border-dashed pb-6">
-                <TeikonWordmark height={20} className="mx-auto mb-4 text-slate-900 dark:text-white" />
-                <p className="text-xs opacity-50 uppercase tracking-widest text-slate-800 dark:text-white">ID: {selectedSale.id.toUpperCase()}</p>
-                <p className="text-xs opacity-50 text-slate-800 dark:text-white">{new Date(selectedSale.date).toLocaleString()}</p>
-              </div>
-              
-              <div className="space-y-3 text-slate-800 dark:text-slate-200">
-                {selectedSale.items.map((item, idx) => (
-                  <div key={idx} className="flex justify-between items-start">
-                    <span className="flex-1 mr-4">{item.quantity}x {item.productName.toUpperCase()}</span>
-                    <span className="font-bold">${item.subtotal.toFixed(2)}</span>
-                  </div>
-                ))}
-              </div>
-
-              <div className="border-t border-brand-border border-dashed pt-6 flex justify-between font-black text-xl">
-                <span className="text-slate-900 dark:text-white">TOTAL</span>
-                <span className={selectedSale.status === 'CANCELLED' ? 'line-through text-red-500' : 'text-brand-pink'}>
-                  ${selectedSale.total.toFixed(2)}
-                </span>
-              </div>
-
-              <div className="no-print grid grid-cols-2 gap-4 pt-4 border-t border-brand-border border-dashed">
-                <Button variant="secondary" fullWidth className="py-3 text-[10px] flex items-center gap-2" onClick={handlePrint}>
-                  <Printer size={16} /> Imprimir
-                </Button>
-                <Button variant="sales" fullWidth className="py-3 text-[10px] flex items-center gap-2" onClick={handleShare}>
-                  {copied ? <Check size={16} /> : <Share2 size={16} />}
-                  {copied ? 'Copiado' : 'Compartir'}
-                </Button>
-              </div>
-            </div>
-
-            <div className="flex gap-4 no-print">
-                {currentUserRole === 'admin' && selectedSale.status === 'ACTIVE' && (
-                  <button onClick={() => handleCancel(selectedSale.id)} className="flex-1 px-6 py-4 text-[11px] font-black uppercase tracking-[0.2em] transition-all duration-300 rounded-xl border-2 border-red-500/20 text-red-500 hover:bg-red-500 hover:text-white">
-                    Anular Transacción
-                  </button>
-                )}
-                <Button fullWidth className="rounded-2xl bg-brand-pink text-white border-none py-4" onClick={() => setSelectedSale(null)}>Cerrar</Button>
-            </div>
-          </div>
-        )}
-      </Modal>
     </div>
   );
 };

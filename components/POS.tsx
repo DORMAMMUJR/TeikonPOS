@@ -4,6 +4,7 @@ import { useStore } from '../context/StoreContext';
 import { Product, CartItem } from '../types';
 import Button from './Button';
 import Modal from './Modal';
+import PrintableTicket from './PrintableTicket';
 import { 
   Search, 
   Trash2, 
@@ -21,19 +22,20 @@ import {
 const POS: React.FC = () => {
   const { products, processSaleAndContributeToGoal, currentUser } = useStore();
   const [searchTerm, setSearchTerm] = useState('');
-  const [cart, setCart] = useState<any[]>([]); // Se mantiene any[] para flexibilidad pero con nombres consistentes
+  const [cart, setCart] = useState<any[]>([]); 
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [amountReceived, setAmountReceived] = useState('');
   const [lastAddedId, setLastAddedId] = useState<string | null>(null);
-  const [saleSummary, setSaleSummary] = useState<{revenue: number, profit: number} | null>(null);
+  const [saleSummary, setSaleSummary] = useState<{revenue: number, profit: number, items: any[], folio: string} | null>(null);
+  const [showTicket, setShowTicket] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const focusSearch = () => { if (!isCheckoutOpen) searchInputRef.current?.focus(); };
+    const focusSearch = () => { if (!isCheckoutOpen && !showTicket) searchInputRef.current?.focus(); };
     focusSearch();
     window.addEventListener('focus', focusSearch);
     return () => window.removeEventListener('focus', focusSearch);
-  }, [isCheckoutOpen]);
+  }, [isCheckoutOpen, showTicket]);
 
   const filteredProducts = products.filter(p => 
     p.isActive && (p.name.toLowerCase().includes(searchTerm.toLowerCase()) || p.sku.toUpperCase().includes(searchTerm.toUpperCase().trim()))
@@ -87,21 +89,29 @@ const POS: React.FC = () => {
       quantity: i.quantity
     }));
 
+    const cartSnapshot = [...cart]; // Guardar copia para el ticket
     const result = await processSaleAndContributeToGoal(itemsToProcess, 'CASH');
     
     if (result.success) {
-      setSaleSummary({ revenue: result.totalRevenueAdded, profit: result.totalProfitAdded });
+      const folioId = crypto.randomUUID().slice(0, 8);
+      setSaleSummary({ 
+        revenue: result.totalRevenueAdded, 
+        profit: result.totalProfitAdded,
+        items: cartSnapshot,
+        folio: folioId
+      });
       setCart([]);
       setIsCheckoutOpen(false);
       setAmountReceived('');
-      setTimeout(() => setSaleSummary(null), 5000);
+      setShowTicket(true);
+      setTimeout(() => setSaleSummary(null), 10000);
     }
   };
 
   return (
     <div className="flex flex-col lg:flex-row gap-6 h-auto lg:h-[calc(100vh-280px)]">
       {/* Feedback de Meta Añadida */}
-      {saleSummary && (
+      {saleSummary && !showTicket && (
         <div className="fixed top-20 right-8 z-[100] animate-bounce">
           <div className="bg-brand-emerald text-white px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 border-2 border-white/20">
             <TrendingUp size={20} />
@@ -204,6 +214,7 @@ const POS: React.FC = () => {
               value={amountReceived} 
               onChange={e => setAmountReceived(e.target.value)}
               placeholder="0"
+              autoFocus
             />
           </div>
 
@@ -218,6 +229,18 @@ const POS: React.FC = () => {
           </div>
         </div>
       </Modal>
+
+      {/* TICKET IMPRIMIBLE */}
+      {showTicket && saleSummary && (
+        <PrintableTicket 
+          items={saleSummary.items}
+          total={saleSummary.revenue}
+          paymentMethod="CASH"
+          sellerId={currentUser?.username || "SISTEMA"}
+          folio={saleSummary.folio}
+          onClose={() => setShowTicket(false)}
+        />
+      )}
     </div>
   );
 };
