@@ -75,7 +75,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => 
           </div>
           <button 
             onClick={() => setIsCollapsed(!isCollapsed)}
-            className={`p-2 rounded-xl text-brand-muted hover:bg-black/5 dark:hover:bg-white/5 transition-all ${isCollapsed ? 'mx-auto' : 'ml-auto'}`}
+            className={`p-2 rounded-xl text-brand-muted hover:bg-black/5 dark:hover:bg-white/5 transition-all active:scale-90 ${isCollapsed ? 'mx-auto' : 'ml-auto'}`}
           >
             {isCollapsed ? <Menu size={20} /> : <ChevronLeft size={20} />}
           </button>
@@ -90,7 +90,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => 
               <button
                 key={item.id}
                 onClick={() => onTabChange(item.id)}
-                className={`flex items-center w-full rounded-2xl transition-all duration-300 group min-h-[50px] ${
+                className={`flex items-center w-full rounded-2xl transition-all duration-150 ease-in-out group min-h-[50px] active:scale-[0.97] ${
                   active 
                     ? 'bg-slate-900 dark:bg-white text-white dark:text-black shadow-lg shadow-black/10' 
                     : 'text-brand-muted hover:bg-black/5 dark:hover:bg-white/5'
@@ -114,7 +114,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => 
         <div className="p-3 border-t border-brand-border space-y-2 bg-black/5 dark:bg-white/5">
           <button 
             onClick={() => setIsSupportModalOpen(true)}
-            className={`flex items-center w-full rounded-xl py-3 text-brand-muted hover:text-indigo-500 hover:bg-indigo-500/5 transition-all font-bold ${isCollapsed ? 'justify-center' : 'px-4 gap-4'}`}
+            className={`flex items-center w-full rounded-xl py-3 text-brand-muted hover:text-indigo-500 hover:bg-indigo-500/5 transition-all font-bold active:scale-95 ${isCollapsed ? 'justify-center' : 'px-4 gap-4'}`}
           >
             <LifeBuoy size={20} />
             {!isCollapsed && <span className="text-[10px] font-black uppercase tracking-widest">Soporte</span>}
@@ -122,7 +122,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => 
 
           <button 
             onClick={toggleTheme}
-            className={`flex items-center w-full rounded-xl py-3 text-brand-muted hover:text-amber-500 hover:bg-amber-500/5 transition-all font-bold ${isCollapsed ? 'justify-center' : 'px-4 gap-4'}`}
+            className={`flex items-center w-full rounded-xl py-3 text-brand-muted hover:text-amber-500 hover:bg-amber-500/5 transition-all font-bold active:scale-95 ${isCollapsed ? 'justify-center' : 'px-4 gap-4'}`}
           >
             {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
             {!isCollapsed && <span className="text-[10px] font-black uppercase tracking-widest">{theme === 'dark' ? 'Modo Luz' : 'Modo Oscuro'}</span>}
@@ -130,7 +130,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => 
 
           <button 
             onClick={logout}
-            className={`flex items-center w-full rounded-xl py-3 text-red-500/60 hover:text-red-500 hover:bg-red-500/5 transition-all font-bold ${isCollapsed ? 'justify-center' : 'px-4 gap-4'}`}
+            className={`flex items-center w-full rounded-xl py-3 text-red-500/60 hover:text-red-500 hover:bg-red-500/5 transition-all font-bold active:scale-95 ${isCollapsed ? 'justify-center' : 'px-4 gap-4'}`}
           >
             <LogOut size={20} />
             {!isCollapsed && <span className="text-[10px] font-black uppercase tracking-widest">Salir</span>}

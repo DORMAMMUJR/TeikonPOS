@@ -13,8 +13,8 @@ const Button: React.FC<ButtonProps> = ({
   className = '', 
   ...props 
 }) => {
-  // Se agrega min-h-[44px] para accesibilidad táctil y px-4 mínimo
-  const baseStyles = "inline-flex items-center justify-center min-h-[44px] px-5 py-3 text-[11px] font-black uppercase tracking-[0.2em] transition-all duration-300 disabled:opacity-40 rounded-xl active:scale-95 border-2 shadow-sm whitespace-nowrap overflow-hidden";
+  // Se integra transition-transform active:scale-95 duration-150 ease-in-out para respuesta táctil superior
+  const baseStyles = "inline-flex items-center justify-center min-h-[44px] px-5 py-3 text-[11px] font-black uppercase tracking-[0.2em] transition-all duration-150 ease-in-out active:scale-95 disabled:opacity-40 rounded-xl border-2 shadow-sm whitespace-nowrap overflow-hidden select-none";
   
   const variants = {
     primary: "bg-brand-text text-brand-bg border-brand-text hover:bg-brand-text/90 shadow-brand-text/10",

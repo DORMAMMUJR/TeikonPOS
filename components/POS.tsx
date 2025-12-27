@@ -4,7 +4,7 @@ import { useStore } from '../context/StoreContext';
 import { Product, CartItem } from '../types';
 import Button from './Button';
 import Modal from './Modal';
-import PrintableTicket from './PrintableTicket';
+import SaleTicket from './SaleTicket';
 import { 
   Search, 
   Trash2, 
@@ -16,7 +16,8 @@ import {
   PackageSearch,
   Scan,
   CheckCircle2,
-  TrendingUp
+  TrendingUp,
+  Check
 } from 'lucide-react';
 
 const POS: React.FC = () => {
@@ -28,14 +29,24 @@ const POS: React.FC = () => {
   const [lastAddedId, setLastAddedId] = useState<string | null>(null);
   const [saleSummary, setSaleSummary] = useState<{revenue: number, profit: number, items: any[], folio: string} | null>(null);
   const [showTicket, setShowTicket] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [animateCart, setAnimateCart] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const focusSearch = () => { if (!isCheckoutOpen && !showTicket) searchInputRef.current?.focus(); };
+    const focusSearch = () => { if (!isCheckoutOpen && !showTicket && !showSuccessModal) searchInputRef.current?.focus(); };
     focusSearch();
     window.addEventListener('focus', focusSearch);
     return () => window.removeEventListener('focus', focusSearch);
-  }, [isCheckoutOpen, showTicket]);
+  }, [isCheckoutOpen, showTicket, showSuccessModal]);
+
+  useEffect(() => {
+    if (cart.length > 0) {
+      setAnimateCart(true);
+      const timer = setTimeout(() => setAnimateCart(false), 300);
+      return () => clearTimeout(timer);
+    }
+  }, [cart.length]);
 
   const filteredProducts = products.filter(p => 
     p.isActive && (p.name.toLowerCase().includes(searchTerm.toLowerCase()) || p.sku.toUpperCase().includes(searchTerm.toUpperCase().trim()))
@@ -89,7 +100,7 @@ const POS: React.FC = () => {
       quantity: i.quantity
     }));
 
-    const cartSnapshot = [...cart]; // Guardar copia para el ticket
+    const cartSnapshot = [...cart];
     const result = await processSaleAndContributeToGoal(itemsToProcess, 'CASH');
     
     if (result.success) {
@@ -103,27 +114,30 @@ const POS: React.FC = () => {
       setCart([]);
       setIsCheckoutOpen(false);
       setAmountReceived('');
-      setShowTicket(true);
+      
+      setShowSuccessModal(true);
+      setTimeout(() => {
+        setShowSuccessModal(false);
+        setShowTicket(true);
+      }, 1500);
+      
       setTimeout(() => setSaleSummary(null), 10000);
     }
   };
 
   return (
     <div className="flex flex-col lg:flex-row gap-6 h-auto lg:h-[calc(100vh-280px)]">
-      {/* Feedback de Meta Añadida */}
-      {saleSummary && !showTicket && (
-        <div className="fixed top-20 right-8 z-[100] animate-bounce">
-          <div className="bg-brand-emerald text-white px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 border-2 border-white/20">
-            <TrendingUp size={20} />
-            <div className="flex flex-col">
-              <span className="text-[10px] font-black uppercase tracking-widest opacity-80">Meta Progreso</span>
-              <span className="text-lg font-black">+${(saleSummary.profit || 0).toLocaleString()}</span>
-            </div>
-          </div>
+      {showSuccessModal && (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300">
+           <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] p-12 flex flex-col items-center justify-center shadow-2xl animate-in zoom-in-95 duration-300">
+              <div className="w-24 h-24 bg-brand-emerald/10 rounded-full flex items-center justify-center text-brand-emerald mb-6 animate-bounce">
+                <Check size={48} strokeWidth={4} />
+              </div>
+              <h3 className="text-xl font-black uppercase tracking-widest text-brand-emerald">Venta Exitosa</h3>
+           </div>
         </div>
       )}
 
-      {/* PANEL DE SELECCIÓN DE PRODUCTOS */}
       <div className="lg:w-2/3 flex flex-col card-premium overflow-hidden border-t-4 border-t-brand-emerald bg-white dark:bg-slate-900 shadow-xl min-h-[400px] lg:min-h-[500px]">
         <div className="p-4 border-b border-brand-border bg-slate-50 dark:bg-emerald-950/20">
           <div className="relative group">
@@ -139,17 +153,17 @@ const POS: React.FC = () => {
         </div>
         
         <div className="flex-1 overflow-y-auto p-4 grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4 no-scrollbar">
-          {filteredProducts.map(p => (
+          {filteredProducts.map((p, idx) => (
             <div 
               key={p.id} 
               onClick={() => addToCart(p)} 
-              className={`group relative p-2.5 bg-white dark:bg-slate-800 border-2 rounded-2xl cursor-pointer transition-all duration-200 active:scale-[0.97] hover:shadow-lg ${
+              style={{ animationDelay: `${idx * 40}ms` }}
+              className={`group relative p-2.5 bg-white dark:bg-slate-800 border-2 rounded-2xl cursor-pointer transition-all duration-150 ease-in-out active:scale-95 hover:shadow-lg animate-fade-in-up ${
                 lastAddedId === p.id 
                   ? 'border-brand-emerald ring-4 ring-brand-emerald/10' 
                   : 'border-slate-100 dark:border-slate-700 hover:border-brand-emerald/40'
               }`}
             >
-              {/* Imagen Prominente */}
               <div className="relative aspect-square w-full bg-slate-50 dark:bg-slate-900 rounded-xl mb-3 flex items-center justify-center overflow-hidden border border-slate-100 dark:border-slate-700">
                 {p.image ? (
                   <img src={p.image} className="h-full w-full object-cover group-hover:scale-110 transition-transform duration-500" alt={p.name} />
@@ -157,7 +171,6 @@ const POS: React.FC = () => {
                   <ImageOff className="text-slate-200 dark:text-slate-700" size={32} />
                 )}
                 
-                {/* Badge de Stock en Imagen */}
                 <div className={`absolute top-2 right-2 px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-tighter ${
                   p.stock <= p.minStock 
                     ? 'bg-red-500 text-white animate-pulse' 
@@ -167,7 +180,6 @@ const POS: React.FC = () => {
                 </div>
               </div>
 
-              {/* Información de Producto con Alto Contraste */}
               <div className="px-1 space-y-1">
                 <h4 className="text-[11px] font-black text-slate-900 dark:text-white line-clamp-2 min-h-[2.2rem] leading-tight uppercase tracking-tight">
                   {p.name}
@@ -186,29 +198,30 @@ const POS: React.FC = () => {
         </div>
       </div>
 
-      {/* PANEL DEL CARRITO COMPACTO */}
       <div className="lg:w-1/3 flex flex-col card-premium overflow-hidden border-t-4 border-t-brand-emerald shadow-2xl bg-white dark:bg-slate-900 min-h-[300px]">
         <div className="px-4 py-3 border-b border-brand-border flex justify-between items-center bg-slate-50 dark:bg-slate-950">
-          <div className="flex items-center gap-2">
-            <ShoppingCart size={16} className="text-brand-emerald" />
+          <div className={`flex items-center gap-2 transition-transform duration-300 ${animateCart ? 'scale-125 text-brand-emerald' : 'scale-100'}`}>
+            <ShoppingCart size={16} className={animateCart ? 'animate-bounce' : 'text-brand-emerald'} />
             <h3 className="text-[10px] font-black uppercase tracking-widest">Detalle</h3>
           </div>
-          <span className="bg-brand-emerald/10 text-brand-emerald px-3 py-1 rounded-full text-[9px] font-black">{cart.length} ÍTEMS</span>
+          <span className={`bg-brand-emerald/10 text-brand-emerald px-3 py-1 rounded-full text-[9px] font-black transition-all ${animateCart ? 'scale-110 rotate-3' : 'scale-100'}`}>
+            {cart.length} ÍTEMS
+          </span>
         </div>
 
         <div className="flex-1 overflow-y-auto p-3 space-y-2 no-scrollbar">
           {cart.map(item => (
-            <div key={item.productId} className="p-3 rounded-[1.2rem] border-2 border-slate-50 dark:border-slate-800 bg-white dark:bg-black/20">
+            <div key={item.productId} className="p-3 rounded-[1.2rem] border-2 border-slate-50 dark:border-slate-800 bg-white dark:bg-black/20 animate-fade-in-up">
               <div className="flex justify-between items-start mb-2">
                 <p className="text-[10px] font-black uppercase truncate">{item.name}</p>
-                <button onClick={() => setCart(c => c.filter(i => i.productId !== item.productId))} className="text-slate-300 hover:text-red-500"><Trash2 size={16}/></button>
+                <button onClick={() => setCart(c => c.filter(i => i.productId !== item.productId))} className="text-slate-300 hover:text-red-500 active:scale-90 transition-transform"><Trash2 size={16}/></button>
               </div>
               <div className="flex justify-between items-center">
                 <div className="flex flex-col">
                   <div className="flex items-center gap-2">
-                    <button onClick={() => updateQuantity(item.productId, -1)} className="p-1 bg-slate-100 dark:bg-slate-800 rounded-lg"><Minus size={12}/></button>
+                    <button onClick={() => updateQuantity(item.productId, -1)} className="p-1 bg-slate-100 dark:bg-slate-800 rounded-lg active:scale-90 transition-transform"><Minus size={12}/></button>
                     <span className="text-sm font-black w-6 text-center">{item.quantity}</span>
-                    <button onClick={() => updateQuantity(item.productId, 1)} className="p-1 bg-slate-100 dark:bg-slate-800 rounded-lg"><Plus size={12}/></button>
+                    <button onClick={() => updateQuantity(item.productId, 1)} className="p-1 bg-slate-100 dark:bg-slate-800 rounded-lg active:scale-90 transition-transform"><Plus size={12}/></button>
                   </div>
                   <span className="text-[8px] font-bold text-slate-400 uppercase mt-1">u. ${(item.sellingPrice || 0).toLocaleString()}</span>
                 </div>
@@ -225,15 +238,14 @@ const POS: React.FC = () => {
         </div>
 
         <div className="p-4 border-t border-brand-border bg-slate-50 dark:bg-slate-950 mt-auto">
-          <div className="flex justify-between items-center mb-3">
+          <div className={`flex justify-between items-center mb-3 transition-all duration-300 ${animateCart ? 'animate-pop' : ''}`}>
             <span className="text-[9px] font-black uppercase tracking-widest">Total Final</span>
-            <p className="text-3xl font-black text-brand-emerald">${(total || 0).toLocaleString()}</p>
+            <p className="text-3xl font-black text-brand-emerald tracking-tighter">${(total || 0).toLocaleString()}</p>
           </div>
           <Button fullWidth variant="sales" disabled={cart.length === 0} onClick={() => setIsCheckoutOpen(true)}>CONFIRMAR VENTA</Button>
         </div>
       </div>
 
-      {/* MODAL DE LIQUIDACIÓN */}
       <Modal isOpen={isCheckoutOpen} onClose={() => setIsCheckoutOpen(false)} title="FINALIZAR OPERACIÓN">
         <div className="space-y-6 p-1">
           <div className="text-center p-6 bg-emerald-500/5 rounded-[2rem] border-2 border-brand-emerald/10">
@@ -265,9 +277,8 @@ const POS: React.FC = () => {
         </div>
       </Modal>
 
-      {/* TICKET IMPRIMIBLE */}
       {showTicket && saleSummary && (
-        <PrintableTicket 
+        <SaleTicket 
           items={saleSummary.items}
           total={saleSummary.revenue}
           paymentMethod="CASH"

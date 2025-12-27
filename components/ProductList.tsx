@@ -96,7 +96,7 @@ const ProductList: React.FC = () => {
     <div className="space-y-4">
       {/* RESUMEN FINANCIERO DE INVENTARIO */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="card-premium p-4 flex items-center justify-between bg-white dark:bg-slate-900 border-l-4 border-l-orange-500">
+        <div className="card-premium p-4 flex items-center justify-between bg-white dark:bg-slate-900 border-l-4 border-l-orange-500 animate-fade-in-up">
            <div className="flex items-center gap-3">
              <div className="p-2 bg-orange-100 dark:bg-orange-500/10 rounded-lg text-orange-600">
                <DollarSign size={20} />
@@ -107,7 +107,7 @@ const ProductList: React.FC = () => {
              </div>
            </div>
         </div>
-        <div className="card-premium p-4 flex items-center justify-between bg-white dark:bg-slate-900 border-l-4 border-l-brand-blue">
+        <div className="card-premium p-4 flex items-center justify-between bg-white dark:bg-slate-900 border-l-4 border-l-brand-blue animate-fade-in-up" style={{ animationDelay: '100ms' }}>
            <div className="flex items-center gap-3">
              <div className="p-2 bg-blue-100 dark:bg-blue-500/10 rounded-lg text-brand-blue">
                <PieChart size={20} />
@@ -120,7 +120,7 @@ const ProductList: React.FC = () => {
         </div>
       </div>
 
-      <div className="flex flex-col md:flex-row justify-between items-stretch md:items-center gap-4 bg-orange-50 dark:bg-orange-900/10 p-4 rounded-xl border border-orange-100 dark:border-orange-900/30">
+      <div className="flex flex-col md:flex-row justify-between items-stretch md:items-center gap-4 bg-orange-50 dark:bg-orange-900/10 p-4 rounded-xl border border-orange-100 dark:border-orange-900/30 animate-fade-in-up" style={{ animationDelay: '200ms' }}>
         <div className="relative w-full md:w-80">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-orange-500 h-4 w-4" />
           <input 
@@ -131,12 +131,12 @@ const ProductList: React.FC = () => {
             onChange={e => setSearchTerm(e.target.value)}
           />
         </div>
-        <Button onClick={openNew} className="bg-orange-600 hover:bg-orange-500 text-white rounded-lg shadow-lg shadow-orange-600/20">
+        <Button onClick={openNew} className="bg-orange-600 hover:bg-orange-500 text-white rounded-lg shadow-lg shadow-orange-600/20 active:scale-95 transition-all">
           <Plus size={16} className="mr-2" /> AGREGAR ITEM
         </Button>
       </div>
 
-      <div className="card-premium overflow-hidden border-t-4 border-t-orange-500">
+      <div className="card-premium overflow-hidden border-t-4 border-t-orange-500 animate-fade-in-up" style={{ animationDelay: '300ms' }}>
         <div className="overflow-x-auto no-scrollbar">
           <table className="min-w-full divide-y divide-brand-border">
             <thead className="bg-orange-50/50 dark:bg-orange-950/10">
@@ -150,10 +150,10 @@ const ProductList: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-brand-border">
-              {filtered.map(p => {
+              {filtered.map((p, idx) => {
                 const margin = p.salePrice > 0 ? ((p.salePrice - p.costPrice) / p.salePrice) * 100 : 0;
                 return (
-                  <tr key={p.id} className="hover:bg-orange-500/5 transition-colors group">
+                  <tr key={p.id} style={{ animationDelay: `${400 + (idx * 30)}ms` }} className="hover:bg-orange-500/5 transition-colors group animate-fade-in-up">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-3">
                         <div className="h-10 w-10 rounded-lg overflow-hidden border border-orange-100 dark:border-orange-900/20 shadow-sm shrink-0">
@@ -182,7 +182,7 @@ const ProductList: React.FC = () => {
                         </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-center">
-                      <button onClick={() => openEdit(p)} className="p-3 text-orange-500 hover:bg-orange-500/10 rounded-xl transition-all min-h-[44px] min-w-[44px]">
+                      <button onClick={() => openEdit(p)} className="p-3 text-orange-500 hover:bg-orange-500/10 rounded-xl transition-all active:scale-90 min-h-[44px] min-w-[44px]">
                         <Edit size={18} />
                       </button>
                     </td>
@@ -205,7 +205,7 @@ const ProductList: React.FC = () => {
               )}
             </div>
             <div className="flex-1 w-full text-center sm:text-left">
-              <label className="cursor-pointer bg-orange-600 text-white px-6 py-3 text-[10px] font-black uppercase tracking-widest hover:bg-orange-500 transition-all flex items-center justify-center sm:justify-start gap-2 rounded-xl shadow-lg shadow-orange-600/20 min-h-[44px]">
+              <label className="cursor-pointer bg-orange-600 text-white px-6 py-3 text-[10px] font-black uppercase tracking-widest hover:bg-orange-500 transition-all active:scale-95 flex items-center justify-center sm:justify-start gap-2 rounded-xl shadow-lg shadow-orange-600/20 min-h-[44px]">
                 <Upload size={16}/>
                 <span>Cargar Imagen</span>
                 <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} />
@@ -275,10 +275,10 @@ const ProductList: React.FC = () => {
           </div>
 
           <div className="flex flex-col sm:flex-row gap-4 pt-4">
-            <button onClick={() => setIsModalOpen(false)} type="button" className="flex-1 px-6 py-4 text-[10px] font-black uppercase tracking-widest rounded-xl border-2 border-slate-200 dark:border-slate-800 order-2 sm:order-1 min-h-[44px]">
+            <button onClick={() => setIsModalOpen(false)} type="button" className="flex-1 px-6 py-4 text-[10px] font-black uppercase tracking-widest rounded-xl border-2 border-slate-200 dark:border-slate-800 active:scale-95 order-2 sm:order-1 min-h-[44px]">
               Cancelar
             </button>
-            <button type="submit" className="flex-1 px-6 py-4 text-[10px] font-black uppercase tracking-widest bg-orange-600 text-white rounded-xl shadow-lg order-1 sm:order-2 min-h-[44px]">
+            <button type="submit" className="flex-1 px-6 py-4 text-[10px] font-black uppercase tracking-widest bg-orange-600 text-white rounded-xl shadow-lg active:scale-95 order-1 sm:order-2 min-h-[44px]">
               Guardar Item
             </button>
           </div>

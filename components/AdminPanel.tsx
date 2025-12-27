@@ -26,7 +26,8 @@ import {
   Key,
   X,
   Menu,
-  ChevronLeft
+  ChevronLeft,
+  Check
 } from 'lucide-react';
 import TeikonLogo from './TeikonLogo';
 
@@ -63,11 +64,12 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
   const [activeView, setActiveView] = useState<'dashboard' | 'stores' | 'support'>('dashboard');
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); // Estado para menú móvil
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   
   const [isNewStoreModalOpen, setIsNewStoreModalOpen] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [newStoreEmail, setNewStoreEmail] = useState('');
   const [newStorePassword, setNewStorePassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -142,6 +144,10 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
       setNewStoreEmail('');
       setNewStorePassword('');
       setIsSubmitting(false);
+      
+      // Mostrar Modal de Éxito
+      setShowSuccessModal(true);
+      setTimeout(() => setShowSuccessModal(false), 2000);
     }, 1000);
   };
 
@@ -163,7 +169,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
 
   const handleNavClick = (view: any) => {
     setActiveView(view);
-    setIsMobileMenuOpen(false); // Cerrar menú en móvil tras navegar
+    setIsMobileMenuOpen(false);
   };
 
   const renderDashboard = () => (
@@ -184,7 +190,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
           { label: 'Usuarios Activos', value: stores.length.toString(), icon: Users, color: 'text-sky-400' },
           { label: 'Actividad 24h', value: '98.2%', icon: Activity, color: 'text-indigo-400' },
         ].map((kpi, i) => (
-          <div key={i} className={`${themeClasses.card} border p-6 md:p-8 rounded-3xl hover:scale-105 transition-all`}>
+          <div key={i} className={`${themeClasses.card} border p-6 md:p-8 rounded-3xl hover:scale-105 transition-all active:scale-[0.98]`}>
             <kpi.icon size={20} className={`${kpi.color} mb-6`} />
             <p className={`text-[10px] font-black uppercase tracking-widest mb-1 ${themeClasses.subtext}`}>{kpi.label}</p>
             <h3 className={`text-2xl md:text-3xl font-black ${themeClasses.text}`}>{kpi.value}</h3>
@@ -225,10 +231,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-          {filteredStores.map((store) => (
+          {filteredStores.map((store, idx) => (
             <div 
               key={store.id} 
-              className={`${themeClasses.card} border rounded-[2rem] p-6 relative overflow-hidden transition-all duration-300 hover:shadow-lg`}
+              style={{ animationDelay: `${idx * 50}ms` }}
+              className={`${themeClasses.card} border rounded-[2rem] p-6 relative overflow-hidden transition-all duration-300 hover:shadow-lg active:scale-[0.99] animate-fade-in-up`}
             >
               <div className="absolute top-6 right-6">
                 <span className={`px-4 py-1.5 rounded-full text-[8px] md:text-[9px] font-black uppercase tracking-widest border ${
@@ -255,7 +262,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                 </div>
                 <div className="flex items-center gap-3 text-[11px] md:text-xs">
                   <Phone size={14} className={themeClasses.subtext} />
-                  <a href={`tel:${store.phone}`} className={`font-black ${isDarkMode ? 'text-emerald-400' : 'text-emerald-600'} hover:underline`}>{store.phone}</a>
+                  <a href={`tel:${store.phone}`} className={`font-black ${isDarkMode ? 'text-emerald-400' : 'text-emerald-600'} hover:underline active:scale-95 transition-transform inline-block`}>{store.phone}</a>
                 </div>
                 <div className="flex items-center gap-3 text-[11px] md:text-xs">
                   <Zap size={14} className={themeClasses.subtext} />
@@ -270,7 +277,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                 <span className={`text-[8px] md:text-[10px] font-black uppercase tracking-widest ${themeClasses.subtext}`}>ACCESO</span>
                 <button 
                   onClick={() => toggleStoreStatus(store.id)}
-                  className={`w-10 md:w-12 h-5 md:h-6 rounded-full p-1 transition-all duration-300 flex items-center ${store.status === 'active' ? 'bg-emerald-500' : 'bg-red-500'}`}
+                  className={`w-10 md:w-12 h-5 md:h-6 rounded-full p-1 transition-all duration-300 flex items-center active:scale-90 ${store.status === 'active' ? 'bg-emerald-500' : 'bg-red-500'}`}
                 >
                   <div className={`w-3 md:w-4 h-3 md:h-4 bg-white rounded-full shadow-sm transform transition-transform duration-300 ${store.status === 'active' ? 'translate-x-5 md:translate-x-6' : 'translate-x-0'} flex items-center justify-center`}>
                     {store.status === 'active' ? <Unlock size={8} className="text-emerald-500" /> : <Lock size={8} className="text-red-500" />}
@@ -302,8 +309,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
             <p className={`text-[10px] md:text-xs font-black uppercase tracking-[0.4em] ${themeClasses.text}`}>Sin reportes</p>
           </div>
         ) : (
-          tickets.map((ticket) => (
-            <div key={ticket.id} className={`${themeClasses.card} border p-6 md:p-8 rounded-2xl md:rounded-[2rem] flex flex-col md:flex-row items-start md:items-center justify-between hover:scale-[1.01] transition-all group gap-6`}>
+          tickets.map((ticket, idx) => (
+            <div key={ticket.id} style={{ animationDelay: `${idx * 40}ms` }} className={`${themeClasses.card} border p-6 md:p-8 rounded-2xl md:rounded-[2rem] flex flex-col md:flex-row items-start md:items-center justify-between hover:scale-[1.01] transition-all group gap-6 active:scale-[0.99] animate-fade-in-up`}>
               <div className="flex items-start gap-4 md:gap-6 flex-1 min-w-0">
                 <div className={`p-3 md:p-4 rounded-xl md:rounded-2xl shrink-0 ${ticket.status === 'pending' ? 'bg-red-500/10 text-red-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
                   {ticket.status === 'pending' ? <AlertCircle size={20} /> : <CheckCircle2 size={20} />}
@@ -320,7 +327,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
               {ticket.status === 'pending' && (
                 <button 
                   onClick={() => markAsResolved(ticket.id)}
-                  className="w-full md:w-auto px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-widest transition-all"
+                  className="w-full md:w-auto px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 shadow-md"
                 >
                   Resolver
                 </button>
@@ -335,15 +342,27 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
   return (
     <div className={`flex flex-col md:flex-row h-screen font-sans selection:bg-emerald-500/30 transition-colors duration-300 ${themeClasses.bg} ${themeClasses.text} overflow-hidden`}>
       
+      {/* MODAL DE ÉXITO TEMPORAL */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300">
+           <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] p-12 flex flex-col items-center justify-center shadow-2xl animate-in zoom-in-95 duration-300">
+              <div className="w-24 h-24 bg-brand-emerald/10 rounded-full flex items-center justify-center text-brand-emerald mb-6 animate-bounce">
+                <Check size={48} strokeWidth={4} />
+              </div>
+              <h3 className="text-xl font-black uppercase tracking-widest text-brand-emerald">Tienda Creada</h3>
+           </div>
+        </div>
+      )}
+
       {/* HEADER MÓVIL EXCLUSIVO */}
       <header className="md:hidden flex items-center justify-between px-6 py-4 bg-brand-panel border-b border-brand-border z-[120] sticky top-0 shrink-0 shadow-sm">
         <div className="flex items-center gap-3">
-          <TeikonLogo size={32} />
+          <TeikonLogo size={32} className="drop-shadow-[0_0_8px_rgba(255,255,255,0.2)]" />
           <span className="text-[10px] font-black uppercase tracking-widest">Admin OS</span>
         </div>
         <button 
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          className="p-2.5 rounded-xl bg-slate-100 dark:bg-white/5 text-brand-text border border-brand-border"
+          className="p-2.5 rounded-xl bg-slate-100 dark:bg-white/5 text-brand-text border border-brand-border active:scale-90 transition-transform"
         >
           {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
         </button>
@@ -369,12 +388,12 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
       >
         <div className={`flex items-center justify-between w-full px-6 mb-12 hidden md:flex`}>
           <div className={`flex items-center gap-3 transition-opacity duration-300 ${isCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>
-            <TeikonLogo size={32} />
+            <TeikonLogo size={32} className="drop-shadow-[0_0_8px_rgba(255,255,255,0.15)]" />
             <span className="text-[10px] font-black uppercase tracking-[0.2em] whitespace-nowrap">Teikon OS</span>
           </div>
           <button 
             onClick={() => setIsCollapsed(!isCollapsed)}
-            className={`p-2 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 transition-all ${isCollapsed ? 'mx-auto' : ''}`}
+            className={`p-2 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 transition-all active:scale-90 ${isCollapsed ? 'mx-auto' : ''}`}
           >
             {isCollapsed ? <Menu size={20} /> : <ChevronLeft size={20} />}
           </button>
@@ -382,7 +401,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
 
         {/* LOGO EN MÓVIL DENTRO DEL SIDEBAR */}
         <div className="md:hidden flex flex-col items-center mb-10 w-full px-6">
-           <TeikonLogo size={64} className="mb-4" />
+           <TeikonLogo size={64} className="mb-4 drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]" />
            <p className="text-[9px] font-black uppercase tracking-[0.4em] text-brand-muted">Admin Terminal</p>
         </div>
 
@@ -393,7 +412,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
               <button
                 key={item.id}
                 onClick={() => handleNavClick(item.id)}
-                className={`flex items-center transition-all duration-300 rounded-2xl group relative overflow-hidden h-14 ${
+                className={`flex items-center transition-all duration-150 ease-in-out active:scale-[0.97] rounded-2xl group relative overflow-hidden h-14 ${
                   isActive 
                     ? themeClasses.navActive 
                     : `${themeClasses.navItem} hover:bg-black/5 dark:hover:bg-white/5`
@@ -414,7 +433,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
         <div className="w-full px-4 mt-auto pt-6 border-t md:border-t-0 border-brand-border">
           <button 
             onClick={onExit} 
-            className={`flex items-center w-full py-4 text-red-500/70 hover:text-red-500 hover:bg-red-500/5 rounded-2xl transition-all duration-300 ${isCollapsed ? 'md:justify-center' : 'px-5 gap-4'}`}
+            className={`flex items-center w-full py-4 text-red-500/70 hover:text-red-500 hover:bg-red-500/5 rounded-2xl transition-all duration-150 active:scale-95 ${isCollapsed ? 'md:justify-center' : 'px-5 gap-4'}`}
           >
             <LogOut size={22} className="shrink-0" />
             <span className={`text-xs font-black uppercase tracking-widest ${isCollapsed ? 'md:hidden' : 'block'}`}>Salir</span>
@@ -462,7 +481,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                   <p className={`text-[8px] md:text-[9px] font-bold uppercase tracking-widest mt-0.5 ${themeClasses.subtext}`}>Alta de Cliente</p>
                 </div>
               </div>
-              <button onClick={() => setIsNewStoreModalOpen(false)} className={`${themeClasses.subtext} hover:${themeClasses.text} transition-colors`}>
+              <button onClick={() => setIsNewStoreModalOpen(false)} className={`${themeClasses.subtext} hover:${themeClasses.text} transition-all active:scale-90`}>
                 <X size={24} />
               </button>
             </div>

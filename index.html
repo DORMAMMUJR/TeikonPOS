@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -43,6 +44,30 @@
         background-color: var(--bg-panel);
       }
 
+      /* ANIMACIONES PERSONALIZADAS */
+      @keyframes pop {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.1); }
+        100% { transform: scale(1); }
+      }
+      .animate-pop {
+        animation: pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      }
+
+      @keyframes fade-in-up {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      .animate-fade-in-up {
+        animation: fade-in-up 0.5s ease-out forwards;
+      }
+
       .nav-pill-label {
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         max-width: 0;
@@ -83,23 +108,20 @@
           size: auto;
         }
 
-        /* 1. Ocultar TODO por defecto */
         body * {
           visibility: hidden !important;
         }
 
-        /* 2. Forzar visibilidad del Ticket y su contenido */
         #printable-ticket, 
         #printable-ticket * {
           visibility: visible !important;
         }
 
-        /* 3. Posicionamiento absoluto al inicio de la página */
         #printable-ticket {
           position: absolute !important;
           left: 0 !important;
           top: 0 !important;
-          width: 80mm !important; /* Ancho estándar térmica */
+          width: 80mm !important;
           margin: 0 !important;
           padding: 10mm 5mm !important;
           background-color: white !important;
@@ -108,13 +130,11 @@
           display: block !important;
         }
 
-        /* 4. Limpieza de sombras y bordes de diseño */
         .card-shadow, .card-premium {
           box-shadow: none !important;
           border: none !important;
         }
 
-        /* Forzar texto negro para asegurar legibilidad */
         #printable-ticket p, 
         #printable-ticket span, 
         #printable-ticket h1, 
