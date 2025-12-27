@@ -21,7 +21,8 @@ import {
   User,
   Zap,
   Lock,
-  Unlock
+  Unlock,
+  Phone
 } from 'lucide-react';
 import TeikonLogo from './TeikonLogo';
 
@@ -38,6 +39,7 @@ interface StoreData {
   id: string;
   name: string;
   owner: string;
+  phone: string; // Nueva propiedad requerida
   plan: 'Basic' | 'Premium' | 'Enterprise';
   status: 'active' | 'suspended';
   lastActive: string;
@@ -49,17 +51,17 @@ interface AdminPanelProps {
 
 const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
   const [activeView, setActiveView] = useState<'dashboard' | 'stores' | 'support'>('dashboard');
-  const [isDarkMode, setIsDarkMode] = useState(false); // Inicializamos en claro
+  const [isDarkMode, setIsDarkMode] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   
   const [stores, setStores] = useState<StoreData[]>([
-    { id: 'ST-001', name: 'Óptica Visionary', owner: 'Carlos Mendez', plan: 'Premium', status: 'active', lastActive: 'Justo ahora' },
-    { id: 'ST-002', name: 'Teikon Concept Store', owner: 'Laura Sanz', plan: 'Enterprise', status: 'active', lastActive: 'hace 2 horas' },
-    { id: 'ST-003', name: 'Mini Market Express', owner: 'Miguel Polo', plan: 'Basic', status: 'suspended', lastActive: 'hace 3 días' },
-    { id: 'ST-004', name: 'Tech Gadgets Center', owner: 'Ana Rius', plan: 'Premium', status: 'active', lastActive: 'hace 10 minutos' },
-    { id: 'ST-005', name: 'Zapatos El Paso', owner: 'Roberto Diaz', plan: 'Basic', status: 'active', lastActive: 'hace 1 día' },
-    { id: 'ST-006', name: 'Farmacia Salud+', owner: 'Elena Gil', plan: 'Enterprise', status: 'active', lastActive: 'hace 5 minutos' },
+    { id: 'ST-001', name: 'Óptica Visionary', owner: 'Carlos Mendez', phone: '5512345678', plan: 'Premium', status: 'active', lastActive: 'Justo ahora' },
+    { id: 'ST-002', name: 'Teikon Concept Store', owner: 'Laura Sanz', phone: '5598765432', plan: 'Enterprise', status: 'active', lastActive: 'hace 2 horas' },
+    { id: 'ST-003', name: 'Mini Market Express', owner: 'Miguel Polo', phone: '5544332211', plan: 'Basic', status: 'suspended', lastActive: 'hace 3 días' },
+    { id: 'ST-004', name: 'Tech Gadgets Center', owner: 'Ana Rius', phone: '5566778899', plan: 'Premium', status: 'active', lastActive: 'hace 10 minutos' },
+    { id: 'ST-005', name: 'Zapatos El Paso', owner: 'Roberto Diaz', phone: '5511223344', plan: 'Basic', status: 'active', lastActive: 'hace 1 día' },
+    { id: 'ST-006', name: 'Farmacia Salud+', owner: 'Elena Gil', phone: '5500998877', plan: 'Enterprise', status: 'active', lastActive: 'hace 5 minutos' },
   ]);
 
   useEffect(() => {
@@ -129,79 +131,105 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
     </div>
   );
 
-  const renderStores = () => (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="relative">
-        <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
-        <input 
-          type="text"
-          placeholder="BUSCAR TIENDA POR NOMBRE O ID..."
-          className={`w-full ${isDarkMode ? 'bg-[#1e323d]' : 'bg-slate-50'} border ${themeClasses.card} rounded-2xl py-5 pl-16 pr-8 text-xs font-bold ${themeClasses.text} outline-none focus:border-emerald-500/50 transition-all placeholder:text-slate-400 uppercase tracking-widest`}
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {stores.filter(s => s.name.toLowerCase().includes(searchTerm.toLowerCase())).map((store) => (
-          <div 
-            key={store.id} 
-            className={`${themeClasses.card} border rounded-[2rem] p-6 relative overflow-hidden transition-all duration-300 hover:shadow-lg`}
-          >
-            {/* Status Pill Condicional */}
-            <div className="absolute top-6 right-6">
-              <span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${
-                store.status === 'active' 
-                ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' 
-                : 'bg-red-500/10 text-red-500 border-red-500/20'
-              }`}>
-                {store.status === 'active' ? 'ACTIVA' : 'SUSPENDIDA'}
-              </span>
-            </div>
-            <div className="flex items-center gap-4 mb-6">
-              <div className={`p-3 rounded-2xl ${isDarkMode ? 'bg-black/20' : 'bg-slate-100'} ${store.status === 'active' ? 'text-emerald-500' : 'text-red-500'}`}>
-                <Store size={24} />
+  const renderStores = () => {
+    // Lógica de búsqueda inteligente
+    const cleanSearch = searchTerm.trim();
+    const isNumericSearch = /^\d+$/.test(cleanSearch);
+    
+    const filteredStores = stores.filter(store => {
+      if (!cleanSearch) return true;
+      if (isNumericSearch) {
+        return store.phone.includes(cleanSearch);
+      }
+      return store.name.toLowerCase().includes(cleanSearch.toLowerCase());
+    });
+
+    return (
+      <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="relative">
+          <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
+          <input 
+            type="text"
+            placeholder="BUSCAR POR NOMBRE O TELÉFONO..."
+            className={`w-full ${isDarkMode ? 'bg-[#1e323d]' : 'bg-slate-50'} border ${themeClasses.card} rounded-2xl py-5 pl-16 pr-8 text-xs font-bold ${themeClasses.text} outline-none focus:border-emerald-500/50 transition-all placeholder:text-slate-400 uppercase tracking-widest`}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredStores.map((store) => (
+            <div 
+              key={store.id} 
+              className={`${themeClasses.card} border rounded-[2rem] p-6 relative overflow-hidden transition-all duration-300 hover:shadow-lg`}
+            >
+              <div className="absolute top-6 right-6">
+                <span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${
+                  store.status === 'active' 
+                  ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' 
+                  : 'bg-red-500/10 text-red-500 border-red-500/20'
+                }`}>
+                  {store.status === 'active' ? 'ACTIVA' : 'SUSPENDIDA'}
+                </span>
               </div>
-              <div>
-                <h4 className={`text-lg font-black uppercase tracking-tight ${themeClasses.text}`}>{store.name}</h4>
-                <span className={`text-[10px] font-black uppercase tracking-widest ${themeClasses.subtext}`}>{store.id}</span>
-              </div>
-            </div>
-            <div className="space-y-4 mb-8">
-              <div className="flex items-center gap-3">
-                <User size={14} className={themeClasses.subtext} />
-                <span className={`text-xs font-bold ${themeClasses.text}`}>Dueño: {store.owner}</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <Zap size={14} className={themeClasses.subtext} />
-                <span className={`text-xs font-bold ${themeClasses.text}`}>Plan: {store.plan}</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <Clock size={14} className={themeClasses.subtext} />
-                <span className={`text-xs font-bold ${themeClasses.text}`}>Visto: {store.lastActive}</span>
-              </div>
-            </div>
-            <div className={`pt-6 border-t ${isDarkMode ? 'border-white/10' : 'border-slate-100'} flex items-center justify-between`}>
-              <span className={`text-[10px] font-black uppercase tracking-widest ${themeClasses.subtext}`}>
-                ESTADO DE ACCESO
-              </span>
-              <button 
-                onClick={() => toggleStoreStatus(store.id)}
-                className={`w-12 h-6 rounded-full p-1 transition-all duration-300 flex items-center ${
-                  store.status === 'active' ? 'bg-emerald-500' : 'bg-red-500'
-                }`}
-              >
-                <div className={`w-4 h-4 bg-white rounded-full shadow-sm transform transition-transform duration-300 ${
-                  store.status === 'active' ? 'translate-x-6' : 'translate-x-0'
-                } flex items-center justify-center`}>
-                  {store.status === 'active' ? <Unlock size={10} className="text-emerald-500" /> : <Lock size={10} className="text-red-500" />}
+              <div className="flex items-center gap-4 mb-6">
+                <div className={`p-3 rounded-2xl ${isDarkMode ? 'bg-black/20' : 'bg-slate-100'} ${store.status === 'active' ? 'text-emerald-500' : 'text-red-500'}`}>
+                  <Store size={24} />
                 </div>
-              </button>
+                <div>
+                  <h4 className={`text-lg font-black uppercase tracking-tight ${themeClasses.text}`}>{store.name}</h4>
+                  <span className={`text-[10px] font-black uppercase tracking-widest ${themeClasses.subtext}`}>{store.id}</span>
+                </div>
+              </div>
+              <div className="space-y-4 mb-8">
+                <div className="flex items-center gap-3">
+                  <User size={14} className={themeClasses.subtext} />
+                  <span className={`text-xs font-bold ${themeClasses.text}`}>Dueño: {store.owner}</span>
+                </div>
+                
+                {/* Visualización del Número Telefónico Accionable */}
+                <div className="flex items-center gap-3">
+                  <Phone size={14} className={themeClasses.subtext} />
+                  <a 
+                    href={`tel:${store.phone}`} 
+                    className={`text-xs font-black ${isDarkMode ? 'text-emerald-400' : 'text-emerald-600'} hover:underline underline-offset-4 decoration-2 transition-all flex items-center gap-1 group/phone`}
+                  >
+                    {store.phone}
+                    <Activity size={10} className="opacity-0 group-hover/phone:opacity-100 transition-opacity" />
+                  </a>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <Zap size={14} className={themeClasses.subtext} />
+                  <span className={`text-xs font-bold ${themeClasses.text}`}>Plan: {store.plan}</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Clock size={14} className={themeClasses.subtext} />
+                  <span className={`text-xs font-bold ${themeClasses.text}`}>Visto: {store.lastActive}</span>
+                </div>
+              </div>
+              <div className={`pt-6 border-t ${isDarkMode ? 'border-white/10' : 'border-slate-100'} flex items-center justify-between`}>
+                <span className={`text-[10px] font-black uppercase tracking-widest ${themeClasses.subtext}`}>
+                  ESTADO DE ACCESO
+                </span>
+                <button 
+                  onClick={() => toggleStoreStatus(store.id)}
+                  className={`w-12 h-6 rounded-full p-1 transition-all duration-300 flex items-center ${
+                    store.status === 'active' ? 'bg-emerald-500' : 'bg-red-500'
+                  }`}
+                >
+                  <div className={`w-4 h-4 bg-white rounded-full shadow-sm transform transition-transform duration-300 ${
+                    store.status === 'active' ? 'translate-x-6' : 'translate-x-0'
+                  } flex items-center justify-center`}>
+                    {store.status === 'active' ? <Unlock size={10} className="text-emerald-500" /> : <Lock size={10} className="text-red-500" />}
+                  </div>
+                </button>
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderSupport = () => (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
