@@ -78,6 +78,68 @@
         -webkit-appearance: none;
         margin: 0;
       }
+
+      /* ESTILOS DE IMPRESIÓN */
+      @media print {
+        body { 
+          background: white !important; 
+          color: black !important;
+          margin: 0;
+          padding: 0;
+        }
+        
+        header, footer, nav, .no-print, button, .modal-close-btn { 
+          display: none !important; 
+        }
+
+        .fixed, .absolute {
+          position: relative !important;
+        }
+
+        #root > div {
+          display: block !important;
+        }
+
+        /* Ocultar todo excepto el ticket */
+        body > * {
+          display: none !important;
+        }
+
+        #printable-ticket-container {
+          display: block !important;
+          position: absolute;
+          left: 0;
+          top: 0;
+          width: 100%;
+          background: white !important;
+          padding: 0;
+          margin: 0;
+        }
+
+        #printable-ticket {
+          border: 1px solid #eee !important;
+          box-shadow: none !important;
+          width: 100%;
+          max-width: 80mm; /* Ancho estándar de ticket térmico */
+          margin: 0 auto;
+          background: white !important;
+          color: black !important;
+        }
+
+        .dark #printable-ticket {
+          background: white !important;
+          color: black !important;
+          border-color: #ddd !important;
+        }
+
+        .dark .text-white, .dark .text-slate-200 {
+          color: black !important;
+        }
+
+        .dark .bg-slate-900, .dark .bg-white {
+          background: white !important;
+        }
+      }
     </style>
     <script>
       tailwind.config = {

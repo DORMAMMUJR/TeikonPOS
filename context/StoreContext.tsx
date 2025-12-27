@@ -1,6 +1,6 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { Product, Sale, FinancialSettings, Role, User, CashSession } from '../types';
+import { Product, Sale, FinancialSettings, Role, User, CashSession, CartItem, SaleResult, SaleDetail } from '../types';
 
 interface StoreContextType {
   products: Product[];
@@ -17,7 +17,7 @@ interface StoreContextType {
   closeSession: (endBalance: number) => void;
   addProduct: (product: Omit<Product, 'ownerId' | 'id'>) => void;
   updateProduct: (product: Product) => void;
-  processSale: (sale: Omit<Sale, 'ownerId'>) => void;
+  processSaleAndContributeToGoal: (cartItems: CartItem[], paymentMethod: 'CASH' | 'CARD' | 'TRANSFER') => Promise<SaleResult>;
   cancelSale: (saleId: string) => void;
   updateSettings: (settings: FinancialSettings) => void;
   getDashboardStats: (period: 'day' | 'month') => any;
@@ -39,7 +39,6 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const products = allProducts.filter(p => p.ownerId === currentUser?.id);
   const sales = allSales.filter(s => s.ownerId === currentUser?.id);
   const currentSession = allSessions.find(s => s.ownerId === currentUser?.id && s.status === 'OPEN') || null;
-  const currentUserRole = currentUser?.role;
 
   useEffect(() => localStorage.setItem('products', JSON.stringify(allProducts)), [allProducts]);
   useEffect(() => localStorage.setItem('sales', JSON.stringify(allSales)), [allSales]);
@@ -84,6 +83,80 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     } : s));
   };
 
+  const processSaleAndContributeToGoal = async (cartItems: CartItem[], paymentMethod: 'CASH' | 'CARD' | 'TRANSFER'): Promise<SaleResult> => {
+    if (!currentUser || !currentSession) return { totalRevenueAdded: 0, totalProfitAdded: 0, success: false };
+
+    let totalTransactionRevenue = 0;
+    let totalTransactionProfit = 0;
+
+    const saleItems: SaleDetail[] = cartItems.map(item => {
+      const itemRevenue = item.sellingPrice * item.quantity;
+      let itemProfit = 0;
+
+      if (!item.unitCost || item.unitCost <= 0) {
+        console.warn(`[TEIKON FINANCIAL] Missing Cost for item: ${item.name}. Assuming 100% margin.`);
+        itemProfit = itemRevenue;
+      } else {
+        itemProfit = (item.sellingPrice - item.unitCost) * item.quantity;
+      }
+
+      totalTransactionRevenue += itemRevenue;
+      totalTransactionProfit += itemProfit;
+
+      return {
+        productId: item.productId || 'unknown',
+        productName: item.name,
+        quantity: item.quantity,
+        unitPrice: item.sellingPrice,
+        unitCost: item.unitCost || 0,
+        discount: 0,
+        subtotal: itemRevenue
+      };
+    });
+
+    totalTransactionRevenue = Math.round(totalTransactionRevenue * 100) / 100;
+    totalTransactionProfit = Math.round(totalTransactionProfit * 100) / 100;
+
+    const newSale: Sale = {
+      id: crypto.randomUUID(),
+      date: new Date().toISOString(),
+      sellerId: currentUser.username,
+      subtotal: totalTransactionRevenue,
+      totalDiscount: 0,
+      taxTotal: 0,
+      total: totalTransactionRevenue,
+      status: 'ACTIVE',
+      paymentMethod,
+      items: saleItems,
+      ownerId: currentUser.id
+    };
+
+    setAllSales(prev => [...prev, newSale]);
+
+    if (paymentMethod === 'CASH') {
+      setAllSessions(prev => prev.map(s => 
+        s.id === currentSession.id 
+          ? { ...s, cashSales: Math.round((s.cashSales + totalTransactionRevenue) * 100) / 100 } 
+          : s
+      ));
+    }
+
+    setAllProducts(prevProducts => {
+      const nextProducts = [...prevProducts];
+      saleItems.forEach(item => {
+        const idx = nextProducts.findIndex(p => p.id === item.productId);
+        if (idx !== -1) nextProducts[idx] = { ...nextProducts[idx], stock: nextProducts[idx].stock - item.quantity };
+      });
+      return nextProducts;
+    });
+    
+    return {
+      totalRevenueAdded: totalTransactionRevenue,
+      totalProfitAdded: totalTransactionProfit,
+      success: true
+    };
+  };
+
   const addProduct = (productData: Omit<Product, 'ownerId' | 'id'>) => {
     if (!currentUser) return;
     const newProduct: Product = { ...productData, id: crypto.randomUUID(), ownerId: currentUser.id };
@@ -93,26 +166,6 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const updateProduct = (updated: Product) => {
     if (updated.ownerId !== currentUser?.id) return;
     setAllProducts(prev => prev.map(p => p.id === updated.id ? updated : p));
-  };
-
-  const processSale = (saleData: Omit<Sale, 'ownerId'>) => {
-    if (!currentUser || !currentSession) return;
-    const sale: Sale = { ...saleData, ownerId: currentUser.id };
-    
-    setAllSales(prev => [...prev, sale]);
-
-    if (sale.paymentMethod === 'CASH') {
-      setAllSessions(prev => prev.map(s => s.id === currentSession.id ? { ...s, cashSales: s.cashSales + sale.total } : s));
-    }
-
-    setAllProducts(prevProducts => {
-      const nextProducts = [...prevProducts];
-      sale.items.forEach(item => {
-        const idx = nextProducts.findIndex(p => p.id === item.productId);
-        if (idx !== -1) nextProducts[idx] = { ...nextProducts[idx], stock: nextProducts[idx].stock - item.quantity };
-      });
-      return nextProducts;
-    });
   };
 
   const cancelSale = (saleId: string) => {
@@ -145,7 +198,6 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     const filteredSales = sales.filter(s => {
       if (s.status !== 'ACTIVE') return false;
       const saleDate = s.date.split('T')[0];
-      
       if (period === 'day') return saleDate === todayStr;
       if (period === 'month') return saleDate.startsWith(monthStr);
       return true;
@@ -153,23 +205,30 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
     const totalRevenue = filteredSales.reduce((acc, s) => acc + s.total, 0);
     
-    const totalCost = filteredSales.reduce((acc, s) => 
-      acc + s.items.reduce((iAcc, item) => iAcc + (item.quantity * item.unitCost), 0)
-    , 0);
+    const totalCost = filteredSales.reduce((acc, s) => {
+      return acc + s.items.reduce((iAcc, item) => iAcc + (item.unitCost * item.quantity), 0);
+    }, 0);
+
+    const totalProfit = filteredSales.reduce((acc, s) => {
+      return acc + s.items.reduce((iAcc, item) => {
+        const profit = item.unitCost > 0 ? (item.unitPrice - item.unitCost) : item.unitPrice;
+        return iAcc + (profit * item.quantity);
+      }, 0);
+    }, 0);
     
     return {
       salesCount: filteredSales.length,
-      totalRevenue,
-      totalCost,
-      totalProfit: totalRevenue - totalCost,
+      totalRevenue: Math.round(totalRevenue * 100) / 100,
+      totalCost: Math.round(totalCost * 100) / 100,
+      totalProfit: Math.round(totalProfit * 100) / 100,
       ticketAverage: filteredSales.length > 0 ? totalRevenue / filteredSales.length : 0
     };
   };
 
   return (
     <StoreContext.Provider value={{
-      products, sales, allSessions, settings, currentUser, currentUserRole, currentSession,
-      login, logout, openSession, closeSession, addProduct, updateProduct, processSale, cancelSale, updateSettings, getDashboardStats
+      products, sales, allSessions, settings, currentUser, currentUserRole: currentUser?.role, currentSession,
+      login, logout, openSession, closeSession, addProduct, updateProduct, processSaleAndContributeToGoal, cancelSale, updateSettings, getDashboardStats
     }}>
       {children}
     </StoreContext.Provider>

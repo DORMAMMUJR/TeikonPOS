@@ -28,6 +28,7 @@ export interface Product {
   category: string;
   costPrice: number;
   salePrice: number;
+  unitProfit: number;
   stock: number;
   minStock: number;
   taxRate: number;
@@ -44,6 +45,22 @@ export interface SaleDetail {
   unitCost: number;
   discount: number;
   subtotal: number;
+}
+
+// Nueva interfaz para ítems del carrito según requerimiento
+export interface CartItem {
+  name: string;
+  sellingPrice: number;
+  unitCost: number;
+  quantity: number;
+  productId?: string; // Opcional para vinculación con DB
+}
+
+// Nueva interfaz para el resultado de la transacción
+export interface SaleResult {
+  totalRevenueAdded: number;
+  totalProfitAdded: number;
+  success: boolean;
 }
 
 export interface Sale {

@@ -4,13 +4,14 @@ import { useStore } from '../context/StoreContext';
 import { Sale } from '../types';
 import Modal from './Modal';
 import Button from './Button';
-import { Search, FileText, History as HistoryIcon, CornerUpLeft } from 'lucide-react';
+import { Search, FileText, History as HistoryIcon, CornerUpLeft, Printer, Share2, Check } from 'lucide-react';
 import TeikonWordmark from './TeikonWordmark';
 
 const SalesHistory: React.FC = () => {
   const { sales, cancelSale, currentUserRole } = useStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const filteredSales = sales
     .filter(s => s.id.toLowerCase().includes(searchTerm.toLowerCase()) || s.date.includes(searchTerm))
@@ -20,6 +21,37 @@ const SalesHistory: React.FC = () => {
     if (confirm('¿CONFIRMAR DEVOLUCIÓN? Los productos volverán al stock y el dinero saldrá de caja.')) {
       cancelSale(saleId);
       setSelectedSale(null);
+    }
+  };
+
+  const handlePrint = () => {
+    window.print();
+  };
+
+  const handleShare = async () => {
+    if (!selectedSale) return;
+    
+    const shareText = `Ticket TEIKON #${selectedSale.id.slice(0, 8).toUpperCase()} - Total: $${selectedSale.total.toFixed(2)}\nFecha: ${new Date(selectedSale.date).toLocaleString()}\nAtendido por: ${selectedSale.sellerId}`;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'Recibo de Venta TEIKON',
+          text: shareText,
+          url: window.location.href,
+        });
+      } catch (err) {
+        console.error('Error al compartir:', err);
+      }
+    } else {
+      // Fallback: Copiar al portapapeles
+      try {
+        await navigator.clipboard.writeText(shareText);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      } catch (err) {
+        console.error('Error al copiar:', err);
+      }
     }
   };
 
@@ -101,6 +133,37 @@ const SalesHistory: React.FC = () => {
         </div>
       </div>
 
+      {/* Contenedor invisible para impresión (vía CSS @media print se muestra) */}
+      {selectedSale && (
+        <div id="printable-ticket-container" className="hidden">
+           <div id="printable-ticket" className="p-8 font-mono text-sm space-y-4">
+              <div className="text-center border-b border-gray-300 border-dashed pb-4">
+                <h1 className="text-xl font-black uppercase">TEIKON</h1>
+                <p className="text-[10px] mt-1 uppercase">RECIBO DE VENTA</p>
+                <p className="text-[10px] uppercase">ID: {selectedSale.id.toUpperCase()}</p>
+                <p className="text-[10px]">{new Date(selectedSale.date).toLocaleString()}</p>
+              </div>
+              <div className="space-y-2 py-4">
+                {selectedSale.items.map((item, idx) => (
+                  <div key={idx} className="flex justify-between">
+                    <span>{item.quantity}x {item.productName.toUpperCase()}</span>
+                    <span>${item.subtotal.toFixed(2)}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="border-t border-gray-300 border-dashed pt-4 flex justify-between font-black text-lg">
+                <span>TOTAL</span>
+                <span>${selectedSale.total.toFixed(2)}</span>
+              </div>
+              <div className="text-center text-[9px] opacity-60 uppercase pt-4">
+                <p>MÉTODO: {selectedSale.paymentMethod}</p>
+                <p>ATENDIDO POR: {selectedSale.sellerId.toUpperCase()}</p>
+                <p className="mt-2">¡GRACIAS POR SU PREFERENCIA!</p>
+              </div>
+           </div>
+        </div>
+      )}
+
       <Modal isOpen={!!selectedSale} onClose={() => setSelectedSale(null)} title="RECIBO DE TRANSACCIÓN">
         {selectedSale && (
           <div className="space-y-8 p-2">
@@ -126,6 +189,27 @@ const SalesHistory: React.FC = () => {
                   ${selectedSale.total.toFixed(2)}
                 </span>
               </div>
+
+              {/* ACTIONS BAR (PRINT & SHARE) */}
+              <div className="no-print grid grid-cols-2 gap-4 pt-4 border-t border-brand-border border-dashed">
+                <Button 
+                  variant="secondary" 
+                  fullWidth 
+                  className="py-3 text-[10px] flex items-center gap-2 border-slate-200 dark:border-slate-700"
+                  onClick={handlePrint}
+                >
+                  <Printer size={16} /> Imprimir
+                </Button>
+                <Button 
+                  variant="sales" 
+                  fullWidth 
+                  className="py-3 text-[10px] flex items-center gap-2"
+                  onClick={handleShare}
+                >
+                  {copied ? <Check size={16} /> : <Share2 size={16} />}
+                  {copied ? 'Copiado' : 'Compartir'}
+                </Button>
+              </div>
               
               <div className="text-center text-[10px] opacity-40 uppercase pt-4 space-y-1 text-slate-800 dark:text-white">
                 <p>Método de Pago: {selectedSale.paymentMethod}</p>
@@ -133,7 +217,7 @@ const SalesHistory: React.FC = () => {
               </div>
             </div>
 
-            <div className="flex gap-4">
+            <div className="flex gap-4 no-print">
                 {currentUserRole === 'admin' && selectedSale.status === 'ACTIVE' && (
                   <button onClick={() => handleCancel(selectedSale.id)} className="flex-1 px-6 py-4 text-[11px] font-black uppercase tracking-[0.2em] transition-all duration-300 rounded-xl border-2 border-red-500/20 text-red-500 hover:bg-red-500 hover:text-white">
                     Anular Transacción

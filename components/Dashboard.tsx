@@ -7,10 +7,10 @@ const Dashboard: React.FC = () => {
   const { getDashboardStats, products, settings } = useStore();
   
   const stats = getDashboardStats('day');
-  const dailyFixedCost = settings.monthlyFixedCosts / 30;
-  const dailyGrossProfit = stats.totalProfit;
+  const dailyFixedCost = (settings?.monthlyFixedCosts || 0) / 30;
+  const dailyGrossProfit = stats?.totalProfit || 0;
   const netDailyProfit = dailyGrossProfit - dailyFixedCost;
-  const goalProgress = Math.min((dailyGrossProfit / dailyFixedCost) * 100, 100);
+  const goalProgress = Math.min((dailyGrossProfit / (dailyFixedCost || 1)) * 100, 100);
   
   const isProfitable = netDailyProfit > 0;
   const isBreakeven = Math.abs(netDailyProfit) < 0.01; 
@@ -18,10 +18,10 @@ const Dashboard: React.FC = () => {
   const lowStockProducts = products.filter(p => p.isActive && p.stock > 0 && p.stock <= p.minStock);
 
   const kpis = [
-    { label: 'Facturación Hoy', val: `$${stats.totalRevenue.toLocaleString()}`, icon: ShoppingBag, color: 'text-brand-emerald' },
-    { label: 'Valor del Ticket', val: `$${stats.ticketAverage.toFixed(0)}`, icon: Box, color: 'text-brand-blue' },
-    { label: 'Órdenes Totales', val: stats.salesCount, icon: Target, color: 'text-brand-purple' },
-    { label: 'Inversión Mercancía', val: `$${stats.totalCost.toLocaleString()}`, icon: DollarSign, color: 'text-slate-400' },
+    { label: 'Facturación Hoy', val: `$${(stats?.totalRevenue || 0).toLocaleString()}`, icon: ShoppingBag, color: 'text-brand-emerald' },
+    { label: 'Valor del Ticket', val: `$${(stats?.ticketAverage || 0).toFixed(0)}`, icon: Box, color: 'text-brand-blue' },
+    { label: 'Órdenes Totales', val: stats?.salesCount || 0, icon: Target, color: 'text-brand-purple' },
+    { label: 'Inversión Mercancía', val: `$${(stats?.totalCost || 0).toLocaleString()}`, icon: DollarSign, color: 'text-slate-400' },
   ];
 
   return (
@@ -38,7 +38,7 @@ const Dashboard: React.FC = () => {
               <span className={`text-4xl md:text-6xl font-black tracking-tighter ${
                 isProfitable ? 'text-brand-emerald' : netDailyProfit < 0 ? 'text-red-500' : 'text-slate-900 dark:text-white'
               }`}>
-                ${netDailyProfit.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                ${(netDailyProfit || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
               </span>
               <span className="text-xs font-bold text-brand-muted">MXN</span>
             </div>
@@ -61,7 +61,7 @@ const Dashboard: React.FC = () => {
            </div>
            <div className="p-4 bg-brand-purple/5 dark:bg-brand-purple/10 rounded-2xl border border-brand-purple/20 dark:border-brand-purple/20">
              <p className="text-[10px] font-black text-brand-purple uppercase tracking-widest mb-1">Utilidad Bruta Generada</p>
-             <p className="text-xl font-black text-brand-purple">${dailyGrossProfit.toLocaleString()}</p>
+             <p className="text-xl font-black text-brand-purple">${(dailyGrossProfit || 0).toLocaleString()}</p>
            </div>
         </div>
       </div>

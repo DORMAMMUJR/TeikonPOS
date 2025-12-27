@@ -16,13 +16,32 @@ const ProductList: React.FC = () => {
     e.preventDefault();
     if (!editingProduct.sku || !editingProduct.name) return;
 
+    // Numerical validation and parsing
+    const purchaseCost = parseFloat((editingProduct.costPrice || 0).toString());
+    const sellingPrice = parseFloat((editingProduct.salePrice || 0).toString());
+
+    if (isNaN(purchaseCost) || isNaN(sellingPrice)) {
+      alert("Costo de Compra o Precio de Venta no son números válidos.");
+      return;
+    }
+
+    // Prevents saving if profit is negative
+    if (sellingPrice < purchaseCost) {
+      alert("PRECIO VENTA es menor que COSTO COMPRA. Por favor, revise los precios.");
+      return;
+    }
+
+    // Calculate unit_profit as requested
+    const unitProfit = sellingPrice - purchaseCost;
+
     const productData = {
       sku: editingProduct.sku,
       name: editingProduct.name,
       category: editingProduct.category || '',
       stock: editingProduct.stock || 0,
-      costPrice: editingProduct.costPrice || 0,
-      salePrice: editingProduct.salePrice || 0,
+      costPrice: purchaseCost,
+      salePrice: sellingPrice,
+      unitProfit: unitProfit,
       minStock: editingProduct.minStock || 0,
       taxRate: editingProduct.taxRate || 0,
       isActive: editingProduct.isActive !== undefined ? editingProduct.isActive : true,
@@ -188,14 +207,41 @@ const ProductList: React.FC = () => {
             <input required className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-xs font-bold focus:border-orange-500 outline-none" value={editingProduct.name || ''} onChange={e => setEditingProduct(prev => ({...prev, name: e.target.value}))} />
           </div>
 
+          {/* KPI DE RENTABILIDAD EN TIEMPO REAL */}
+          <div className="grid grid-cols-2 gap-3 p-4 bg-emerald-500/5 dark:bg-emerald-500/10 rounded-2xl border border-emerald-500/10">
+             <div className="space-y-1">
+               <p className="text-[8px] font-black text-emerald-600 uppercase tracking-widest flex items-center gap-1">
+                 <DollarSign size={10} /> Utilidad Bruta
+               </p>
+               <p className="text-lg font-black text-emerald-500">${calculatedProfit.toLocaleString()}</p>
+             </div>
+             <div className="space-y-1">
+               <p className="text-[8px] font-black text-emerald-600 uppercase tracking-widest flex items-center gap-1">
+                 <TrendingUp size={10} /> Margen Bruto
+               </p>
+               <p className="text-lg font-black text-emerald-500">{calculatedMargin.toFixed(2)}%</p>
+             </div>
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
-              <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Costo</label>
+              <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Costo Compra</label>
               <input type="number" step="0.01" required className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-xs font-bold" value={editingProduct.costPrice || ''} onChange={e => setEditingProduct(prev => ({...prev, costPrice: parseFloat(e.target.value)}))} />
             </div>
             <div className="space-y-1">
-              <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Venta</label>
+              <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Precio Venta</label>
               <input type="number" step="0.01" required className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-xs font-bold" value={editingProduct.salePrice || ''} onChange={e => setEditingProduct(prev => ({...prev, salePrice: parseFloat(e.target.value)}))} />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Stock Inicial</label>
+              <input type="number" required className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-xs font-bold focus:border-orange-500 disabled:opacity-30 shadow-sm" value={editingProduct.stock || 0} onChange={e => setEditingProduct(prev => ({...prev, stock: parseInt(e.target.value)}))} disabled={!!editingProduct.id} />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Mínimo Crítico</label>
+              <input type="number" required className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-xs font-bold focus:border-orange-500 shadow-sm" value={editingProduct.minStock || 0} onChange={e => setEditingProduct(prev => ({...prev, minStock: parseInt(e.target.value)}))} />
             </div>
           </div>
 
