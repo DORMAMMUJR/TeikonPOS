@@ -133,10 +133,10 @@ const SalesHistory: React.FC = () => {
         </div>
       </div>
 
-      {/* Contenedor invisible para impresión (vía CSS @media print se muestra) */}
+      {/* Contenedor optimizado para impresión: visible solo para la impresora */}
       {selectedSale && (
-        <div id="printable-ticket-container" className="hidden">
-           <div id="printable-ticket" className="p-8 font-mono text-sm space-y-4">
+        <div id="printable-ticket-container" className="print:block hidden">
+           <div id="printable-ticket" className="p-8 font-mono text-sm space-y-4 bg-white text-black">
               <div className="text-center border-b border-gray-300 border-dashed pb-4">
                 <h1 className="text-xl font-black uppercase">TEIKON</h1>
                 <p className="text-[10px] mt-1 uppercase">RECIBO DE VENTA</p>
@@ -145,9 +145,9 @@ const SalesHistory: React.FC = () => {
               </div>
               <div className="space-y-2 py-4">
                 {selectedSale.items.map((item, idx) => (
-                  <div key={idx} className="flex justify-between">
-                    <span>{item.quantity}x {item.productName.toUpperCase()}</span>
-                    <span>${item.subtotal.toFixed(2)}</span>
+                  <div key={idx} className="flex justify-between gap-4">
+                    <span className="flex-1">{item.quantity}x {item.productName.toUpperCase()}</span>
+                    <span className="shrink-0">${item.subtotal.toFixed(2)}</span>
                   </div>
                 ))}
               </div>
@@ -158,7 +158,10 @@ const SalesHistory: React.FC = () => {
               <div className="text-center text-[9px] opacity-60 uppercase pt-4">
                 <p>MÉTODO: {selectedSale.paymentMethod}</p>
                 <p>ATENDIDO POR: {selectedSale.sellerId.toUpperCase()}</p>
-                <p className="mt-2">¡GRACIAS POR SU PREFERENCIA!</p>
+                <div className="mt-4 pt-4 border-t border-gray-200 border-dotted">
+                  <p>¡GRACIAS POR SU PREFERENCIA!</p>
+                  <p className="mt-1">SISTEMA TEIKON OS v2.9</p>
+                </div>
               </div>
            </div>
         </div>
