@@ -12,12 +12,7 @@ import {
   Minus, 
   ImageOff, 
   ShoppingCart, 
-  AlertTriangle, 
-  PackageSearch,
   Scan,
-  CheckCircle2,
-  TrendingUp,
-  Check
 } from 'lucide-react';
 
 const POS: React.FC = () => {
@@ -33,6 +28,7 @@ const POS: React.FC = () => {
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    // Optimización: El foco regresa al input inmediatamente si no hay modales críticos
     const focusSearch = () => { if (!isCheckoutOpen && !showTicket) searchInputRef.current?.focus(); };
     focusSearch();
     window.addEventListener('focus', focusSearch);
@@ -71,6 +67,7 @@ const POS: React.FC = () => {
       }];
     });
     setLastAddedId(product.id);
+    // Feedback visual mínimo en el producto (borde verde)
     setTimeout(() => setLastAddedId(null), 1000);
     setSearchTerm('');
   };
@@ -100,6 +97,7 @@ const POS: React.FC = () => {
     }));
 
     const cartSnapshot = [...cart];
+    // Procesamiento asíncrono pero bloqueante solo lo necesario
     const result = await processSaleAndContributeToGoal(itemsToProcess, 'CASH');
     
     if (result.success) {
@@ -110,11 +108,13 @@ const POS: React.FC = () => {
         items: cartSnapshot,
         folio: folioId
       });
+      
+      // Limpieza inmediata de estado
       setCart([]);
       setIsCheckoutOpen(false);
       setAmountReceived('');
       
-      // Salto directo al ticket para máxima velocidad
+      // TRANSICIÓN INSTANTÁNEA AL TICKET (Sin modal de éxito intermedio)
       setShowTicket(true);
       
       setTimeout(() => setSaleSummary(null), 10000);

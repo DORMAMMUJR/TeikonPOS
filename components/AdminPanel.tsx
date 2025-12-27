@@ -27,7 +27,6 @@ import {
   X,
   Menu,
   ChevronLeft,
-  Check
 } from 'lucide-react';
 import TeikonLogo from './TeikonLogo';
 
@@ -139,12 +138,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
       setStores(updated);
       localStorage.setItem('teikon_all_stores', JSON.stringify(updated));
 
+      // CIERRE INMEDIATO SIN MODAL DE ÉXITO PARA EVITAR LAG
       setIsNewStoreModalOpen(false);
       setNewStoreEmail('');
       setNewStorePassword('');
       setIsSubmitting(false);
-      
-      // Se elimina el modal de éxito para una transición inmediata a la lista actualizada
     }, 800);
   };
 
