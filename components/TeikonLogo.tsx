@@ -9,7 +9,7 @@ interface TeikonLogoProps {
 const TeikonLogo: React.FC<TeikonLogoProps> = ({ size = 80, className = "" }) => {
   return (
     <div 
-      className={`flex items-center justify-center transition-all duration-500 filter drop-shadow-[0_0_12px_rgba(0,198,255,0.25)] dark:drop-shadow-[0_0_20px_rgba(255,255,255,0.15)] brightness-110 ${className}`}
+      className={`flex items-center justify-center transition-all duration-500 filter drop-shadow-[0_0_12px_rgba(0,198,255,0.25)] dark:drop-shadow-[0_0_30px_rgba(0,198,255,0.4)] brightness-110 ${className}`}
       style={{ width: size, height: size }}
       role="img"
       aria-label="Teikon Brand Logo"
