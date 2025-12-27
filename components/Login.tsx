@@ -16,8 +16,22 @@ const Login: React.FC = () => {
   const [showDevModal, setShowDevModal] = useState(false);
 
   const USERS_DB: Record<string, UserType & { pass: string }> = {
-    'ADMIN': { id: 'usr-1', username: 'admin', role: 'admin', department: 'CORE', pass: '1234' },
-    'LENTES_USER': { id: 'usr-2', username: 'lentes_user', role: 'seller', department: 'OPTICA', pass: 'lentes123' }
+    'ADMIN': { 
+      id: 'usr-1', 
+      username: 'admin', 
+      role: 'admin', 
+      department: 'CORE', 
+      pass: '1234',
+      storeName: 'TEIKON MATRIZ' // Usuario ya configurado
+    },
+    'LENTES_USER': { 
+      id: 'usr-2', 
+      username: 'lentes_user', 
+      role: 'seller', 
+      department: 'OPTICA', 
+      pass: 'lentes123' 
+      // Sin storeName para forzar ONBOARDING
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {

@@ -11,6 +11,7 @@ import SalesHistory from './components/SalesHistory';
 import Login from './components/Login';
 import Button from './components/Button';
 import AdminPanel from './components/AdminPanel';
+import InitialConfig from './components/InitialConfig';
 import { Power } from 'lucide-react';
 
 const AppContent: React.FC = () => {
@@ -18,13 +19,35 @@ const AppContent: React.FC = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [openingBalance, setOpeningBalance] = useState('');
 
-  if (!currentUser) return <Login />;
+  // ==========================================
+  // FILTRO 1 (CRÍTICO): AUTENTICACIÓN
+  // ==========================================
+  if (!currentUser) {
+    return <Login />;
+  }
 
-  // REDIRECCIÓN RBAC: Si es superuser, mostramos el AdminPanel
+  // ==========================================
+  // FILTRO 2: RBAC - ACCESO A PANEL DE CONTROL
+  // ==========================================
   if ((currentUser as any).role === 'superuser') {
     return <AdminPanel onExit={logout} />;
   }
 
+  // ==========================================
+  // FILTRO 3 (MURO DE SEGURIDAD): ONBOARDING
+  // Este bloque impide que se procese cualquier lógica de caja o dashboard
+  // si la tienda no tiene un nombre válido asignado.
+  // ==========================================
+  const isStoreConfigured = currentUser.storeName && currentUser.storeName.trim() !== '';
+  
+  if (!isStoreConfigured) {
+    return <InitialConfig />;
+  }
+
+  // ==========================================
+  // FILTRO 4: APERTURA DE CAJA / SESIÓN
+  // Solo se evalúa si el usuario ya pasó exitosamente el Onboarding.
+  // ==========================================
   if (!currentSession) {
     return (
       <div className="min-h-screen bg-brand-bg flex items-center justify-center p-4">
@@ -35,7 +58,12 @@ const AppContent: React.FC = () => {
             </div>
             <div>
               <h2 className="text-xl font-black uppercase tracking-[0.3em] text-slate-900 dark:text-white">Apertura de Terminal</h2>
-              <p className="text-[10px] font-bold text-brand-muted uppercase tracking-widest mt-2">Ingrese el fondo de caja inicial</p>
+              <p className="text-[10px] font-bold text-brand-muted uppercase tracking-widest mt-2">
+                Nodo Activo: {currentUser.storeName}
+              </p>
+              <p className="text-[10px] font-medium text-brand-muted uppercase mt-1">
+                Ingrese el fondo de caja inicial para comenzar
+              </p>
             </div>
             <div className="w-full relative">
                <span className="absolute left-6 top-1/2 -translate-y-1/2 text-3xl font-black text-brand-muted">$</span>
@@ -63,6 +91,10 @@ const AppContent: React.FC = () => {
     );
   }
 
+  // ==========================================
+  // FLUJO FINAL: RENDERIZADO DEL DASHBOARD
+  // Solo se llega aquí si Auth, Onboarding y Caja están OK.
+  // ==========================================
   const renderContent = () => {
     switch(activeTab) {
       case 'dashboard': return <Dashboard />;

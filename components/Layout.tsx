@@ -1,6 +1,20 @@
 
 import React, { useState } from 'react';
-import { LayoutDashboard, ShoppingCart, Package, Settings, LogOut, History, Sun, Moon, LifeBuoy } from 'lucide-react';
+import { 
+  LayoutDashboard, 
+  ShoppingCart, 
+  Package, 
+  Settings, 
+  LogOut, 
+  History, 
+  Sun, 
+  Moon, 
+  LifeBuoy, 
+  Menu,
+  ChevronLeft,
+  ChevronRight,
+  TrendingUp
+} from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import { useTheme } from '../context/ThemeContext';
 import TeikonLogo from './TeikonLogo';
@@ -16,20 +30,21 @@ interface LayoutProps {
 const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => {
   const { currentUser, logout, settings, getDashboardStats } = useStore();
   const { theme, toggleTheme } = useTheme();
+  const [isCollapsed, setIsCollapsed] = useState(false);
   const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
 
-  // Lógica de Meta Operativa simplificada (Read-Only)
+  // Lógica de Meta Operativa (Read-Only)
   const stats = getDashboardStats('day');
   const dailyTarget = settings.monthlyFixedCosts / 30;
   const currentProfit = stats.totalProfit;
   const progressPercent = Math.min(Math.max((currentProfit / dailyTarget) * 100, 0), 100);
 
   const navItems = [
-    { id: 'dashboard', label: 'Inicio', icon: LayoutDashboard, color: 'bg-brand-purple' },
-    { id: 'pos', label: 'Ventas', icon: ShoppingCart, color: 'bg-brand-emerald' },
-    { id: 'history', label: 'Historial', icon: History, color: 'bg-brand-pink' },
-    { id: 'products', label: 'Inventario', icon: Package, color: 'bg-orange-600' },
-    { id: 'settings', label: 'Admin', icon: Settings, adminOnly: true, color: 'bg-brand-blue' },
+    { id: 'dashboard', label: 'Inicio', icon: LayoutDashboard, color: 'text-brand-purple' },
+    { id: 'pos', label: 'Ventas', icon: ShoppingCart, color: 'text-brand-emerald' },
+    { id: 'history', label: 'Historial', icon: History, color: 'text-brand-pink' },
+    { id: 'products', label: 'Inventario', icon: Package, color: 'text-orange-600' },
+    { id: 'settings', label: 'Admin', icon: Settings, adminOnly: true, color: 'text-brand-blue' },
   ];
 
   const getPageTitle = () => {
@@ -44,17 +59,30 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => 
   };
 
   return (
-    <div className="min-h-screen bg-brand-bg text-brand-text flex flex-col transition-colors duration-500">
-      <header className="bg-brand-panel border-b border-brand-border sticky top-0 z-[60] px-4 md:px-6 h-16 flex items-center justify-between shadow-sm gap-4">
-        <div className="flex items-center gap-3 shrink-0">
-          <TeikonLogo size={32} />
-          <div className="hidden lg:block">
-            <TeikonWordmark height={14} className="text-slate-900 dark:text-white" />
+    <div className="flex h-screen bg-brand-bg text-brand-text overflow-hidden transition-colors duration-500">
+      
+      {/* BARRA LATERAL (SIDEBAR) */}
+      <aside 
+        className={`flex flex-col bg-brand-panel border-r border-brand-border transition-all duration-300 z-[70] h-screen shrink-0 ${isCollapsed ? 'w-20' : 'w-64'}`}
+      >
+        {/* Header del Sidebar: Logo y Toggle */}
+        <div className="h-20 flex items-center px-4 border-b border-brand-border shrink-0 overflow-hidden">
+          <div className={`flex items-center flex-1 transition-opacity duration-300 ${isCollapsed ? 'opacity-0 w-0' : 'opacity-100 w-auto'}`}>
+            <TeikonLogo size={32} className="shrink-0" />
+            <div className="ml-3">
+              <TeikonWordmark height={14} className="text-slate-900 dark:text-white" />
+            </div>
           </div>
+          <button 
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            className={`p-2 rounded-xl text-brand-muted hover:bg-black/5 dark:hover:bg-white/5 transition-all ${isCollapsed ? 'mx-auto' : 'ml-auto'}`}
+          >
+            {isCollapsed ? <Menu size={20} /> : <ChevronLeft size={20} />}
+          </button>
         </div>
 
-        {/* Navegación Refactorizada: Scroll horizontal en móviles */}
-        <nav className="flex items-center gap-2 overflow-x-auto no-scrollbar whitespace-nowrap py-2">
+        {/* Navegación Principal */}
+        <nav className="flex-1 overflow-y-auto no-scrollbar py-6 px-3 space-y-2">
           {navItems.map(item => {
             if (item.adminOnly && currentUser?.role !== 'admin') return null;
             const active = activeTab === item.id;
@@ -62,86 +90,93 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => 
               <button
                 key={item.id}
                 onClick={() => onTabChange(item.id)}
-                className={`flex items-center h-10 px-3 rounded-full font-bold transition-all duration-300 group shrink-0 ${
+                className={`flex items-center w-full rounded-2xl transition-all duration-300 group min-h-[50px] ${
                   active 
-                    ? `active-pill ${item.color} text-white shadow-lg` 
+                    ? 'bg-slate-900 dark:bg-white text-white dark:text-black shadow-lg shadow-black/10' 
                     : 'text-brand-muted hover:bg-black/5 dark:hover:bg-white/5'
-                }`}
+                } ${isCollapsed ? 'justify-center px-0' : 'px-4 gap-4'}`}
               >
-                <item.icon size={18} className="shrink-0" />
-                <span className="nav-pill-label text-xs">
-                  {item.label}
-                </span>
+                <item.icon size={20} className={`shrink-0 ${active ? 'text-inherit' : item.color}`} />
+                {!isCollapsed && (
+                  <span className="text-xs font-black uppercase tracking-widest truncate">
+                    {item.label}
+                  </span>
+                )}
+                {active && !isCollapsed && (
+                  <div className="ml-auto w-1.5 h-1.5 rounded-full bg-brand-emerald animate-pulse" />
+                )}
               </button>
             );
           })}
         </nav>
 
-        <div className="flex items-center gap-2 shrink-0">
+        {/* Footer del Sidebar: Soporte, Tema y Logout */}
+        <div className="p-3 border-t border-brand-border space-y-2 bg-black/5 dark:bg-white/5">
           <button 
             onClick={() => setIsSupportModalOpen(true)}
-            className="flex items-center gap-2 h-10 px-3 rounded-full text-brand-muted hover:text-indigo-500 hover:bg-indigo-500/5 transition-all font-bold"
-            title="Soporte Técnico"
+            className={`flex items-center w-full rounded-xl py-3 text-brand-muted hover:text-indigo-500 hover:bg-indigo-500/5 transition-all font-bold ${isCollapsed ? 'justify-center' : 'px-4 gap-4'}`}
           >
-            <LifeBuoy size={18} />
-            <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Soporte</span>
+            <LifeBuoy size={20} />
+            {!isCollapsed && <span className="text-[10px] font-black uppercase tracking-widest">Soporte</span>}
+          </button>
+
+          <button 
+            onClick={toggleTheme}
+            className={`flex items-center w-full rounded-xl py-3 text-brand-muted hover:text-amber-500 hover:bg-amber-500/5 transition-all font-bold ${isCollapsed ? 'justify-center' : 'px-4 gap-4'}`}
+          >
+            {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+            {!isCollapsed && <span className="text-[10px] font-black uppercase tracking-widest">{theme === 'dark' ? 'Modo Luz' : 'Modo Oscuro'}</span>}
+          </button>
+
+          <button 
+            onClick={logout}
+            className={`flex items-center w-full rounded-xl py-3 text-red-500/60 hover:text-red-500 hover:bg-red-500/5 transition-all font-bold ${isCollapsed ? 'justify-center' : 'px-4 gap-4'}`}
+          >
+            <LogOut size={20} />
+            {!isCollapsed && <span className="text-[10px] font-black uppercase tracking-widest">Salir</span>}
           </button>
         </div>
-      </header>
+      </aside>
 
-      <div className="bg-brand-panel border-b border-brand-border py-6 shadow-sm">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="flex flex-col gap-2">
-            <div className="flex justify-between items-end px-1">
-              <span className="text-[9px] font-black uppercase tracking-[0.2em] text-brand-muted">Utilidad Bruta vs Gasto Operativo Diario</span>
-              <span className="text-[10px] font-black text-slate-800 dark:text-white font-mono">
-                ${currentProfit.toFixed(0)} / <span className="text-brand-muted opacity-60">${dailyTarget.toFixed(0)}</span>
-              </span>
-            </div>
-
-            <div className="h-4 w-full bg-slate-100 dark:bg-slate-900 rounded-lg relative overflow-hidden shadow-inner border border-black/5 dark:border-white/5">
-              <div 
-                className="h-full bg-[#A020F0] transition-all duration-1000 ease-out shadow-[0_0_15px_rgba(160,32,240,0.6)]"
-                style={{ width: `${progressPercent}%` }}
-              />
-              <div 
-                className="absolute top-0 bottom-0 w-[2px] bg-white shadow-[0_0_10px_white] transition-all duration-1000 ease-out z-10"
-                style={{ left: `calc(${progressPercent}% - 1px)` }}
-              />
-            </div>
-
-            <div className="flex justify-end">
-              <span className="text-[9px] font-black text-[#A020F0] tracking-widest">{progressPercent.toFixed(1)}% PUNTO DE EQUILIBRIO</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <main className="max-w-7xl mx-auto w-full p-4 md:p-8 space-y-8 animate-in fade-in duration-700">
-        <div className="flex items-end justify-between border-b-2 border-brand-border pb-6">
-          <div className="space-y-1">
-            <h2 className="text-2xl md:text-3xl font-black text-slate-900 dark:text-white tracking-tighter uppercase">
+      {/* ÁREA DE CONTENIDO PRINCIPAL */}
+      <div className="flex-1 flex flex-col overflow-hidden relative">
+        
+        {/* Top Header Dinámico */}
+        <header className="h-20 bg-brand-panel border-b border-brand-border flex items-center justify-between px-8 shrink-0 shadow-sm z-50">
+          <div className="flex flex-col">
+            <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">
               {getPageTitle()}
             </h2>
-            <div className="flex items-center gap-3">
-              <span className="px-2 py-0.5 bg-slate-100 dark:bg-white/5 text-brand-muted rounded text-[9px] font-black uppercase tracking-widest border border-brand-border">
-                DEP: {currentUser?.department || 'GENERAL'}
-              </span>
-              <span className="px-2 py-0.5 bg-slate-100 dark:bg-white/5 text-brand-muted rounded text-[9px] font-black uppercase tracking-widest border border-brand-border">
-                USER: {currentUser?.username}
+            <div className="flex items-center gap-3 mt-0.5">
+              <span className="text-[8px] font-black text-brand-muted uppercase tracking-[0.2em]">
+                {currentUser?.storeName || 'SISTEMA'} // {currentUser?.username}
               </span>
             </div>
           </div>
-        </div>
 
-        {children}
-      </main>
+          <div className="flex flex-col items-end gap-1.5 max-w-[300px] w-full hidden md:flex">
+            <div className="flex justify-between w-full text-[8px] font-black uppercase tracking-widest text-brand-muted">
+              <span>Utilidad Bruta vs Gasto Diario</span>
+              <span className="text-slate-900 dark:text-white">${currentProfit.toFixed(0)} / ${dailyTarget.toFixed(0)}</span>
+            </div>
+            <div className="h-2.5 w-full bg-slate-100 dark:bg-slate-900 rounded-full relative overflow-hidden shadow-inner border border-black/5 dark:border-white/5">
+              <div 
+                className="h-full bg-brand-purple transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(139,92,246,0.4)]"
+                style={{ width: `${progressPercent}%` }}
+              />
+            </div>
+          </div>
+        </header>
 
-      <footer className="mt-auto py-10 border-t border-brand-border bg-brand-panel/30">
-        <div className="max-w-7xl mx-auto px-6 text-[10px] font-black text-brand-muted uppercase tracking-[0.5em] text-center opacity-30">
-          TEIKON OS // CORE INTELLIGENCE v2.9.1
-        </div>
-      </footer>
+        {/* Scrollable Content */}
+        <main className="flex-1 overflow-y-auto p-6 md:p-10 no-scrollbar space-y-10">
+          {children}
+
+          <footer className="pt-20 pb-10 border-t border-brand-border text-[9px] font-black text-brand-muted uppercase tracking-[0.5em] text-center opacity-20">
+            TEIKON OS // CORE INTELLIGENCE v2.9.1
+          </footer>
+        </main>
+      </div>
 
       <SupportTicketModal isOpen={isSupportModalOpen} onClose={() => setIsSupportModalOpen(false)} />
     </div>

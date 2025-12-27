@@ -6,6 +6,8 @@ export interface User {
   username: string;
   role: Role;
   department: string;
+  storeName?: string; // Nuevo campo para validación de onboarding
+  phone?: string;     // Nuevo campo opcional
 }
 
 export interface CashSession {
@@ -47,16 +49,14 @@ export interface SaleDetail {
   subtotal: number;
 }
 
-// Nueva interfaz para ítems del carrito según requerimiento
 export interface CartItem {
   name: string;
   sellingPrice: number;
   unitCost: number;
   quantity: number;
-  productId?: string; // Opcional para vinculación con DB
+  productId?: string;
 }
 
-// Nueva interfaz para el resultado de la transacción
 export interface SaleResult {
   totalRevenueAdded: number;
   totalProfitAdded: number;

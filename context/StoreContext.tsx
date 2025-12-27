@@ -13,6 +13,7 @@ interface StoreContextType {
   
   login: (user: User) => void;
   logout: () => void;
+  updateCurrentUser: (userData: Partial<User>) => void; // Nueva función
   openSession: (startBalance: number) => void;
   closeSession: (endBalance: number) => void;
   addProduct: (product: Omit<Product, 'ownerId' | 'id'>) => void;
@@ -76,6 +77,13 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const logout = () => {
     setCurrentUser(null);
     sessionStorage.removeItem('user_session');
+  };
+
+  const updateCurrentUser = (userData: Partial<User>) => {
+    if (!currentUser) return;
+    const updatedUser = { ...currentUser, ...userData };
+    setCurrentUser(updatedUser);
+    sessionStorage.setItem('user_session', JSON.stringify(updatedUser));
   };
 
   const openSession = (startBalance: number) => {
@@ -258,7 +266,7 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   return (
     <StoreContext.Provider value={{
       products, sales, allSessions, settings, currentUser, currentUserRole: currentUser?.role, currentSession,
-      login, logout, openSession, closeSession, addProduct, updateProduct, processSaleAndContributeToGoal, cancelSale, updateSettings, getDashboardStats, calculateTotalInventoryValue
+      login, logout, updateCurrentUser, openSession, closeSession, addProduct, updateProduct, processSaleAndContributeToGoal, cancelSale, updateSettings, getDashboardStats, calculateTotalInventoryValue
     }}>
       {children}
     </StoreContext.Provider>
