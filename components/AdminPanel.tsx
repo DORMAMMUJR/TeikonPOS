@@ -69,7 +69,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   
   const [isNewStoreModalOpen, setIsNewStoreModalOpen] = useState(false);
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [newStoreEmail, setNewStoreEmail] = useState('');
   const [newStorePassword, setNewStorePassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -145,10 +144,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
       setNewStorePassword('');
       setIsSubmitting(false);
       
-      // Mostrar Modal de Éxito
-      setShowSuccessModal(true);
-      setTimeout(() => setShowSuccessModal(false), 2000);
-    }, 1000);
+      // Se elimina el modal de éxito para una transición inmediata a la lista actualizada
+    }, 800);
   };
 
   const themeClasses = {
@@ -342,18 +339,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
   return (
     <div className={`flex flex-col md:flex-row h-screen font-sans selection:bg-emerald-500/30 transition-colors duration-300 ${themeClasses.bg} ${themeClasses.text} overflow-hidden`}>
       
-      {/* MODAL DE ÉXITO TEMPORAL */}
-      {showSuccessModal && (
-        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300">
-           <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] p-12 flex flex-col items-center justify-center shadow-2xl animate-in zoom-in-95 duration-300">
-              <div className="w-24 h-24 bg-brand-emerald/10 rounded-full flex items-center justify-center text-brand-emerald mb-6 animate-bounce">
-                <Check size={48} strokeWidth={4} />
-              </div>
-              <h3 className="text-xl font-black uppercase tracking-widest text-brand-emerald">Tienda Creada</h3>
-           </div>
-        </div>
-      )}
-
       {/* HEADER MÓVIL EXCLUSIVO */}
       <header className="md:hidden flex items-center justify-between px-6 py-4 bg-brand-panel border-b border-brand-border z-[120] sticky top-0 shrink-0 shadow-sm">
         <div className="flex items-center gap-3">

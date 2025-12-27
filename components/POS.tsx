@@ -29,16 +29,15 @@ const POS: React.FC = () => {
   const [lastAddedId, setLastAddedId] = useState<string | null>(null);
   const [saleSummary, setSaleSummary] = useState<{revenue: number, profit: number, items: any[], folio: string} | null>(null);
   const [showTicket, setShowTicket] = useState(false);
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [animateCart, setAnimateCart] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const focusSearch = () => { if (!isCheckoutOpen && !showTicket && !showSuccessModal) searchInputRef.current?.focus(); };
+    const focusSearch = () => { if (!isCheckoutOpen && !showTicket) searchInputRef.current?.focus(); };
     focusSearch();
     window.addEventListener('focus', focusSearch);
     return () => window.removeEventListener('focus', focusSearch);
-  }, [isCheckoutOpen, showTicket, showSuccessModal]);
+  }, [isCheckoutOpen, showTicket]);
 
   useEffect(() => {
     if (cart.length > 0) {
@@ -115,11 +114,8 @@ const POS: React.FC = () => {
       setIsCheckoutOpen(false);
       setAmountReceived('');
       
-      setShowSuccessModal(true);
-      setTimeout(() => {
-        setShowSuccessModal(false);
-        setShowTicket(true);
-      }, 1500);
+      // Salto directo al ticket para máxima velocidad
+      setShowTicket(true);
       
       setTimeout(() => setSaleSummary(null), 10000);
     }
@@ -127,17 +123,6 @@ const POS: React.FC = () => {
 
   return (
     <div className="flex flex-col lg:flex-row gap-6 h-auto lg:h-[calc(100vh-280px)]">
-      {showSuccessModal && (
-        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300">
-           <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] p-12 flex flex-col items-center justify-center shadow-2xl animate-in zoom-in-95 duration-300">
-              <div className="w-24 h-24 bg-brand-emerald/10 rounded-full flex items-center justify-center text-brand-emerald mb-6 animate-bounce">
-                <Check size={48} strokeWidth={4} />
-              </div>
-              <h3 className="text-xl font-black uppercase tracking-widest text-brand-emerald">Venta Exitosa</h3>
-           </div>
-        </div>
-      )}
-
       <div className="lg:w-2/3 flex flex-col card-premium overflow-hidden border-t-4 border-t-brand-emerald bg-white dark:bg-slate-900 shadow-xl min-h-[400px] lg:min-h-[500px]">
         <div className="p-4 border-b border-brand-border bg-slate-50 dark:bg-emerald-950/20">
           <div className="relative group">
