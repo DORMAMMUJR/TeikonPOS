@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useStore } from '../context/StoreContext';
 import { Product } from '../types';
@@ -16,29 +15,27 @@ const ProductList: React.FC = () => {
     e.preventDefault();
     if (!editingProduct.sku || !editingProduct.name) return;
 
-    // Numerical validation and parsing
     const purchaseCost = parseFloat((editingProduct.costPrice || 0).toString());
     const sellingPrice = parseFloat((editingProduct.salePrice || 0).toString());
+    const currentStock = parseInt((editingProduct.stock || 0).toString());
 
-    if (isNaN(purchaseCost) || isNaN(sellingPrice)) {
-      alert("Costo de Compra o Precio de Venta no son números válidos.");
+    if (isNaN(purchaseCost) || isNaN(sellingPrice) || isNaN(currentStock)) {
+      alert("Los valores numéricos ingresados no son válidos.");
       return;
     }
 
-    // Prevents saving if profit is negative
     if (sellingPrice < purchaseCost) {
       alert("PRECIO VENTA es menor que COSTO COMPRA. Por favor, revise los precios.");
       return;
     }
 
-    // Calculate unit_profit as requested
     const unitProfit = sellingPrice - purchaseCost;
 
     const productData = {
       sku: editingProduct.sku,
       name: editingProduct.name,
       category: editingProduct.category || '',
-      stock: editingProduct.stock || 0,
+      stock: currentStock,
       costPrice: purchaseCost,
       salePrice: sellingPrice,
       unitProfit: unitProfit,
@@ -72,7 +69,7 @@ const ProductList: React.FC = () => {
   };
 
   const openNew = () => {
-    setEditingProduct({ isActive: true, costPrice: 0, salePrice: 0 });
+    setEditingProduct({ isActive: true, costPrice: 0, salePrice: 0, stock: 0 });
     setIsModalOpen(true);
   };
 
@@ -93,7 +90,6 @@ const ProductList: React.FC = () => {
 
   return (
     <div className="space-y-4">
-      {/* Barra de Búsqueda Adaptable */}
       <div className="flex flex-col md:flex-row justify-between items-stretch md:items-center gap-4 bg-orange-50 dark:bg-orange-900/10 p-4 rounded-xl border border-orange-100 dark:border-orange-900/30">
         <div className="relative w-full md:w-80">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-orange-500 h-4 w-4" />
@@ -105,10 +101,7 @@ const ProductList: React.FC = () => {
             onChange={e => setSearchTerm(e.target.value)}
           />
         </div>
-        <Button 
-          onClick={openNew} 
-          className="bg-orange-600 hover:bg-orange-500 text-white rounded-lg shadow-lg shadow-orange-600/20"
-        >
+        <Button onClick={openNew} className="bg-orange-600 hover:bg-orange-500 text-white rounded-lg shadow-lg shadow-orange-600/20">
           <Plus size={16} className="mr-2" /> AGREGAR ITEM
         </Button>
       </div>
@@ -173,7 +166,6 @@ const ProductList: React.FC = () => {
 
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingProduct.id ? "Modificar" : "Nuevo Ítem"}>
         <form onSubmit={handleSave} className="space-y-6">
-          {/* Layout Responsivo para Imagen/Subida */}
           <div className="flex flex-col sm:flex-row items-center gap-6 p-4 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-100 dark:border-slate-800">
             <div className="h-24 w-24 bg-white dark:bg-slate-900 border border-orange-100 dark:border-orange-800/40 rounded-2xl flex items-center justify-center overflow-hidden shadow-md shrink-0">
               {editingProduct.image ? (
@@ -193,21 +185,20 @@ const ProductList: React.FC = () => {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1">
-              <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">SKU</label>
+              <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">SKU</label>
               <input required className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-xs font-bold focus:border-orange-500 outline-none" value={editingProduct.sku || ''} onChange={e => setEditingProduct(prev => ({...prev, sku: e.target.value}))} />
             </div>
             <div className="space-y-1">
-              <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Categoría</label>
+              <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Categoría</label>
               <input className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-xs font-bold focus:border-orange-500 outline-none" value={editingProduct.category || ''} onChange={e => setEditingProduct(prev => ({...prev, category: e.target.value}))} />
             </div>
           </div>
           
           <div className="space-y-1">
-            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Nombre</label>
+            <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Nombre</label>
             <input required className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-xs font-bold focus:border-orange-500 outline-none" value={editingProduct.name || ''} onChange={e => setEditingProduct(prev => ({...prev, name: e.target.value}))} />
           </div>
 
-          {/* KPI DE RENTABILIDAD EN TIEMPO REAL */}
           <div className="grid grid-cols-2 gap-3 p-4 bg-emerald-500/5 dark:bg-emerald-500/10 rounded-2xl border border-emerald-500/10">
              <div className="space-y-1">
                <p className="text-[8px] font-black text-emerald-600 uppercase tracking-widest flex items-center gap-1">
@@ -225,39 +216,39 @@ const ProductList: React.FC = () => {
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
-              <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Costo Compra</label>
+              <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Costo Compra</label>
               <input type="number" step="0.01" required className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-xs font-bold" value={editingProduct.costPrice || ''} onChange={e => setEditingProduct(prev => ({...prev, costPrice: parseFloat(e.target.value)}))} />
             </div>
             <div className="space-y-1">
-              <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Precio Venta</label>
+              <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Precio Venta</label>
               <input type="number" step="0.01" required className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-xs font-bold" value={editingProduct.salePrice || ''} onChange={e => setEditingProduct(prev => ({...prev, salePrice: parseFloat(e.target.value)}))} />
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
-              <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Stock Inicial</label>
-              <input type="number" required className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-xs font-bold focus:border-orange-500 disabled:opacity-30 shadow-sm" value={editingProduct.stock || 0} onChange={e => setEditingProduct(prev => ({...prev, stock: parseInt(e.target.value)}))} disabled={!!editingProduct.id} />
+              <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">
+                {editingProduct.id ? 'Ajuste de Stock' : 'Stock Inicial'}
+              </label>
+              <input 
+                type="number" 
+                required 
+                className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-xs font-bold focus:border-orange-500 shadow-sm" 
+                value={editingProduct.stock || 0} 
+                onChange={e => setEditingProduct(prev => ({...prev, stock: parseInt(e.target.value) || 0}))} 
+              />
             </div>
             <div className="space-y-1">
-              <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Mínimo Crítico</label>
-              <input type="number" required className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-xs font-bold focus:border-orange-500 shadow-sm" value={editingProduct.minStock || 0} onChange={e => setEditingProduct(prev => ({...prev, minStock: parseInt(e.target.value)}))} />
+              <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Mínimo Crítico</label>
+              <input type="number" required className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-xs font-bold focus:border-orange-500 shadow-sm" value={editingProduct.minStock || 0} onChange={e => setEditingProduct(prev => ({...prev, minStock: parseInt(e.target.value) || 0}))} />
             </div>
           </div>
 
-          {/* Botones del Formulario: Pila en móviles */}
           <div className="flex flex-col sm:flex-row gap-4 pt-4">
-            <button 
-              onClick={() => setIsModalOpen(false)} 
-              type="button" 
-              className="flex-1 px-6 py-4 text-[10px] font-black uppercase tracking-widest rounded-xl border-2 border-slate-200 dark:border-slate-800 order-2 sm:order-1 min-h-[44px]"
-            >
+            <button onClick={() => setIsModalOpen(false)} type="button" className="flex-1 px-6 py-4 text-[10px] font-black uppercase tracking-widest rounded-xl border-2 border-slate-200 dark:border-slate-800 order-2 sm:order-1 min-h-[44px]">
               Cancelar
             </button>
-            <button 
-              type="submit" 
-              className="flex-1 px-6 py-4 text-[10px] font-black uppercase tracking-widest bg-orange-600 text-white rounded-xl shadow-lg order-1 sm:order-2 min-h-[44px]"
-            >
+            <button type="submit" className="flex-1 px-6 py-4 text-[10px] font-black uppercase tracking-widest bg-orange-600 text-white rounded-xl shadow-lg order-1 sm:order-2 min-h-[44px]">
               Guardar Item
             </button>
           </div>

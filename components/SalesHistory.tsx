@@ -1,10 +1,9 @@
-
 import React, { useState } from 'react';
 import { useStore } from '../context/StoreContext';
 import { Sale } from '../types';
 import Modal from './Modal';
 import Button from './Button';
-import { Search, FileText, History as HistoryIcon, CornerUpLeft, Printer, Share2, Check } from 'lucide-react';
+import { Search, FileText, History as HistoryIcon, Printer, Share2, Check } from 'lucide-react';
 import TeikonWordmark from './TeikonWordmark';
 
 const SalesHistory: React.FC = () => {
@@ -44,7 +43,6 @@ const SalesHistory: React.FC = () => {
         console.error('Error al compartir:', err);
       }
     } else {
-      // Fallback: Copiar al portapapeles
       try {
         await navigator.clipboard.writeText(shareText);
         setCopied(true);
@@ -123,47 +121,40 @@ const SalesHistory: React.FC = () => {
                   </td>
                 </tr>
               ))}
-              {filteredSales.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="px-8 py-20 text-center opacity-30 text-sm font-bold uppercase tracking-widest">Búsqueda sin resultados</td>
-                </tr>
-              )}
             </tbody>
           </table>
         </div>
       </div>
 
-      {/* Contenedor optimizado para impresión: visible solo para la impresora */}
+      {/* TICKET PARA IMPRESIÓN (MÉTODO NUCLEAR) */}
       {selectedSale && (
-        <div id="printable-ticket-container" className="print:block hidden">
-           <div id="printable-ticket" className="p-8 font-mono text-sm space-y-4 bg-white text-black">
-              <div className="text-center border-b border-gray-300 border-dashed pb-4">
-                <h1 className="text-xl font-black uppercase">TEIKON</h1>
-                <p className="text-[10px] mt-1 uppercase">RECIBO DE VENTA</p>
-                <p className="text-[10px] uppercase">ID: {selectedSale.id.toUpperCase()}</p>
-                <p className="text-[10px]">{new Date(selectedSale.date).toLocaleString()}</p>
+        <div id="printable-ticket" className="hidden print:block font-mono text-xs text-black bg-white">
+          <div className="text-center border-b border-black border-dashed pb-4 mb-4">
+            <h1 className="text-lg font-black uppercase">TEIKON OS</h1>
+            <p className="text-[10px] uppercase">Comprobante de Venta</p>
+            <p className="text-[9px] mt-1">FOLIO: {selectedSale.id.slice(0,13).toUpperCase()}</p>
+            <p className="text-[9px]">{new Date(selectedSale.date).toLocaleString()}</p>
+          </div>
+          
+          <div className="space-y-1 mb-4">
+            {selectedSale.items.map((item, idx) => (
+              <div key={idx} className="flex justify-between gap-2">
+                <span className="flex-1">{item.quantity}x {item.productName.toUpperCase()}</span>
+                <span>${item.subtotal.toFixed(2)}</span>
               </div>
-              <div className="space-y-2 py-4">
-                {selectedSale.items.map((item, idx) => (
-                  <div key={idx} className="flex justify-between gap-4">
-                    <span className="flex-1">{item.quantity}x {item.productName.toUpperCase()}</span>
-                    <span className="shrink-0">${item.subtotal.toFixed(2)}</span>
-                  </div>
-                ))}
-              </div>
-              <div className="border-t border-gray-300 border-dashed pt-4 flex justify-between font-black text-lg">
-                <span>TOTAL</span>
-                <span>${selectedSale.total.toFixed(2)}</span>
-              </div>
-              <div className="text-center text-[9px] opacity-60 uppercase pt-4">
-                <p>MÉTODO: {selectedSale.paymentMethod}</p>
-                <p>ATENDIDO POR: {selectedSale.sellerId.toUpperCase()}</p>
-                <div className="mt-4 pt-4 border-t border-gray-200 border-dotted">
-                  <p>¡GRACIAS POR SU PREFERENCIA!</p>
-                  <p className="mt-1">SISTEMA TEIKON OS v2.9</p>
-                </div>
-              </div>
-           </div>
+            ))}
+          </div>
+
+          <div className="border-t border-black border-dashed pt-2 flex justify-between font-black text-sm">
+            <span>TOTAL</span>
+            <span>${selectedSale.total.toFixed(2)}</span>
+          </div>
+
+          <div className="text-center text-[8px] mt-6 pt-4 border-t border-black border-dotted">
+            <p>MÉTODO: {selectedSale.paymentMethod}</p>
+            <p>ATENDIDO POR: {selectedSale.sellerId.toUpperCase()}</p>
+            <p className="mt-4 font-bold">¡GRACIAS POR SU PREFERENCIA!</p>
+          </div>
         </div>
       )}
 
@@ -193,30 +184,14 @@ const SalesHistory: React.FC = () => {
                 </span>
               </div>
 
-              {/* ACTIONS BAR (PRINT & SHARE) */}
               <div className="no-print grid grid-cols-2 gap-4 pt-4 border-t border-brand-border border-dashed">
-                <Button 
-                  variant="secondary" 
-                  fullWidth 
-                  className="py-3 text-[10px] flex items-center gap-2 border-slate-200 dark:border-slate-700"
-                  onClick={handlePrint}
-                >
+                <Button variant="secondary" fullWidth className="py-3 text-[10px] flex items-center gap-2" onClick={handlePrint}>
                   <Printer size={16} /> Imprimir
                 </Button>
-                <Button 
-                  variant="sales" 
-                  fullWidth 
-                  className="py-3 text-[10px] flex items-center gap-2"
-                  onClick={handleShare}
-                >
+                <Button variant="sales" fullWidth className="py-3 text-[10px] flex items-center gap-2" onClick={handleShare}>
                   {copied ? <Check size={16} /> : <Share2 size={16} />}
                   {copied ? 'Copiado' : 'Compartir'}
                 </Button>
-              </div>
-              
-              <div className="text-center text-[10px] opacity-40 uppercase pt-4 space-y-1 text-slate-800 dark:text-white">
-                <p>Método de Pago: {selectedSale.paymentMethod}</p>
-                <p>Atendido por: {selectedSale.sellerId.toUpperCase()}</p>
               </div>
             </div>
 

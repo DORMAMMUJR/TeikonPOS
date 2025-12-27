@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -9,16 +8,16 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
       :root {
-        --bg-primary: #f8fafc; /* Slate 50 - Fondo limpio */
-        --bg-panel: #ffffff;   /* Blanco Puro */
-        --text-main: #1e293b;  /* Slate 800 - Contraste alto */
-        --text-muted: #64748b; /* Slate 500 */
+        --bg-primary: #f8fafc;
+        --bg-panel: #ffffff;
+        --text-main: #1e293b;
+        --text-muted: #64748b;
         --border-color: rgba(0, 0, 0, 0.05);
       }
 
       .dark {
-        --bg-primary: #1E3A4A; /* Midnight Teal Specified */
-        --bg-panel: #264a5e;   /* Elevated Teal Panel */
+        --bg-primary: #1E3A4A;
+        --bg-panel: #264a5e;
         --text-main: #f8fafc;
         --text-muted: #94a3b8;
         --border-color: rgba(255, 255, 255, 0.12);
@@ -44,7 +43,6 @@
         background-color: var(--bg-panel);
       }
 
-      /* Animación del Expanding Pill */
       .nav-pill-label {
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         max-width: 0;
@@ -59,7 +57,6 @@
         margin-left: 8px;
       }
 
-      /* Utilidad para ocultar scrollbars */
       .no-scrollbar::-webkit-scrollbar {
         display: none;
       }
@@ -79,59 +76,54 @@
         margin: 0;
       }
 
-      /* ESTILOS DE IMPRESIÓN REFACTORIZADOS */
+      /* MÉTODO NUCLEAR DE IMPRESIÓN */
       @media print {
         @page {
           margin: 0;
           size: auto;
         }
 
-        /* Ocultar TODO por defecto usando visibilidad para no romper el flujo de React */
-        body {
-          background: white !important;
-          color: black !important;
-          visibility: hidden;
-          margin: 0;
-          padding: 0;
+        /* 1. Ocultar TODO por defecto */
+        body * {
+          visibility: hidden !important;
         }
 
-        /* Forzar visibilidad solo del contenedor del ticket */
-        #printable-ticket-container, 
-        #printable-ticket-container * {
-          visibility: visible;
-          color: black !important;
-          background-color: white !important;
-          border-color: #eee !important;
+        /* 2. Forzar visibilidad del Ticket y su contenido */
+        #printable-ticket, 
+        #printable-ticket * {
+          visibility: visible !important;
         }
 
-        /* Posicionamiento del Ticket */
-        #printable-ticket-container {
-          position: absolute;
-          left: 0;
-          top: 0;
-          width: 100%;
-          display: flex !important;
-          justify-content: center;
-          padding: 0;
-          margin: 0;
-          background: white !important;
-        }
-
+        /* 3. Posicionamiento absoluto al inicio de la página */
         #printable-ticket {
-          width: 80mm; /* Ancho estándar ticketera térmica */
-          max-width: 100%;
-          border: none !important;
-          box-shadow: none !important;
+          position: absolute !important;
+          left: 0 !important;
+          top: 0 !important;
+          width: 80mm !important; /* Ancho estándar térmica */
+          margin: 0 !important;
           padding: 10mm 5mm !important;
+          background-color: white !important;
+          color: black !important;
+          z-index: 99999 !important;
+          display: block !important;
         }
 
-        /* Asegurar que el contenido de modo oscuro sea visible (negro sobre blanco) */
-        .dark #printable-ticket-container * {
+        /* 4. Limpieza de sombras y bordes de diseño */
+        .card-shadow, .card-premium {
+          box-shadow: none !important;
+          border: none !important;
+        }
+
+        /* Forzar texto negro para asegurar legibilidad */
+        #printable-ticket p, 
+        #printable-ticket span, 
+        #printable-ticket h1, 
+        #printable-ticket h2, 
+        #printable-ticket div {
           color: black !important;
         }
 
-        /* Ocultar elementos específicos que podrían interferir */
-        header, footer, nav, .no-print, button, .modal-close-btn, #root > header, #root > div:not(#printable-ticket-container) {
+        header, footer, nav, .no-print, button, #root > header, #root > div:not(#printable-ticket) {
           display: none !important;
         }
       }
