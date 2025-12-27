@@ -25,13 +25,36 @@ interface StoreContextType {
 
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
 
+// Producto Semilla para Pruebas
+const SEED_PRODUCTS: Product[] = [
+  {
+    id: 'seed-papas-001',
+    sku: '0003',
+    name: 'Papas',
+    category: 'Snacks',
+    costPrice: 15,
+    salePrice: 22,
+    unitProfit: 7, // $22 - $15
+    stock: 12,
+    minStock: 3,
+    taxRate: 0,
+    isActive: true,
+    ownerId: 'usr-1' // Vinculado al admin por defecto
+  }
+];
+
 export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
     const session = sessionStorage.getItem('user_session');
     return session ? JSON.parse(session) : null;
   });
 
-  const [allProducts, setAllProducts] = useState<Product[]>(() => JSON.parse(localStorage.getItem('products') || '[]'));
+  const [allProducts, setAllProducts] = useState<Product[]>(() => {
+    const saved = localStorage.getItem('products');
+    if (saved) return JSON.parse(saved);
+    return SEED_PRODUCTS; // Cargar semilla si no hay datos
+  });
+
   const [allSales, setAllSales] = useState<Sale[]>(() => JSON.parse(localStorage.getItem('sales') || '[]'));
   const [allSessions, setAllSessions] = useState<CashSession[]>(() => JSON.parse(localStorage.getItem('cash_sessions') || '[]'));
   const [settings, setSettings] = useState<FinancialSettings>(() => JSON.parse(localStorage.getItem('settings') || '{"monthlyFixedCosts": 10000}'));
