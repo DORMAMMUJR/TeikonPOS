@@ -1,9 +1,9 @@
-const { Sequelize, DataTypes } = require('sequelize');
+import { Sequelize, DataTypes } from 'sequelize';
 
 // Inicializar Sequelize con DATABASE_URL
 const sequelize = new Sequelize(process.env.DATABASE_URL || 'postgres://localhost:5432/teikonpos', {
     dialect: 'postgres',
-    logging: false, // Cambiar a console.log para debug
+    logging: false,
     dialectOptions: {
         ssl: process.env.NODE_ENV === 'production' ? {
             require: true,
@@ -485,7 +485,7 @@ StockMovement.belongsTo(Store, { foreignKey: 'storeId', as: 'store' });
 // ==========================================
 // EXPORTAR
 // ==========================================
-module.exports = {
+export {
     sequelize,
     Organization,
     Store,

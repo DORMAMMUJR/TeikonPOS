@@ -1,11 +1,12 @@
-const express = require('express');
-const cors = require('cors');
-const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
-const path = require('path');
-const { fileURLToPath } = require('url');
+import express from 'express';
+import cors from 'cors';
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
 
-const {
+import {
     sequelize,
     Organization,
     Store,
@@ -14,7 +15,10 @@ const {
     Expense,
     StockMovement,
     CashShift
-} = require('./models');
+} from './models.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 80;
