@@ -918,10 +918,9 @@ app.get('/api/test/run', async (req, res) => {
     };
 
     try {
-        // LIMPIAR BASE DE DATOS
-        await sequelize.query('DROP SCHEMA public CASCADE; CREATE SCHEMA public;');
+        // LIMPIAR BASE DE DATOS - Usar sync con force para recrear todas las tablas
         await sequelize.sync({ force: true });
-        addResult('Limpieza de base de datos', true, 'Base de datos reiniciada');
+        addResult('Limpieza de base de datos', true, 'Base de datos reiniciada con sync force');
 
         // Variables para las pruebas
         let tokenCentro, tokenNorte, storeIdCentro, storeIdNorte, productId, orgId;
