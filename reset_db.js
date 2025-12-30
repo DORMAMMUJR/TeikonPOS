@@ -1,6 +1,6 @@
 
 import { sequelize, User, Store, Product, Sale, Expense, StockMovement, Organization, Client } from './models.js';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 
 const resetDatabase = async () => {
     try {
