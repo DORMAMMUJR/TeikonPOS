@@ -217,7 +217,6 @@ app.get('/api/stores', authenticateToken, async (req, res) => {
         console.error('Error al listar sucursales:', error);
         res.status(500).json({ error: 'Error al listar sucursales' });
     }
-}
 });
 
 // DELETE /api/stores/:id - Eliminar tienda (SOLO SUPER_ADMIN)
