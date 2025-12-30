@@ -210,6 +210,29 @@ app.get('/api/stores', authenticateToken, async (req, res) => {
         console.error('Error al listar sucursales:', error);
         res.status(500).json({ error: 'Error al listar sucursales' });
     }
+}
+});
+
+// DELETE /api/stores/:id - Eliminar tienda (SOLO SUPER_ADMIN)
+app.delete('/api/stores/:id', authenticateToken, async (req, res) => {
+    try {
+        if (req.role !== 'SUPER_ADMIN') {
+            return res.status(403).json({ error: 'Acceso denegado' });
+        }
+
+        const store = await Store.findByPk(req.params.id);
+        if (!store) {
+            return res.status(404).json({ error: 'Tienda no encontrada' });
+        }
+
+        // Cascade delete is handled by Database definition (onDelete: CASCADE)
+        await store.destroy();
+
+        res.json({ message: 'Tienda eliminada correctamente' });
+    } catch (error) {
+        console.error('Error al eliminar tienda:', error);
+        res.status(500).json({ error: 'Error al eliminar tienda' });
+    }
 });
 
 // ==========================================
@@ -349,6 +372,11 @@ app.get('/api/ventas', authenticateToken, async (req, res) => {
 
         const sales = await Sale.findAll({
             where,
+            include: req.role === 'SUPER_ADMIN' ? [{
+                model: Store,
+                as: 'store',
+                attributes: ['nombre']
+            }] : [],
             order: [['created_at', 'DESC']]
         });
         res.json(sales);
@@ -358,98 +386,116 @@ app.get('/api/ventas', authenticateToken, async (req, res) => {
     }
 });
 
-// POST /api/ventas - Crear venta
+// POST /api/ventas - Crear venta (ATOMIC TRANSACTION)
 app.post('/api/ventas', authenticateToken, async (req, res) => {
     try {
-        const { vendedor, items, paymentMethod, total } = req.body;
+        const { vendedor, items, paymentMethod } = req.body;
 
-        if (!vendedor || !items || !paymentMethod || !total) {
-            return res.status(400).json({ error: 'Faltan campos requeridos' });
+        if (!items || items.length === 0) {
+            return res.status(400).json({ error: 'El carrito está vacío' });
         }
 
-        // Calcular totalCost y netProfit
-        let totalCost = 0;
-        const enrichedItems = [];
+        const result = await sequelize.transaction(async (t) => {
+            let calculatedTotal = 0;
+            let calculatedCost = 0;
+            const enrichedItems = [];
 
-        for (const item of items) {
-            const product = await Product.findByPk(item.productId);
-            if (!product) {
-                return res.status(404).json({ error: `Producto ${item.productId} no encontrado` });
-            }
-
-            if (product.stock < item.cantidad) {
-                return res.status(400).json({ error: `Stock insuficiente para ${product.nombre}` });
-            }
-
-            const itemCost = parseFloat(product.costPrice) * item.cantidad;
-            totalCost += itemCost;
-
-            enrichedItems.push({
-                productId: product.id,
-                nombre: product.nombre,
-                cantidad: item.cantidad,
-                unitPrice: item.unitPrice || product.salePrice,
-                unitCost: product.costPrice,
-                subtotal: item.unitPrice * item.cantidad
-            });
-        }
-
-        const netProfit = total - totalCost;
-
-        // Crear venta en transacción
-        const sale = await sequelize.transaction(async (t) => {
-            const newSale = await Sale.create({
-                storeId: req.storeId,
-                vendedor,
-                subtotal: total,
-                totalDiscount: 0,
-                taxTotal: 0,
-                total,
-                totalCost,
-                netProfit,
-                paymentMethod,
-                status: 'ACTIVE',
-                items: enrichedItems,
-                syncedAt: new Date()
-            }, { transaction: t });
-
-            // Actualizar stock y crear movimientos
-            for (const item of enrichedItems) {
-                // HARDENING: Verify product belongs to storeId transactionally
+            // 1. Verificación y Bloqueo (Iterar items para validar antes de escribir nada)
+            for (const item of items) {
+                // LOCK: Consultar producto con bloqueo "SELECT ... FOR UPDATE"
+                // Esto impide que dos ventas simultáneas resten el mismo stock causando negativos.
                 const product = await Product.findOne({
                     where: { id: item.productId, storeId: req.storeId },
+                    lock: t.LOCK.UPDATE,
                     transaction: t
                 });
 
+                // Seguridad: Validar propiedad de la tienda
                 if (!product) {
-                    throw new Error(`Producto ${item.productId} no pertenece a la tienda o no existe`);
+                    throw new Error(`Producto no encontrado o acceso denegado (ID: ${item.productId})`);
                 }
 
+                // Seguridad: Validar Stock (No negativos)
+                if (product.stock < item.cantidad) {
+                    throw new Error(`Stock insuficiente para ${product.nombre} (Disponible: ${product.stock})`);
+                }
+
+                // Calcular financieros (Server-Side Trust)
+                const unitPrice = parseFloat(item.unitPrice) || parseFloat(product.salePrice);
+                const unitCost = parseFloat(product.costPrice);
+                const subtotal = unitPrice * item.cantidad;
+                const itemCost = unitCost * item.cantidad;
+
+                calculatedTotal += subtotal;
+                calculatedCost += itemCost;
+
+                enrichedItems.push({
+                    productId: product.id,
+                    nombre: product.nombre,
+                    cantidad: item.cantidad,
+                    unitPrice,
+                    unitCost,
+                    subtotal,
+                    originalProduct: product // Mantener ref para update
+                });
+            }
+
+            const netProfit = calculatedTotal - calculatedCost;
+
+            // 2. Registro de la Venta (Header)
+            const newSale = await Sale.create({
+                storeId: req.storeId,
+                vendedor: vendedor || req.user.username,
+                subtotal: calculatedTotal,
+                totalDiscount: 0,
+                taxTotal: 0,
+                total: calculatedTotal,
+                totalCost: calculatedCost,
+                netProfit: netProfit,
+                paymentMethod: paymentMethod || 'CASH',
+                status: 'ACTIVE',
+                items: enrichedItems.map(i => ({
+                    productId: i.productId,
+                    nombre: i.nombre,
+                    cantidad: i.cantidad,
+                    unitPrice: i.unitPrice,
+                    subtotal: i.subtotal
+                })),
+                syncedAt: new Date()
+            }, { transaction: t });
+
+            // 3. Actualizar Inventario y Kardex
+            for (const item of enrichedItems) {
+                const product = item.originalProduct;
                 const stockAnterior = product.stock;
                 const stockNuevo = stockAnterior - item.cantidad;
 
+                // Resta de Stock
                 await product.update({ stock: stockNuevo }, { transaction: t });
 
+                // Registro Histórico (Sales History / Movement)
                 await StockMovement.create({
-                    productId: item.productId,
                     storeId: req.storeId,
+                    productId: product.id,
                     tipo: 'SALE',
                     cantidad: -item.cantidad,
                     stockAnterior,
                     stockNuevo,
                     motivo: `Venta #${newSale.id.substring(0, 8)}`,
                     referenciaId: newSale.id,
-                    registradoPor: vendedor
+                    registradoPor: vendedor || req.user.username
                 }, { transaction: t });
             }
 
             return newSale;
         });
 
-        res.status(201).json(sale);
+        res.status(201).json(result);
+
     } catch (error) {
-        console.error('Error al crear venta:', error);
-        res.status(500).json({ error: 'Error al crear venta' });
+        console.error('Transaction Error:', error.message);
+        // Si hay error, Sequelize hace Rollback automático.
+        res.status(400).json({ error: error.message });
     }
 });
 

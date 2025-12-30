@@ -140,11 +140,10 @@ const Login: React.FC = () => {
 
           <div className="mt-6 pt-6 border-t border-slate-100 dark:border-white/5 text-center">
             <a
-              href="mailto:ventas@teikonpos.com?subject=Interés en TeikonPOS&body=Hola, estoy interesado en adquirir una licencia."
-              className="text-xs font-bold text-brand-muted hover:text-brand-purple transition-colors flex items-center gap-2 mx-auto"
+              href="mailto:soporte@teikonpos.com?subject=Interesado%20en%20TeikonPOS"
+              className="mt-6 flex items-center justify-center gap-2 text-[10px] font-bold text-slate-500 hover:text-indigo-500 transition-colors uppercase tracking-widest border border-dashed border-slate-300 dark:border-slate-700 px-4 py-2 rounded-full hover:border-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 w-fit mx-auto"
             >
-              ¿Quieres tu propia tienda? Contáctanos
-              <ArrowRight size={14} />
+              <Mail size={12} /> Interesados contactar a soporte <ArrowRight size={14} />
             </a>
           </div>
         </div>
@@ -159,13 +158,15 @@ const Login: React.FC = () => {
         </div>
       </div>
 
-      {showDevModal && (
-        <DevLoginModal
-          onSuccess={handleDevSuccess}
-          onClose={() => setShowDevModal(false)}
-        />
-      )}
-    </div>
+      {
+        showDevModal && (
+          <DevLoginModal
+            onSuccess={handleDevSuccess}
+            onClose={() => setShowDevModal(false)}
+          />
+        )
+      }
+    </div >
   );
 };
 
