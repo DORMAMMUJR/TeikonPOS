@@ -74,7 +74,7 @@ const Login: React.FC = () => {
             <TeikonLogo size={80} className="mb-6" />
             <TeikonWordmark height={24} className="text-slate-900 dark:text-white" />
             <p className="text-[10px] font-black text-brand-muted uppercase tracking-[0.4em] mt-4">
-              Acceso Seguro
+              INVENTORY SOFTWARE
             </p>
           </div>
 
@@ -133,22 +133,11 @@ const Login: React.FC = () => {
               </Button>
             </form>
 
-            <div className="mt-6 pt-6 border-t border-slate-100 dark:border-white/5 text-center">
-              <div className="mt-6 flex items-center justify-center gap-2 text-[10px] font-bold text-slate-500 uppercase tracking-widest px-4 py-2 w-fit mx-auto">
-                <Lock size={12} /> Acceso exclusivo para socios Teikon
-              </div>
-            </div>
+
           </div>
         </div>
 
-        <div className="mt-8 flex flex-col items-center gap-4">
-          <button
-            onClick={() => setShowDevModal(true)}
-            className="flex items-center gap-2 text-[8px] font-black text-slate-400 hover:text-indigo-500 transition-colors uppercase tracking-[0.3em] opacity-30 hover:opacity-100"
-          >
-            <Terminal size={12} /> Acceso Desarrollador
-          </button>
-        </div>
+
       </div>
 
       {showDevModal && (
