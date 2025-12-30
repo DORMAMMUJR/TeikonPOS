@@ -671,9 +671,10 @@ const StoreConfig = sequelize.define('StoreConfig', {
         allowNull: false,
         unique: true,
         references: {
-            model: 'Stores',
+            model: 'stores', // FIXED: Must match tableName (lowercase)
             key: 'id'
-        }
+        },
+        field: 'store_id'
     },
     breakEvenGoal: {
         type: DataTypes.DECIMAL(10, 2),
