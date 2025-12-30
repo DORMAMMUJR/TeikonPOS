@@ -296,7 +296,7 @@ const Sale = sequelize.define('Sale', {
     updatedAt: false,
     indexes: [
         {
-            fields: ['storeId']
+            fields: ['store_id']
         }
     ]
 });
@@ -348,7 +348,7 @@ const Client = sequelize.define('Client', {
     timestamps: true,
     indexes: [
         {
-            fields: ['storeId']
+            fields: ['store_id']
         }
     ]
 });
@@ -406,7 +406,7 @@ const Expense = sequelize.define('Expense', {
     updatedAt: 'updated_at',
     indexes: [
         {
-            fields: ['storeId']
+            fields: ['store_id']
         }
     ]
 });
@@ -476,7 +476,7 @@ const StockMovement = sequelize.define('StockMovement', {
     updatedAt: false,
     indexes: [
         {
-            fields: ['storeId']
+            fields: ['store_id']
         }
     ]
 });
@@ -563,7 +563,7 @@ const CashShift = sequelize.define('CashShift', {
     updatedAt: 'updated_at',
     indexes: [
         {
-            fields: ['storeId']
+            fields: ['store_id']
         }
     ]
 });
