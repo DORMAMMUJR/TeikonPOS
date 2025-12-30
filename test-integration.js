@@ -8,7 +8,7 @@
  * 4. Cálculo correcto de Utilidad Neta
  */
 
-const axios = require('axios');
+import axios from 'axios';
 
 const BASE_URL = process.env.API_URL || 'http://localhost:80';
 const colors = {

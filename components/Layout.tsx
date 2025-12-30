@@ -1,15 +1,15 @@
 
-import React, { useState } from 'react';
-import { 
-  LayoutDashboard, 
-  ShoppingCart, 
-  Package, 
-  Settings, 
-  LogOut, 
-  History, 
-  Sun, 
-  Moon, 
-  LifeBuoy, 
+import React, { useState, useEffect } from 'react';
+import {
+  LayoutDashboard,
+  ShoppingCart,
+  Package,
+  Settings as SettingsIcon, // Renamed to avoid confusion with Settings Tab
+  LogOut,
+  History,
+  Sun,
+  Moon,
+  LifeBuoy,
   Menu,
   ChevronLeft,
   X
@@ -19,6 +19,7 @@ import { useTheme } from '../context/ThemeContext';
 import TeikonLogo from './TeikonLogo';
 import TeikonWordmark from './TeikonWordmark';
 import SupportTicketModal from './SupportTicketModal';
+import ConnectionStatus from './ConnectionStatus';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -32,11 +33,26 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => 
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
+  const [stats, setStats] = useState<any>({ totalProfit: 0 });
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const data = await getDashboardStats('day');
+        setStats(data || { totalProfit: 0 });
+      } catch (error) {
+        console.error("Error fetching layout stats", error);
+      }
+    };
+    fetchStats();
+    // Refresh stats every minute? Or rely on global re-renders
+    const interval = setInterval(fetchStats, 60000);
+    return () => clearInterval(interval);
+  }, [getDashboardStats]);
 
   // Lógica de Meta Operativa (Read-Only)
-  const stats = getDashboardStats('day');
   const dailyTarget = settings.monthlyFixedCosts / 30;
-  const currentProfit = stats.totalProfit;
+  const currentProfit = stats.totalProfit || 0;
   const progressPercent = dailyTarget > 0 ? Math.min(Math.max((currentProfit / dailyTarget) * 100, 0), 100) : 0;
 
   const navItems = [
@@ -44,7 +60,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => 
     { id: 'pos', label: 'Ventas', icon: ShoppingCart, color: 'text-brand-emerald' },
     { id: 'history', label: 'Historial', icon: History, color: 'text-brand-pink' },
     { id: 'products', label: 'Inventario', icon: Package, color: 'text-orange-600' },
-    { id: 'settings', label: 'Admin', icon: Settings, adminOnly: true, color: 'text-brand-blue' },
+    { id: 'settings', label: 'Admin', icon: SettingsIcon, adminOnly: true, color: 'text-brand-blue' },
   ];
 
   const getPageTitle = () => {
@@ -65,43 +81,38 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => 
 
   return (
     <div className="flex h-[100dvh] bg-brand-bg text-brand-text overflow-hidden transition-colors duration-500 flex-col md:flex-row">
-      
-      {/* --- 1. BARRA SUPERIOR (Solo visible en Celular) --- */}
-      <div className="md:hidden bg-brand-panel border-b border-brand-border px-4 py-3 flex justify-between items-center shrink-0 z-[60] shadow-sm">
-        <div className="flex items-center gap-2">
-          <TeikonLogo size={28} />
-          <TeikonWordmark height={14} className="text-slate-900 dark:text-white" />
+
+      <ConnectionStatus />
+
+      {/* --- 1. NAVBAR MÓVIL SUPERIOR (Mobile Header) --- */}
+      <div className="md:hidden bg-brand-panel border-b border-brand-border px-4 py-3 flex justify-between items-center shrink-0 z-[60] shadow-sm relative">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="p-2 -ml-2 text-brand-text rounded-lg active:bg-slate-100 dark:active:bg-slate-800 focus:outline-none"
+          >
+            {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
+          <div className="flex items-center gap-2">
+            <TeikonLogo size={24} />
+            <h1 className="text-sm font-black uppercase tracking-tight text-slate-900 dark:text-white">Teikon POS</h1>
+          </div>
         </div>
-        <button 
-          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          className="p-2 text-brand-text rounded-lg active:bg-slate-100 dark:active:bg-slate-800 focus:outline-none"
-        >
-          {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-        </button>
+
+        {/* Mobile Profile / Actions can go here */}
       </div>
 
-      {/* --- 2. SIDEBAR (Drawer Móvil / Sidebar Desktop) --- */}
-      <aside 
+      {/* --- 2. SIDEBAR / DRAWER --- */}
+      <aside
         className={`
           flex flex-col bg-brand-panel border-r border-brand-border transition-all duration-300 z-[70] shrink-0
-          /* Móvil: Fixed Overlay */
-          ${isMobileMenuOpen ? 'fixed inset-0 w-full' : 'hidden'}
-          /* Desktop: Relative Flex */
-          md:relative md:flex md:h-full md:translate-x-0
+          /* Móvil: Drawer Fixed (Slide-in) */
+          fixed inset-y-0 left-0 w-64 shadow-2xl transform ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
+          /* Desktop: Relative Static Sidebar */
+          md:relative md:translate-x-0 md:shadow-none md:flex md:h-full
           ${isCollapsed ? 'md:w-20' : 'md:w-64'}
         `}
       >
-        {/* Botón Cerrar (Solo Móvil - Header interno del drawer) */}
-        <div className="md:hidden flex justify-between items-center p-4 border-b border-brand-border">
-            <span className="text-xs font-black uppercase tracking-widest text-brand-muted">Menú Principal</span>
-            <button 
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="p-2 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-500"
-            >
-                <X size={20} />
-            </button>
-        </div>
-
         {/* Header del Sidebar (Solo Desktop) */}
         <div className="hidden md:flex h-20 items-center px-4 border-b border-brand-border shrink-0 overflow-hidden whitespace-nowrap">
           <div className={`flex items-center flex-1 transition-opacity duration-300 ${isCollapsed ? 'opacity-0 w-0' : 'opacity-100 w-auto'}`}>
@@ -110,7 +121,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => 
               <TeikonWordmark height={14} className="text-slate-900 dark:text-white" />
             </div>
           </div>
-          <button 
+          <button
             onClick={() => setIsCollapsed(!isCollapsed)}
             className={`p-2 rounded-xl text-brand-muted hover:bg-black/5 dark:hover:bg-white/5 transition-all active:scale-90 ${isCollapsed ? 'mx-auto' : 'ml-auto'}`}
           >
@@ -127,11 +138,10 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => 
               <button
                 key={item.id}
                 onClick={() => handleMobileNav(item.id)}
-                className={`flex items-center w-full rounded-2xl transition-all duration-150 ease-in-out group min-h-[52px] active:scale-[0.97] ${
-                  active 
-                    ? 'bg-slate-900 dark:bg-white text-white dark:text-black shadow-lg shadow-black/10' 
+                className={`flex items-center w-full rounded-2xl transition-all duration-150 ease-in-out group min-h-[52px] active:scale-[0.97] ${active
+                    ? 'bg-slate-900 dark:bg-white text-white dark:text-black shadow-lg shadow-black/10'
                     : 'text-brand-muted hover:bg-black/5 dark:hover:bg-white/5'
-                } 
+                  } 
                 /* Mobile: siempre expandido */
                 justify-start px-4 gap-4
                 /* Desktop: depende de isCollapsed */
@@ -139,7 +149,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => 
                 `}
               >
                 <item.icon size={22} className={`shrink-0 ${active ? 'text-inherit' : item.color}`} />
-                
+
                 <span className={`text-xs font-black uppercase tracking-widest truncate 
                   /* Mobile: siempre visible */
                   block
@@ -159,7 +169,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => 
 
         {/* Footer del Sidebar */}
         <div className="p-3 border-t border-brand-border space-y-2 bg-black/5 dark:bg-white/5 shrink-0">
-          <button 
+          <button
             onClick={() => { setIsSupportModalOpen(true); setIsMobileMenuOpen(false); }}
             className={`flex items-center w-full rounded-xl py-3 text-brand-muted hover:text-indigo-500 hover:bg-indigo-500/5 transition-all font-bold active:scale-95 px-4 gap-4 md:${isCollapsed ? 'justify-center px-0' : 'px-4 gap-4'}`}
           >
@@ -167,7 +177,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => 
             <span className={`text-[10px] font-black uppercase tracking-widest block md:${isCollapsed ? 'hidden' : 'block'}`}>Soporte</span>
           </button>
 
-          <button 
+          <button
             onClick={() => { toggleTheme(); setIsMobileMenuOpen(false); }}
             className={`flex items-center w-full rounded-xl py-3 text-brand-muted hover:text-amber-500 hover:bg-amber-500/5 transition-all font-bold active:scale-95 px-4 gap-4 md:${isCollapsed ? 'justify-center px-0' : 'px-4 gap-4'}`}
           >
@@ -175,7 +185,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => 
             <span className={`text-[10px] font-black uppercase tracking-widest block md:${isCollapsed ? 'hidden' : 'block'}`}>{theme === 'dark' ? 'Modo Luz' : 'Modo Oscuro'}</span>
           </button>
 
-          <button 
+          <button
             onClick={logout}
             className={`flex items-center w-full rounded-xl py-3 text-red-500/60 hover:text-red-500 hover:bg-red-500/5 transition-all font-bold active:scale-95 px-4 gap-4 md:${isCollapsed ? 'justify-center px-0' : 'px-4 gap-4'}`}
           >
@@ -185,13 +195,21 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => 
         </div>
       </aside>
 
+      {/* Overlay para cerrar drawer en móvil */}
+      {isMobileMenuOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-[65] md:hidden backdrop-blur-sm"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
       {/* --- 3. ÁREA DE CONTENIDO PRINCIPAL --- */}
-      <div className="flex-1 flex flex-col min-w-0 relative w-full h-full">
-        
-        {/* Top Header Desktop (Info Bar) */}
-        <header className="h-16 md:h-20 bg-brand-panel border-b border-brand-border flex items-center justify-between px-4 md:px-8 shrink-0 z-40">
+      <div className="flex-1 flex flex-col min-w-0 relative w-full h-full bg-brand-bg">
+
+        {/* Top Header Desktop (Info Bar) y Mobile Title */}
+        <header className="h-14 md:h-20 bg-brand-panel border-b border-brand-border flex items-center justify-between px-4 md:px-8 shrink-0 z-40 sticky top-0 md:relative">
           <div className="flex flex-col min-w-0">
-            <h2 className="text-base md:text-xl font-black text-slate-900 dark:text-white uppercase tracking-tighter truncate">
+            <h2 className="text-sm md:text-xl font-black text-slate-900 dark:text-white uppercase tracking-tighter truncate">
               {getPageTitle()}
             </h2>
             <div className="flex items-center gap-3 mt-0.5">
@@ -207,7 +225,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => 
               <span className="text-slate-900 dark:text-white">${currentProfit.toFixed(0)} / ${dailyTarget.toFixed(0)}</span>
             </div>
             <div className="h-2 w-full bg-slate-100 dark:bg-slate-900 rounded-full relative overflow-hidden shadow-inner border border-black/5 dark:border-white/5">
-              <div 
+              <div
                 className="h-full bg-brand-purple transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(139,92,246,0.4)]"
                 style={{ width: `${progressPercent}%` }}
               />
@@ -233,3 +251,4 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => 
 };
 
 export default Layout;
+

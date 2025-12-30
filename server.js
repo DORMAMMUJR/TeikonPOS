@@ -10,6 +10,7 @@ import {
     sequelize,
     Organization,
     Store,
+    User,
     Product,
     Sale,
     Expense,
@@ -127,26 +128,50 @@ app.post('/api/auth/register', async (req, res) => {
     }
 });
 
-// POST /api/auth/login - Login de store
+// POST /api/auth/login - Iniciar sesión
 app.post('/api/auth/login', async (req, res) => {
     try {
         const { usuario, password } = req.body;
 
         if (!usuario || !password) {
-            return res.status(400).json({ error: 'Usuario y contraseña requeridos' });
+            return res.status(400).json({ error: 'Faltan credenciales' });
         }
 
-        // Buscar store
-        const store = await Store.findOne({
-            where: { usuario },
-            include: [{ model: Organization, as: 'organization' }]
-        });
+        // 1. Buscar en Users (Administradores, Cajeros, Super Admin)
+        const user = await User.findOne({ where: { username: usuario } });
+
+        if (user) {
+            const validPassword = await bcrypt.compare(password, user.password);
+            if (!validPassword) {
+                return res.status(401).json({ error: 'Credenciales inválidas' });
+            }
+
+            const token = jwt.sign({
+                userId: user.id,
+                storeId: user.storeId, // Puede ser null si es SUPER_ADMIN
+                role: user.role,
+                username: user.username
+            }, JWT_SECRET, { expiresIn: '30d' });
+
+            return res.json({
+                token,
+                user: {
+                    id: user.id,
+                    username: user.username,
+                    role: user.role,
+                    storeId: user.storeId,
+                    storeName: user.storeId ? 'Store' : 'Teikon HQ' // Placeholder
+                }
+            });
+        }
+
+        // 2. Fallback: Buscar en Stores (Legacy - La tienda es el usuario)
+        const store = await Store.findOne({ where: { usuario }, include: ['organization'] });
 
         if (!store) {
             return res.status(401).json({ error: 'Credenciales inválidas' });
         }
 
-        // Verificar password
         const validPassword = await bcrypt.compare(password, store.password);
         if (!validPassword) {
             return res.status(401).json({ error: 'Credenciales inválidas' });
@@ -157,19 +182,22 @@ app.post('/api/auth/login', async (req, res) => {
             storeId: store.id,
             organizationId: store.organizationId,
             storeName: store.nombre,
-            usuario: store.usuario
+            usuario: store.usuario,
+            role: 'ADMIN' // Asumimos rol admin para cuenta de tienda
         }, JWT_SECRET, { expiresIn: '30d' });
 
         res.json({
             token,
-            store: {
+            user: {
                 id: store.id,
-                nombre: store.nombre,
-                usuario: store.usuario,
-                organizationId: store.organizationId,
+                username: store.usuario,
+                role: 'ADMIN',
+                storeId: store.id,
+                storeName: store.nombre,
                 organizationName: store.organization.nombre
             }
         });
+
     } catch (error) {
         console.error('Error en login:', error);
         res.status(500).json({ error: 'Error al iniciar sesión' });

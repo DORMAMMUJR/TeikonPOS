@@ -107,6 +107,47 @@ const Store = sequelize.define('Store', {
 });
 
 // ==========================================
+// MODELO: User (Usuarios del Sistema)
+// ==========================================
+const User = sequelize.define('User', {
+    id: {
+        type: DataTypes.UUID,
+        defaultValue: DataTypes.UUIDV4,
+        primaryKey: true
+    },
+    username: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        unique: true
+    },
+    password: {
+        type: DataTypes.STRING,
+        allowNull: false
+    },
+    role: {
+        type: DataTypes.ENUM('SUPER_ADMIN', 'ADMIN', 'SELLER'),
+        defaultValue: 'SELLER'
+    },
+    storeId: {
+        type: DataTypes.UUID,
+        allowNull: true, // NULL para Super Admin
+        references: {
+            model: 'stores',
+            key: 'id'
+        },
+        field: 'store_id'
+    },
+    fullName: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        field: 'full_name'
+    }
+}, {
+    tableName: 'users',
+    timestamps: true
+});
+
+// ==========================================
 // MODELO: Product (Producto)
 // ==========================================
 const Product = sequelize.define('Product', {
@@ -474,6 +515,10 @@ Expense.belongsTo(Store, { foreignKey: 'storeId', as: 'store' });
 Store.hasMany(CashShift, { foreignKey: 'storeId', as: 'cashShifts' });
 CashShift.belongsTo(Store, { foreignKey: 'storeId', as: 'store' });
 
+// Store -> User (1:N)
+Store.hasMany(User, { foreignKey: 'storeId', as: 'users' });
+User.belongsTo(Store, { foreignKey: 'storeId', as: 'store' });
+
 // Product -> StockMovement (1:N)
 Product.hasMany(StockMovement, { foreignKey: 'productId', as: 'movements' });
 StockMovement.belongsTo(Product, { foreignKey: 'productId', as: 'product' });
@@ -489,6 +534,7 @@ export {
     sequelize,
     Organization,
     Store,
+    User,
     Product,
     Sale,
     Expense,

@@ -14,40 +14,39 @@ import AdminPanel from './components/AdminPanel';
 import InitialConfig from './components/InitialConfig';
 import { Power } from 'lucide-react';
 
-const AppContent: React.FC = () => {
-  const { currentUser, currentSession, openSession, logout } = useStore();
-  const [activeTab, setActiveTab] = useState('dashboard');
+import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
+
+const ProtectedRoute = ({ children, requireAdmin = false }: { children: JSX.Element, requireAdmin?: boolean }) => {
+  const { currentUser } = useStore();
+  const location = useLocation();
+
+  if (!currentUser) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  if (requireAdmin && (currentUser as any).role !== 'SUPER_ADMIN') {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return children;
+};
+
+const StoreGuard = ({ children }: { children: JSX.Element }) => {
+  const { currentUser, currentSession, openSession } = useStore();
   const [openingBalance, setOpeningBalance] = useState('');
 
-  // ==========================================
-  // FILTRO 1 (CRÍTICO): AUTENTICACIÓN
-  // ==========================================
-  if (!currentUser) {
-    return <Login />;
+  // Bypass checks for Super Admin (just in case they land here)
+  if ((currentUser as any).role === 'SUPER_ADMIN') {
+    return <Navigate to="/admin/stores" replace />;
   }
 
-  // ==========================================
-  // FILTRO 2: RBAC - ACCESO A PANEL DE CONTROL
-  // ==========================================
-  if ((currentUser as any).role === 'superuser') {
-    return <AdminPanel onExit={logout} />;
-  }
-
-  // ==========================================
-  // FILTRO 3 (MURO DE SEGURIDAD): ONBOARDING
-  // Este bloque impide que se procese cualquier lógica de caja o dashboard
-  // si la tienda no tiene un nombre válido asignado.
-  // ==========================================
-  const isStoreConfigured = currentUser.storeName && currentUser.storeName.trim() !== '';
-  
+  // Check Onboarding
+  const isStoreConfigured = currentUser?.storeName && currentUser.storeName.trim() !== '';
   if (!isStoreConfigured) {
     return <InitialConfig />;
   }
 
-  // ==========================================
-  // FILTRO 4: APERTURA DE CAJA / SESIÓN
-  // Solo se evalúa si el usuario ya pasó exitosamente el Onboarding.
-  // ==========================================
+  // Check Session
   if (!currentSession) {
     return (
       <div className="min-h-screen bg-brand-bg flex items-center justify-center p-4">
@@ -59,26 +58,26 @@ const AppContent: React.FC = () => {
             <div>
               <h2 className="text-xl font-black uppercase tracking-[0.3em] text-slate-900 dark:text-white">Apertura de Terminal</h2>
               <p className="text-[10px] font-bold text-brand-muted uppercase tracking-widest mt-2">
-                Nodo Activo: {currentUser.storeName}
+                Nodo Activo: {currentUser?.storeName}
               </p>
               <p className="text-[10px] font-medium text-brand-muted uppercase mt-1">
                 Ingrese el fondo de caja inicial para comenzar
               </p>
             </div>
             <div className="w-full relative">
-               <span className="absolute left-6 top-1/2 -translate-y-1/2 text-3xl font-black text-brand-muted">$</span>
-               <input 
-                 type="number" 
-                 autoFocus
-                 className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 cut-corner p-6 pl-14 text-4xl font-black text-slate-900 dark:text-white outline-none focus:border-brand-purple transition-all shadow-inner"
-                 placeholder="0.00"
-                 value={openingBalance}
-                 onChange={e => setOpeningBalance(e.target.value)}
-               />
+              <span className="absolute left-6 top-1/2 -translate-y-1/2 text-3xl font-black text-brand-muted">$</span>
+              <input
+                type="number"
+                autoFocus
+                className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 cut-corner p-6 pl-14 text-4xl font-black text-slate-900 dark:text-white outline-none focus:border-brand-purple transition-all shadow-inner"
+                placeholder="0.00"
+                value={openingBalance}
+                onChange={e => setOpeningBalance(e.target.value)}
+              />
             </div>
-            <Button 
-              fullWidth 
-              variant="primary" 
+            <Button
+              fullWidth
+              variant="primary"
               className="py-5 bg-slate-900 dark:bg-white text-white dark:text-black hover:opacity-90"
               onClick={() => openSession(parseFloat(openingBalance) || 0)}
             >
@@ -91,25 +90,44 @@ const AppContent: React.FC = () => {
     );
   }
 
-  // ==========================================
-  // FLUJO FINAL: RENDERIZADO DEL DASHBOARD
-  // Solo se llega aquí si Auth, Onboarding y Caja están OK.
-  // ==========================================
-  const renderContent = () => {
-    switch(activeTab) {
-      case 'dashboard': return <Dashboard />;
-      case 'pos': return <POS />;
-      case 'history': return <SalesHistory />;
-      case 'products': return <ProductList />;
-      case 'settings': return <Settings />;
-      default: return <Dashboard />;
-    }
-  };
+  return children;
+};
+
+const AppContent: React.FC = () => {
+  const { currentUser, logout } = useStore();
+  const [activeTab, setActiveTab] = useState('dashboard');
+
+  // Update activeTab based on route if needed, or simple State management for Dashboard internal tabs
+  // Ideally Dashboard routes should be nested: /dashboard/pos, /dashboard/products etc.
+  // For now, we keep the Tabs pattern inside /dashboard route for simplicity, unless we refactor all components.
+  // We will route /dashboard to the main Layout with Tabs.
 
   return (
-    <Layout activeTab={activeTab} onTabChange={setActiveTab}>
-      {renderContent()}
-    </Layout>
+    <Routes>
+      <Route path="/login" element={!currentUser ? <Login /> : <Navigate to={currentUser.role === 'SUPER_ADMIN' ? "/admin/stores" : "/dashboard"} replace />} />
+
+      {/* Super Admin Routes */}
+      <Route path="/admin/*" element={
+        <ProtectedRoute requireAdmin>
+          <AdminPanel onExit={logout} />
+        </ProtectedRoute>
+      } />
+
+      {/* Store User Routes */}
+      <Route path="/*" element={
+        <ProtectedRoute>
+          <StoreGuard>
+            <Layout activeTab={activeTab} onTabChange={setActiveTab}>
+              {activeTab === 'dashboard' && <Dashboard />}
+              {activeTab === 'pos' && <POS />}
+              {activeTab === 'history' && <SalesHistory />}
+              {activeTab === 'products' && <ProductList />}
+              {activeTab === 'settings' && <Settings />}
+            </Layout>
+          </StoreGuard>
+        </ProtectedRoute>
+      } />
+    </Routes>
   );
 };
 
