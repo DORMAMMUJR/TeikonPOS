@@ -315,7 +315,7 @@ app.post('/api/productos', authenticateToken, async (req, res) => {
             storeId: targetStoreId,
             sku,
             nombre,
-            categoria,
+            categoria: finalCategoria,
             costPrice,
             salePrice,
             stock: stock || 0,
