@@ -77,7 +77,14 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         salesAPI.getAll()
       ]);
 
-      setProducts(fetchedProducts);
+      const mappedProducts = Array.isArray(fetchedProducts) ? fetchedProducts.map((p: any) => ({
+        ...p,
+        name: p.nombre || p.name || 'Sin Nombre',
+        category: p.categoria || p.category || 'General',
+        image: p.imagen || p.image
+      })) : [];
+
+      setProducts(mappedProducts as Product[]);
       setSales(fetchedSales);
 
       // Expenses and Sessions could be fetched here too if needed
