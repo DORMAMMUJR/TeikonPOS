@@ -10,6 +10,9 @@ import dotenv from 'dotenv';
 // Cargar variables de entorno
 dotenv.config();
 
+// Importar controladores
+import { getDashboardSummary } from './controllers/dashboardController.js';
+
 import {
     sequelize,
     Op,

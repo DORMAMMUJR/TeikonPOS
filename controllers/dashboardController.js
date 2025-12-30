@@ -1,3 +1,4 @@
+import { Op } from 'sequelize';
 import { sequelize, Sale, Product, StoreConfig } from '../models.js';
 
 export const getDashboardSummary = async (req, res) => {
@@ -25,12 +26,12 @@ export const getDashboardSummary = async (req, res) => {
 
         if (period === 'day') {
             whereSale.createdAt = {
-                [sequelize.Sequelize.Op.gte]: startOfDay
+                [Op.gte]: startOfDay
             };
         } else if (period === 'month') {
             const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
             whereSale.createdAt = {
-                [sequelize.Sequelize.Op.gte]: startOfMonth
+                [Op.gte]: startOfMonth
             };
         }
 
