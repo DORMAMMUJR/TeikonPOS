@@ -1,0 +1,48 @@
+// CÓDIGO CORREGIDO PARA server.js
+// Reemplazar el inicio de POST /api/productos (líneas 276-313)
+
+app.post('/api/productos', authenticateToken, async (req, res) => {
+    try {
+        console.log('🔵 POST /api/productos - Request recibido');
+        console.log('👤 Usuario:', req.usuario, 'Role:', req.role, 'StoreId:', req.storeId);
+        console.log('📦 Body recibido:', JSON.stringify(req.body, null, 2));
+        
+        const { sku, nombre, categoria, costPrice, salePrice, stock, minStock, taxRate, imagen } = req.body;
+
+        if (!sku || !nombre || !categoria || costPrice === undefined || salePrice === undefined) {
+            console.error('❌ Faltan campos requeridos:', { sku, nombre, categoria, costPrice, salePrice });
+            return res.status(400).json({ error: 'Faltan campos requeridos' });
+        }
+
+        // Determinar storeId:
+        let targetStoreId = req.storeId;
+        if (req.role === 'SUPER_ADMIN' && req.body.storeId) {
+            targetStoreId = req.body.storeId;
+        }
+
+        // FALLBACK: Si es SUPER_ADMIN y NO tiene storeId, buscar primera tienda activa
+        if (req.role === 'SUPER_ADMIN' && !targetStoreId) {
+            console.log('🔍 SUPER_ADMIN sin storeId - Buscando primera tienda activa...');
+            const firstStore = await Store.findOne({
+                where: { activo: true },
+                order: [['createdAt', 'ASC']]
+            });
+
+            if (firstStore) {
+                targetStoreId = firstStore.id;
+                console.log(`✅ Asignando producto a tienda: ${firstStore.nombre} (${firstStore.id})`);
+            } else {
+                return res.status(400).json({ 
+                    error: 'No hay tiendas activas disponibles. Por favor, crea una tienda primero.' 
+                });
+            }
+        }
+
+        if (!targetStoreId) {
+            console.error('❌ Store ID es requerido pero no se encontró');
+            return res.status(400).json({ error: 'Store ID es requerido para crear productos' });
+        }
+
+        console.log('💾 Creando producto con storeId:', targetStoreId);
+        const product = await Product.create({
+            // ... resto del código sigue igual

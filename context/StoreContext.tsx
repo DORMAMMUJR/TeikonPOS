@@ -259,34 +259,47 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     if (!currentUser) return;
     try {
       if (isOnline) {
-        // Prepare product data with storeId
-        const productPayload = {
-          ...productData,
-          // For SUPER_ADMIN: use storeId from productData if provided, otherwise show error
-          // For regular users: use currentUser.storeId
+        // Map frontend field names (English) to backend API names (Spanish)
+        const productPayload: any = {
+          sku: productData.sku,
+          nombre: productData.name,
+          categoria: productData.category || '',
+          costPrice: productData.costPrice,
+          salePrice: productData.salePrice,
+          stock: productData.stock || 0,
+          minStock: productData.minStock || 0,
+          taxRate: productData.taxRate || 0,
+          imagen: productData.image,
           storeId: currentUser.role === 'SUPER_ADMIN'
             ? (productData as any).storeId || null
             : currentUser.storeId
         };
 
+        // DEBUG: Log payload before sending
+        console.log('📦 Payload:', JSON.stringify(productPayload, null, 2));
+        console.log('👤 User:', currentUser.username, 'Role:', currentUser.role);
+        console.log('🏪 StoreId:', productPayload.storeId);
+
         // Validate storeId is present
         if (!productPayload.storeId) {
+          console.error('❌ ERROR: storeId is null');
           alert('Error: Debe seleccionar una tienda para crear el producto.');
           throw new Error('Store ID is required to create products');
         }
 
         const newProduct = await productsAPI.create(productPayload);
+        console.log('✅ Product created:', newProduct);
         setProducts(prev => [...prev, newProduct]);
       } else {
         console.warn('Cannot add products while offline');
         alert('No se pueden agregar productos sin conexión a internet.');
-        // Optionally implement offline product creation queue
       }
     } catch (e: any) {
       console.error('Error creating product:', e);
       alert(`Error al crear producto: ${e.message || 'Error desconocido'}`);
     }
   };
+
 
   const updateProduct = async (updated: Product) => {
     try {

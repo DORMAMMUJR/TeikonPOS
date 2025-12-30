@@ -1,0 +1,47 @@
+// CÓDIGO CORREGIDO PARA StoreContext.tsx
+// Reemplazar la función addProduct (líneas 258-289)
+
+const addProduct = async (productData: Omit<Product, 'ownerId' | 'id'>) => {
+  if (!currentUser) return;
+  try {
+    if (isOnline) {
+      // Map frontend field names (English) to backend API names (Spanish)
+      const productPayload: any = {
+        sku: productData.sku,
+        nombre: productData.name,              // Backend expects 'nombre'
+        categoria: productData.category || '', // Backend expects 'categoria'
+        costPrice: productData.costPrice,
+        salePrice: productData.salePrice,
+        stock: productData.stock || 0,
+        minStock: productData.minStock || 0,
+        taxRate: productData.taxRate || 0,
+        imagen: productData.image,             // Backend expects 'imagen'
+        storeId: currentUser.role === 'SUPER_ADMIN' 
+          ? (productData as any).storeId || null
+          : currentUser.storeId
+      };
+
+      // DEBUG: Log payload before sending
+      console.log('📦 Payload a enviar al backend:', JSON.stringify(productPayload, null, 2));
+      console.log('👤 Usuario actual:', currentUser.username, 'Role:', currentUser.role);
+      console.log('🏪 StoreId asignado:', productPayload.storeId);
+
+      // Validate storeId is present
+      if (!productPayload.storeId) {
+        console.error('❌ ERROR: storeId es null o undefined');
+        alert('Error: Debe seleccionar una tienda para crear el producto.');
+        throw new Error('Store ID is required to create products');
+      }
+
+      const newProduct = await productsAPI.create(productPayload);
+      console.log('✅ Producto creado exitosamente:', newProduct);
+      setProducts(prev => [...prev, newProduct]);
+    } else {
+      console.warn('Cannot add products while offline');
+      alert('No se pueden agregar productos sin conexión a internet.');
+    }
+  } catch (e: any) {
+    console.error('Error creating product:', e);
+    alert(`Error al crear producto: ${e.message || 'Error desconocido'}`);
+  }
+};
