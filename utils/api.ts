@@ -140,7 +140,12 @@ export const salesAPI = {
             headers: getHeaders()
         });
         if (!response.ok) throw new Error(await response.text());
-        return response.json();
+        const data = await response.json();
+        // Map backend createdAt to frontend date property
+        return data.map((sale: any) => ({
+            ...sale,
+            date: sale.createdAt || sale.date
+        }));
     },
 
     create: async (sale: any) => {
