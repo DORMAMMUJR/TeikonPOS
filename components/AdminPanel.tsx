@@ -74,14 +74,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
 
   const fetchTickets = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:5000/api/tickets', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setTickets(data);
-      }
+      const data = await ticketsAPI.getAll();
+      setTickets(data);
     } catch (err) {
       console.error("Error loading tickets", err);
     }
@@ -90,24 +84,13 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
   const handleCreateStore = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const token = localStorage.getItem('token');
-      // Adjust URL if needed (e.g., use API_URL const)
-      const res = await fetch('http://localhost:5000/api/stores/new', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          nombre: newStoreData.name,
-          usuario: newStoreData.email,
-          password: newStoreData.password,
-          telefono: newStoreData.phone,
-          direccion: 'N/A'
-        })
+      await storesAPI.create({
+        nombre: newStoreData.name,
+        usuario: newStoreData.email,
+        password: newStoreData.password,
+        telefono: newStoreData.phone,
+        direccion: 'N/A'
       });
-
-      if (!res.ok) throw new Error(await res.text());
 
       alert('Tienda creada exitosamente');
       setIsStoreModalOpen(false);

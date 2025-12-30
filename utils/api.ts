@@ -1,19 +1,20 @@
 // API Base URL - automatically uses current domain in production
-const API_URL = (import.meta as any).env?.PROD ? '' : 'http://localhost:80';
+// API Base URL - Environment aware
+const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '' : 'http://localhost:80');
 
 // Get auth token from localStorage
 export const getAuthToken = (): string | null => {
-    return localStorage.getItem('authToken');
+    return localStorage.getItem('token');
 };
 
 // Set auth token
 export const setAuthToken = (token: string): void => {
-    localStorage.setItem('authToken', token);
+    localStorage.setItem('token', token);
 };
 
 // Clear auth token
 export const clearAuthToken = (): void => {
-    localStorage.removeItem('authToken');
+    localStorage.removeItem('token');
 };
 
 // Get headers with auth
@@ -94,6 +95,35 @@ export const productsAPI = {
     delete: async (id: string) => {
         const response = await fetch(`${API_URL}/api/productos/${id}`, {
             method: 'DELETE',
+            headers: getHeaders()
+        });
+        if (!response.ok) throw new Error(await response.text());
+        return response.json();
+    }
+};
+
+export const storesAPI = {
+    getAll: async () => {
+        const response = await fetch(`${API_URL}/api/stores`, {
+            headers: getHeaders()
+        });
+        if (!response.ok) throw new Error(await response.text());
+        return response.json();
+    },
+    create: async (data: any) => {
+        const response = await fetch(`${API_URL}/api/stores/new`, {
+            method: 'POST',
+            headers: getHeaders(),
+            body: JSON.stringify(data)
+        });
+        if (!response.ok) throw new Error(await response.text());
+        return response.json();
+    }
+};
+
+export const ticketsAPI = {
+    getAll: async () => {
+        const response = await fetch(`${API_URL}/api/tickets`, {
             headers: getHeaders()
         });
         if (!response.ok) throw new Error(await response.text());
