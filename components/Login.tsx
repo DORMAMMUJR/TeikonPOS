@@ -143,29 +143,30 @@ const Login: React.FC = () => {
               href="mailto:soporte@teikonpos.com?subject=Interesado%20en%20TeikonPOS"
               className="mt-6 flex items-center justify-center gap-2 text-[10px] font-bold text-slate-500 hover:text-indigo-500 transition-colors uppercase tracking-widest border border-dashed border-slate-300 dark:border-slate-700 px-4 py-2 rounded-full hover:border-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 w-fit mx-auto"
             >
-              <Mail size={12} /> Interesados contactar a soporte <ArrowRight size={14} />
+              <Mail size={12} /> Interesados contactar a soporte
             </a>
           </div>
         </div>
-
-        <div className="mt-8 flex flex-col items-center gap-4">
-          <button
-            onClick={() => setShowDevModal(true)}
-            className="flex items-center gap-2 text-[8px] font-black text-slate-400 hover:text-indigo-500 transition-colors uppercase tracking-[0.3em] opacity-30 hover:opacity-100"
-          >
-            <Terminal size={12} /> Acceso Desarrollador
-          </button>
-        </div>
       </div>
 
+      <div className="mt-8 flex flex-col items-center gap-4">
+        <button
+          onClick={() => setShowDevModal(true)}
+          className="flex items-center gap-2 text-[8px] font-black text-slate-400 hover:text-indigo-500 transition-colors uppercase tracking-[0.3em] opacity-30 hover:opacity-100"
+        >
+          <Terminal size={12} /> Acceso Desarrollador
+        </button>
+      </div>
+    </div>
+
       {
-        showDevModal && (
-          <DevLoginModal
-            onSuccess={handleDevSuccess}
-            onClose={() => setShowDevModal(false)}
-          />
-        )
-      }
+    showDevModal && (
+      <DevLoginModal
+        onSuccess={handleDevSuccess}
+        onClose={() => setShowDevModal(false)}
+      />
+    )
+  }
     </div >
   );
 };

@@ -79,6 +79,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
   const [newStoreEmail, setNewStoreEmail] = useState('');
   const [newStorePassword, setNewStorePassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedStoreFilter, setSelectedStoreFilter] = useState<string>('all'); // 'all' or storeId
 
   const [stores, setStores] = useState<StoreData[]>([]);
 
@@ -250,6 +251,31 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
     navigate(`/admin/${view}`);
   };
 
+  // --- FILTERING HELPERS ---
+  const getFilteredData = () => {
+    // Filter Sales
+    const filteredSales = selectedStoreFilter === 'all'
+      ? sales
+      : sales.filter(s => s.storeId === selectedStoreFilter || s.store?.id === selectedStoreFilter);
+
+    // Filter Products
+    const filteredProducts = selectedStoreFilter === 'all'
+      ? products
+      : products.filter(p => p.storeId === selectedStoreFilter);
+
+    // Aggregate Stats for Dashboard from filtered data if backend doesn't provide them specific enough
+    // For now, let's approximate Dashboard stats from the loaded stores/sales context if possible, 
+    // or just show "Global" vs "Store X" in the UI titles.
+    // Ideally, we'd refetch stats from backend, but for this 'Phase 3.5' UI refinement, filtering loaded lists is the requested step.
+
+    const revenue = filteredSales.reduce((acc, s) => acc + parseFloat(s.total), 0);
+    const activeUsers = selectedStoreFilter === 'all' ? stores.length : 1;
+
+    return { filteredSales, filteredProducts, revenue, activeUsers };
+  };
+
+  const { filteredSales, filteredProducts, revenue, activeUsers } = getFilteredData();
+
   const renderDashboard = () => (
     <div className="space-y-6 md:space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className={`${themeClasses.card} border p-8 md:p-12 rounded-[2rem] md:rounded-[2.5rem] flex flex-col items-center justify-center text-center space-y-6 transition-all`}>
@@ -257,16 +283,21 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
           <ShieldCheck size={48} className="text-emerald-500 md:hidden" />
           <ShieldCheck size={64} className="text-emerald-500 hidden md:block" />
         </div>
+        </div>
         <div>
-          <h2 className={`text-xl md:text-2xl font-black uppercase tracking-widest ${themeClasses.text}`}>Sistemas Operativos</h2>
-          <p className="text-[10px] md:text-sm font-bold uppercase tracking-[0.2em] mt-2 text-emerald-500/80">Protocolo de seguridad activo</p>
+          <h2 className={`text-xl md:text-2xl font-black uppercase tracking-widest ${themeClasses.text}`}>
+            {selectedStoreFilter === 'all' ? 'Sistemas Operativos Globales' : `Sistema: ${stores.find(s=>s.id === selectedStoreFilter)?.name || selectedStoreFilter}`}
+          </h2>
+          <p className="text-[10px] md:text-sm font-bold uppercase tracking-[0.2em] mt-2 text-emerald-500/80">
+            {selectedStoreFilter === 'all' ? 'Protocolo de seguridad activo' : 'Vista filtrada por tienda'}
+          </p>
         </div>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-8">
         {[
-          { label: 'Revenue Global', value: '$248.5K', icon: TrendingUp, color: 'text-emerald-400' },
-          { label: 'Usuarios Activos', value: stores.length.toString(), icon: Users, color: 'text-sky-400' },
-          { label: 'Actividad 24h', value: '98.2%', icon: Activity, color: 'text-indigo-400' },
+          { label: 'Revenue', value: `$${revenue.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`, icon: TrendingUp, color: 'text-emerald-400' },
+          { label: 'Tiendas / Usuarios', value: activeUsers.toString(), icon: Users, color: 'text-sky-400' },
+          { label: 'Actividad 24h', value: '100%', icon: Activity, color: 'text-indigo-400' },
         ].map((kpi, i) => (
           <div key={i} className={`${themeClasses.card} border p-6 md:p-8 rounded-3xl hover:scale-105 transition-all active:scale-[0.98]`}>
             <kpi.icon size={20} className={`${kpi.color} mb-6`} />
@@ -275,41 +306,41 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
           </div>
         ))}
       </div>
-    </div>
+    </div >
   );
 
-  const renderStores = () => {
-    const filteredStores = stores.filter(store => {
-      const cleanSearch = searchTerm.trim().toLowerCase();
-      if (!cleanSearch) return true;
-      return store.name.toLowerCase().includes(cleanSearch) || store.phone.includes(cleanSearch);
-    });
+const renderStores = () => {
+  const filteredStores = stores.filter(store => {
+    const cleanSearch = searchTerm.trim().toLowerCase();
+    if (!cleanSearch) return true;
+    return store.name.toLowerCase().includes(cleanSearch) || store.phone.includes(cleanSearch);
+  });
 
-    return (
-      <div className="space-y-6 md:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-        <div className="flex flex-col lg:flex-row gap-4 justify-between items-stretch">
-          <div className="relative flex-1">
-            <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
-            <input
-              type="text"
-              placeholder="BUSCAR POR NOMBRE O TELÉFONO..."
-              className={`w-full ${isDarkMode ? 'bg-[#1e323d]' : 'bg-slate-50'} border ${themeClasses.card} rounded-2xl py-4 md:py-5 pl-16 pr-8 text-[10px] md:text-xs font-bold ${themeClasses.text} outline-none focus:border-emerald-500/50 transition-all placeholder:text-slate-400 uppercase tracking-widest`}
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-
-          <button
-            onClick={() => setIsNewStoreModalOpen(true)}
-            className="px-8 py-4 md:py-5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl md:rounded-[1.5rem] text-[10px] md:text-xs font-black uppercase tracking-widest flex items-center justify-center gap-3 shadow-lg shadow-emerald-600/20 active:scale-95 transition-all"
-          >
-            <Plus size={18} />
-            Nueva Tienda
-          </button>
+  return (
+    <div className="space-y-6 md:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="flex flex-col lg:flex-row gap-4 justify-between items-stretch">
+        <div className="relative flex-1">
+          <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
+          <input
+            type="text"
+            placeholder="BUSCAR POR NOMBRE O TELÉFONO..."
+            className={`w-full ${isDarkMode ? 'bg-[#1e323d]' : 'bg-slate-50'} border ${themeClasses.card} rounded-2xl py-4 md:py-5 pl-16 pr-8 text-[10px] md:text-xs font-bold ${themeClasses.text} outline-none focus:border-emerald-500/50 transition-all placeholder:text-slate-400 uppercase tracking-widest`}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-          {filteredStores.map((store, idx) => (
+        <button
+          onClick={() => setIsNewStoreModalOpen(true)}
+          className="px-8 py-4 md:py-5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl md:rounded-[1.5rem] text-[10px] md:text-xs font-black uppercase tracking-widest flex items-center justify-center gap-3 shadow-lg shadow-emerald-600/20 active:scale-95 transition-all"
+        >
+          <Plus size={18} />
+          Nueva Tienda
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+        {filteredStores.map((store, idx) => (
             <div
               key={store.id}
               style={{ animationDelay: `${idx * 50}ms` }}
@@ -365,9 +396,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                     <Trash2 size={14} />
                 </button>
               </div>
-      </div>
-    ))
-  }
+    </div>
+  ))
+}
         </div >
       </div >
     );
@@ -424,11 +455,11 @@ const renderSupport = () => (
 const renderProducts = () => (
   <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
     <div className="flex justify-between items-center mb-6">
-      <h2 className={`text-xl font-black uppercase tracking-widest ${themeClasses.text}`}>Inventario Global</h2>
-      <div className="text-[10px] font-bold text-brand-muted uppercase tracking-widest">{products.length} Productos Total</div>
+      <h2 className={`text-xl font-black uppercase tracking-widest ${themeClasses.text}`}>Inventario {selectedStoreFilter === 'all' ? 'Global' : 'Filtrado'}</h2>
+      <div className="text-[10px] font-bold text-brand-muted uppercase tracking-widest">{filteredProducts.length} Productos</div>
     </div>
     <div className="grid grid-cols-1 gap-4">
-      {products.map((product) => (
+      {filteredProducts.map((product) => (
         <div key={product.id} className={`${themeClasses.card} border p-4 rounded-2xl flex items-center justify-between`}>
           <div className="flex items-center gap-4">
             <div className="h-10 w-10 rounded-lg bg-gray-100 dark:bg-white/5 flex items-center justify-center">
@@ -561,6 +592,21 @@ return (
           <p className={`text-[8px] md:text-[10px] font-black uppercase tracking-[0.4em] mt-2 md:mt-3 ${themeClasses.subtext}`}>TEIKON OS // ADMIN MODE</p>
         </div>
         <div className="flex items-center gap-4 md:gap-6 self-end md:self-auto">
+          {/* STORE SELECTOR */}
+          <div className="relative">
+            <select
+              value={selectedStoreFilter}
+              onChange={(e) => setSelectedStoreFilter(e.target.value)}
+              className={`appearance-none cursor-pointer pl-4 pr-10 py-3 rounded-xl border ${themeClasses.card} shadow-sm text-[10px] font-black uppercase tracking-widest outline-none focus:border-emerald-500 transition-all ${themeClasses.text}`}
+            >
+              <option value="all">Filtrar por Tienda: Todas</option>
+              {stores.map(s => (
+                <option key={s.id} value={s.id}>{s.name}</option>
+              ))}
+            </select>
+            <Store size={14} className={`absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none ${themeClasses.subtext}`} />
+          </div>
+
           <button onClick={() => setIsDarkMode(!isDarkMode)} className={`p-3 rounded-xl border ${themeClasses.card} shadow-sm active:scale-90 transition-transform`}>
             {isDarkMode ? <Sun size={18} className="text-amber-400" /> : <Moon size={18} className="text-indigo-500" />}
           </button>
