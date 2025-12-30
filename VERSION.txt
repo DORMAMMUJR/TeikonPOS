@@ -1,0 +1,12 @@
+TeikonPOS v1.0.0
+Build: 2025-12-30 02:33 CST
+
+CHANGELOG:
+- Fixed product creation bug (field mapping)
+- Increased payload limit to 50mb for Base64 images
+- Changed imagen field to TEXT in database
+- Added robust error handling
+- Category defaults to 'General' if empty
+- Auto-assign store for SUPER_ADMIN
+
+All systems operational.
