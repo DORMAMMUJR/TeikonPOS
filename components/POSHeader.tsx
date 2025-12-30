@@ -1,19 +1,17 @@
 import React from 'react';
-import { Search, Settings } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 
 interface POSHeaderProps {
     searchTerm: string;
     setSearchTerm: (term: string) => void;
     searchInputRef: React.RefObject<HTMLInputElement>;
-    onSettingsClick: () => void;
 }
 
 const POSHeader: React.FC<POSHeaderProps> = ({
     searchTerm,
     setSearchTerm,
-    searchInputRef,
-    onSettingsClick
+    searchInputRef
 }) => {
     const { getDashboardStats, settings } = useStore();
     const [stats, setStats] = React.useState<any>({ totalRevenue: 0 });
@@ -69,14 +67,6 @@ const POSHeader: React.FC<POSHeaderProps> = ({
                 </div>
             </div>
 
-            {/* RIGHT: Settings Icon */}
-            <button
-                onClick={onSettingsClick}
-                className="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-brand-emerald/10 hover:text-brand-emerald transition-all active:scale-95 text-slate-600 dark:text-slate-300"
-                title="Configuración"
-            >
-                <Settings size={20} />
-            </button>
         </div>
     );
 };

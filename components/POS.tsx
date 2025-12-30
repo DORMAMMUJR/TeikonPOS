@@ -6,7 +6,6 @@ import Button from './Button';
 import Modal from './Modal';
 import SaleTicket from './SaleTicket';
 import POSHeader from './POSHeader';
-import POSSettingsMenu from './POSSettingsMenu';
 import SalesGoalModal from './SalesGoalModal';
 import CashRegisterModal from './CashRegisterModal';
 import SupportTicketModal from './SupportTicketModal';
@@ -28,7 +27,6 @@ const POS: React.FC = () => {
   const [saleSummary, setSaleSummary] = useState<{ revenue: number, profit: number, items: any[], folio: string } | null>(null);
   const [showTicket, setShowTicket] = useState(false);
   const [animateCart, setAnimateCart] = useState(false);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isGoalModalOpen, setIsGoalModalOpen] = useState(false);
   const [isCashCloseOpen, setIsCashCloseOpen] = useState(false);
   const [isSupportOpen, setIsSupportOpen] = useState(false);
@@ -147,21 +145,11 @@ const POS: React.FC = () => {
   return (
     <div className="flex flex-col gap-6 h-[calc(100vh-140px)] md:h-[calc(100vh-180px)]">
       {/* POS HEADER */}
-      <div className="relative">
-        <POSHeader
-          searchTerm={searchTerm}
-          setSearchTerm={setSearchTerm}
-          searchInputRef={searchInputRef}
-          onSettingsClick={() => setIsSettingsOpen(!isSettingsOpen)}
-        />
-        <POSSettingsMenu
-          isOpen={isSettingsOpen}
-          onClose={() => setIsSettingsOpen(false)}
-          onOpenGoalModal={() => setIsGoalModalOpen(true)}
-          onOpenCashClose={() => setIsCashCloseOpen(true)}
-          onOpenSupport={() => setIsSupportOpen(true)}
-        />
-      </div>
+      <POSHeader
+        searchTerm={searchTerm}
+        setSearchTerm={setSearchTerm}
+        searchInputRef={searchInputRef}
+      />
 
       <div className="flex flex-col lg:flex-row gap-6 flex-1 min-h-0">
         {/* SECCIÓN IZQUIERDA: PRODUCT GRID */}
