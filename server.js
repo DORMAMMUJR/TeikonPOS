@@ -21,6 +21,7 @@ import {
     StockMovement,
     CashShift,
     Client,
+    Ticket,
     StoreConfig
 } from './models.js';
 

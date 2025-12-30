@@ -605,8 +605,57 @@ Product.hasMany(StockMovement, { foreignKey: 'productId', as: 'movements', onDel
 StockMovement.belongsTo(Product, { foreignKey: 'productId', as: 'product' });
 
 // Store -> StockMovement (1:N)
+// Store -> StockMovement (1:N)
 Store.hasMany(StockMovement, { foreignKey: 'storeId', as: 'stockMovements', onDelete: 'CASCADE' });
 StockMovement.belongsTo(Store, { foreignKey: 'storeId', as: 'store' });
+
+// ==========================================
+// MODELO: Ticket (Soporte Técnico)
+// ==========================================
+const Ticket = sequelize.define('Ticket', {
+    id: {
+        type: DataTypes.UUID,
+        defaultValue: DataTypes.UUIDV4,
+        primaryKey: true
+    },
+    storeId: {
+        type: DataTypes.UUID,
+        allowNull: false,
+        references: {
+            model: 'stores',
+            key: 'id'
+        },
+        field: 'store_id'
+    },
+    titulo: {
+        type: DataTypes.STRING,
+        allowNull: false
+    },
+    descripcion: {
+        type: DataTypes.TEXT,
+        allowNull: false
+    },
+    prioridad: {
+        type: DataTypes.ENUM('LOW', 'MEDIUM', 'HIGH', 'URGENT'),
+        defaultValue: 'MEDIUM'
+    },
+    status: {
+        type: DataTypes.ENUM('OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'),
+        defaultValue: 'OPEN'
+    },
+    creadoPor: { // Usuario que creó el ticket
+        type: DataTypes.STRING,
+        allowNull: false,
+        field: 'creado_por'
+    }
+}, {
+    tableName: 'tickets',
+    timestamps: true
+});
+
+// Store -> Ticket (1:N)
+Store.hasMany(Ticket, { foreignKey: 'storeId', as: 'tickets', onDelete: 'CASCADE' });
+Ticket.belongsTo(Store, { foreignKey: 'storeId', as: 'store' });
 
 // ==========================================
 // MODELO: StoreConfig (Configuración de Tienda)
@@ -658,5 +707,6 @@ export {
     StockMovement,
     CashShift,
     Client,
+    Ticket,
     StoreConfig
 };
