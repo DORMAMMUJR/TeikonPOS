@@ -139,12 +139,9 @@ const Login: React.FC = () => {
           </form>
 
           <div className="mt-6 pt-6 border-t border-slate-100 dark:border-white/5 text-center">
-            <a
-              href="mailto:soporte@teikonpos.com?subject=Interesado%20en%20TeikonPOS"
-              className="mt-6 flex items-center justify-center gap-2 text-[10px] font-bold text-slate-500 hover:text-indigo-500 transition-colors uppercase tracking-widest border border-dashed border-slate-300 dark:border-slate-700 px-4 py-2 rounded-full hover:border-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 w-fit mx-auto"
-            >
-              <Mail size={12} /> Interesados contactar a soporte
-            </a>
+            <div className="mt-6 flex items-center justify-center gap-2 text-[10px] font-bold text-slate-500 uppercase tracking-widest px-4 py-2 w-fit mx-auto">
+              <Lock size={12} /> Acceso exclusivo para socios Teikon
+            </div>
           </div>
         </div>
       </div>
