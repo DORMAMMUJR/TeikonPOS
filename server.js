@@ -454,7 +454,7 @@ app.get('/api/ventas', authenticateToken, async (req, res) => {
                 as: 'store',
                 attributes: ['nombre']
             }] : [],
-            order: [['created_at', 'DESC']]
+            order: [['createdAt', 'DESC']]
         });
         res.json(sales);
     } catch (error) {
@@ -1621,7 +1621,7 @@ app.get('/api/dashboard/summary', authenticateToken, async (req, res) => {
             where: {
                 storeId: req.storeId,
                 status: 'ACTIVE',
-                created_at: {
+                createdAt: {
                     [sequelize.Sequelize.Op.gte]: startDate
                 }
             },
