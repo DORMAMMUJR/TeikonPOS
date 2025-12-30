@@ -27,7 +27,7 @@ const SalesHistory: React.FC = () => {
 
   const handleShare = async () => {
     if (!selectedSale) return;
-    
+
     const shareText = `Ticket TEIKON #${selectedSale.id.slice(0, 8).toUpperCase()} - Total: $${selectedSale.total.toFixed(2)}\nFecha: ${new Date(selectedSale.date).toLocaleString()}\nAtendido por: ${selectedSale.sellerId}`;
 
     if (navigator.share) {
@@ -76,9 +76,9 @@ const SalesHistory: React.FC = () => {
         </div>
         <div className="relative w-full sm:w-80">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-pink h-4 w-4" />
-          <input 
-            type="text" 
-            placeholder="Buscar por ID o Fecha..." 
+          <input
+            type="text"
+            placeholder="Buscar por ID o Fecha..."
             className="w-full pl-12 pr-6 py-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl text-slate-900 dark:text-white focus:border-brand-pink focus:outline-none text-sm font-bold shadow-sm"
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
@@ -115,18 +115,34 @@ const SalesHistory: React.FC = () => {
                     ${sale.total.toLocaleString()}
                   </td>
                   <td className="px-8 py-5 whitespace-nowrap text-center">
-                    <span className={`px-4 py-1 rounded-full text-[9px] font-black uppercase ${
-                      sale.status === 'ACTIVE' 
-                        ? 'bg-emerald-500/10 text-emerald-500' 
+                    <span className={`px-4 py-1 rounded-full text-[9px] font-black uppercase ${sale.status === 'ACTIVE'
+                        ? 'bg-emerald-500/10 text-emerald-500'
                         : 'bg-red-500/10 text-red-500'
-                    }`}>
+                      }`}>
                       {sale.status === 'ACTIVE' ? 'Aprobada' : 'Devolución'}
                     </span>
                   </td>
                   <td className="px-8 py-5 whitespace-nowrap text-center">
-                    <button onClick={() => setSelectedSale(sale)} className="p-2 text-brand-muted hover:text-brand-pink transition-colors">
-                      <FileText size={20} />
-                    </button>
+                    <div className="flex justify-center gap-2">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => setSelectedSale(sale)}
+                        className="h-8 text-[10px]"
+                      >
+                        <FileText size={14} className="mr-1" />
+                        DETALLES
+                      </Button>
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        onClick={() => { setSelectedSale(sale); setTimeout(() => window.print(), 500); }}
+                        className="h-8 text-[10px] bg-slate-900 text-white hover:bg-slate-800"
+                      >
+                        <Printer size={14} className="mr-1" />
+                        IMPRIMIR
+                      </Button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -136,7 +152,7 @@ const SalesHistory: React.FC = () => {
       </div>
 
       {selectedSale && (
-        <SaleTicket 
+        <SaleTicket
           items={selectedSale.items}
           total={selectedSale.total}
           paymentMethod={selectedSale.paymentMethod}

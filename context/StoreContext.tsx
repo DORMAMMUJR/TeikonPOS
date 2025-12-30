@@ -186,7 +186,7 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     });
 
     const newSale = {
-      storeId: 'unknown-store-id', // This will be handled by backend from token
+      storeId: currentUser.storeId || currentUser.store_id || 'unknown',
       vendedor: currentUser.username,
       subtotal: totalTransactionRevenue,
       totalDiscount: 0,
