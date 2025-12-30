@@ -104,7 +104,7 @@ const AppContent: React.FC = () => {
 
   return (
     <Routes>
-      <Route path="/login" element={!currentUser ? <Login /> : <Navigate to={currentUser.role === 'SUPER_ADMIN' ? "/admin/stores" : "/dashboard"} replace />} />
+      <Route path="/login" element={!currentUser ? <Login /> : <Navigate to={currentUser.role === 'SUPER_ADMIN' ? "/admin/dashboard" : "/dashboard"} replace />} />
 
       {/* Super Admin Routes */}
       <Route path="/admin/*" element={

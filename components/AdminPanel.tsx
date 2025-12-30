@@ -1,14 +1,14 @@
 
 import React, { useState, useEffect } from 'react';
-import { 
-  LayoutDashboard, 
-  Store, 
-  Ticket, 
-  LogOut, 
-  ShieldCheck, 
-  TrendingUp, 
-  Users, 
-  Activity, 
+import {
+  LayoutDashboard,
+  Store,
+  Ticket,
+  LogOut,
+  ShieldCheck,
+  TrendingUp,
+  Users,
+  Activity,
   Search,
   Circle,
   CheckCircle2,
@@ -28,6 +28,7 @@ import {
   Menu,
   ChevronLeft,
 } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import TeikonLogo from './TeikonLogo';
 
 interface SupportTicket {
@@ -60,19 +61,33 @@ const DEFAULT_STORES: StoreData[] = [
 ];
 
 const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [activeView, setActiveView] = useState<'dashboard' | 'stores' | 'support'>('dashboard');
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
-  
+
   const [isNewStoreModalOpen, setIsNewStoreModalOpen] = useState(false);
   const [newStoreEmail, setNewStoreEmail] = useState('');
   const [newStorePassword, setNewStorePassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [stores, setStores] = useState<StoreData[]>([]);
+
+  // Sync activeView with URL
+  useEffect(() => {
+    const path = location.pathname;
+    if (path.includes('/admin/stores')) {
+      setActiveView('stores');
+    } else if (path.includes('/admin/support')) {
+      setActiveView('support');
+    } else {
+      setActiveView('dashboard');
+    }
+  }, [location.pathname]);
 
   useEffect(() => {
     const loadStores = () => {
@@ -92,17 +107,17 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
 
     loadStores();
     loadTickets();
-    
+
     window.addEventListener('storage', (e) => {
       if (e.key === 'teikon_all_stores') loadStores();
       if (e.key === 'teikon_tickets') loadTickets();
     });
-    
+
     return () => window.removeEventListener('storage', loadStores as any);
   }, []);
 
   const markAsResolved = (ticketId: number) => {
-    const updated = tickets.map(t => 
+    const updated = tickets.map(t =>
       t.id === ticketId ? { ...t, status: 'resolved' as const } : t
     );
     setTickets(updated);
@@ -110,7 +125,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
   };
 
   const toggleStoreStatus = (id: string) => {
-    const updatedStores = stores.map(s => 
+    const updatedStores = stores.map(s =>
       s.id === id ? { ...s, status: s.status === 'active' ? 'suspended' : 'active' } as StoreData : s
     );
     setStores(updatedStores);
@@ -120,9 +135,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
   const handleCreateStore = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newStoreEmail || !newStorePassword) return;
-    
+
     setIsSubmitting(true);
-    
+
     setTimeout(() => {
       const newStore: StoreData = {
         id: `ST-${Math.floor(Math.random() * 900 + 100)}`,
@@ -133,7 +148,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
         status: 'active',
         lastActive: 'Pendiente Onboarding'
       };
-      
+
       const updated = [newStore, ...stores];
       setStores(updated);
       localStorage.setItem('teikon_all_stores', JSON.stringify(updated));
@@ -165,6 +180,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
   const handleNavClick = (view: any) => {
     setActiveView(view);
     setIsMobileMenuOpen(false);
+    navigate(`/admin/${view}`);
   };
 
   const renderDashboard = () => (
@@ -207,7 +223,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
         <div className="flex flex-col lg:flex-row gap-4 justify-between items-stretch">
           <div className="relative flex-1">
             <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
-            <input 
+            <input
               type="text"
               placeholder="BUSCAR POR NOMBRE O TELÉFONO..."
               className={`w-full ${isDarkMode ? 'bg-[#1e323d]' : 'bg-slate-50'} border ${themeClasses.card} rounded-2xl py-4 md:py-5 pl-16 pr-8 text-[10px] md:text-xs font-bold ${themeClasses.text} outline-none focus:border-emerald-500/50 transition-all placeholder:text-slate-400 uppercase tracking-widest`}
@@ -215,8 +231,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          
-          <button 
+
+          <button
             onClick={() => setIsNewStoreModalOpen(true)}
             className="px-8 py-4 md:py-5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl md:rounded-[1.5rem] text-[10px] md:text-xs font-black uppercase tracking-widest flex items-center justify-center gap-3 shadow-lg shadow-emerald-600/20 active:scale-95 transition-all"
           >
@@ -227,17 +243,16 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
           {filteredStores.map((store, idx) => (
-            <div 
-              key={store.id} 
+            <div
+              key={store.id}
               style={{ animationDelay: `${idx * 50}ms` }}
               className={`${themeClasses.card} border rounded-[2rem] p-6 relative overflow-hidden transition-all duration-300 hover:shadow-lg active:scale-[0.99] animate-fade-in-up`}
             >
               <div className="absolute top-6 right-6">
-                <span className={`px-4 py-1.5 rounded-full text-[8px] md:text-[9px] font-black uppercase tracking-widest border ${
-                  store.status === 'active' 
-                  ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' 
-                  : 'bg-red-500/10 text-red-500 border-red-500/20'
-                }`}>
+                <span className={`px-4 py-1.5 rounded-full text-[8px] md:text-[9px] font-black uppercase tracking-widest border ${store.status === 'active'
+                    ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
+                    : 'bg-red-500/10 text-red-500 border-red-500/20'
+                  }`}>
                   {store.status === 'active' ? 'ACTIVA' : 'SUSPENDIDA'}
                 </span>
               </div>
@@ -270,7 +285,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
               </div>
               <div className={`pt-4 md:pt-6 border-t ${isDarkMode ? 'border-white/10' : 'border-slate-100'} flex items-center justify-between`}>
                 <span className={`text-[8px] md:text-[10px] font-black uppercase tracking-widest ${themeClasses.subtext}`}>ACCESO</span>
-                <button 
+                <button
                   onClick={() => toggleStoreStatus(store.id)}
                   className={`w-10 md:w-12 h-5 md:h-6 rounded-full p-1 transition-all duration-300 flex items-center active:scale-90 ${store.status === 'active' ? 'bg-emerald-500' : 'bg-red-500'}`}
                 >
@@ -320,7 +335,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                 </div>
               </div>
               {ticket.status === 'pending' && (
-                <button 
+                <button
                   onClick={() => markAsResolved(ticket.id)}
                   className="w-full md:w-auto px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 shadow-md"
                 >
@@ -336,14 +351,14 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
 
   return (
     <div className={`flex flex-col md:flex-row h-screen font-sans selection:bg-emerald-500/30 transition-colors duration-300 ${themeClasses.bg} ${themeClasses.text} overflow-hidden`}>
-      
+
       {/* HEADER MÓVIL EXCLUSIVO */}
       <header className="md:hidden flex items-center justify-between px-6 py-4 bg-brand-panel border-b border-brand-border z-[120] sticky top-0 shrink-0 shadow-sm">
         <div className="flex items-center gap-3">
           <TeikonLogo size={32} className="drop-shadow-[0_0_8px_rgba(255,255,255,0.2)]" />
           <span className="text-[10px] font-black uppercase tracking-widest">Admin OS</span>
         </div>
-        <button 
+        <button
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
           className="p-2.5 rounded-xl bg-slate-100 dark:bg-white/5 text-brand-text border border-brand-border active:scale-90 transition-transform"
         >
@@ -353,14 +368,14 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
 
       {/* OVERLAY MÓVIL */}
       {isMobileMenuOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] md:hidden"
           onClick={() => setIsMobileMenuOpen(false)}
         />
       )}
 
       {/* SIDEBAR RESPONSIVO */}
-      <aside 
+      <aside
         className={`
           fixed inset-y-0 left-0 z-[110] transform transition-transform duration-300 bg-brand-panel border-r border-brand-border
           md:relative md:translate-x-0 md:flex md:flex-col items-center py-10
@@ -374,7 +389,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
             <TeikonLogo size={32} className="drop-shadow-[0_0_8px_rgba(255,255,255,0.15)]" />
             <span className="text-[10px] font-black uppercase tracking-[0.2em] whitespace-nowrap">Teikon OS</span>
           </div>
-          <button 
+          <button
             onClick={() => setIsCollapsed(!isCollapsed)}
             className={`p-2 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 transition-all active:scale-90 ${isCollapsed ? 'mx-auto' : ''}`}
           >
@@ -384,8 +399,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
 
         {/* LOGO EN MÓVIL DENTRO DEL SIDEBAR */}
         <div className="md:hidden flex flex-col items-center mb-10 w-full px-6">
-           <TeikonLogo size={64} className="mb-4 drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]" />
-           <p className="text-[9px] font-black uppercase tracking-[0.4em] text-brand-muted">Admin Terminal</p>
+          <TeikonLogo size={64} className="mb-4 drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]" />
+          <p className="text-[9px] font-black uppercase tracking-[0.4em] text-brand-muted">Admin Terminal</p>
         </div>
 
         <nav className="flex-1 flex flex-col gap-4 w-full px-4 overflow-y-auto no-scrollbar">
@@ -395,11 +410,10 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
               <button
                 key={item.id}
                 onClick={() => handleNavClick(item.id)}
-                className={`flex items-center transition-all duration-150 ease-in-out active:scale-[0.97] rounded-2xl group relative overflow-hidden h-14 ${
-                  isActive 
-                    ? themeClasses.navActive 
+                className={`flex items-center transition-all duration-150 ease-in-out active:scale-[0.97] rounded-2xl group relative overflow-hidden h-14 ${isActive
+                    ? themeClasses.navActive
                     : `${themeClasses.navItem} hover:bg-black/5 dark:hover:bg-white/5`
-                } ${isCollapsed ? 'md:justify-center' : 'px-5 gap-4'}`}
+                  } ${isCollapsed ? 'md:justify-center' : 'px-5 gap-4'}`}
               >
                 <item.icon size={22} className="shrink-0" />
                 <span className={`text-xs font-black uppercase tracking-widest truncate ${isCollapsed ? 'md:hidden' : 'block'}`}>
@@ -414,8 +428,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
         </nav>
 
         <div className="w-full px-4 mt-auto pt-6 border-t md:border-t-0 border-brand-border">
-          <button 
-            onClick={onExit} 
+          <button
+            onClick={onExit}
             className={`flex items-center w-full py-4 text-red-500/70 hover:text-red-500 hover:bg-red-500/5 rounded-2xl transition-all duration-150 active:scale-95 ${isCollapsed ? 'md:justify-center' : 'px-5 gap-4'}`}
           >
             <LogOut size={22} className="shrink-0" />
@@ -423,7 +437,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
           </button>
         </div>
       </aside>
-      
+
       {/* MAIN CONTENT AREA */}
       <main className="flex-1 overflow-y-auto px-4 py-8 md:px-12 md:py-12 no-scrollbar">
         <header className="flex flex-col md:flex-row justify-between items-start md:items-end mb-10 md:mb-16 gap-6">

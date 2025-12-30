@@ -62,7 +62,7 @@ const Login: React.FC = () => {
         // ---------------------------------------------------------
         if (response.user.role === 'SUPER_ADMIN') {
           console.log("👑 Bienvenido Jefe - Redirigiendo a Panel de Tiendas");
-          navigate('/admin/stores');
+          navigate('/admin/dashboard');
         } else {
           console.log("💼 Bienvenido Cliente - Redirigiendo a su POS");
           navigate('/dashboard');
@@ -78,9 +78,9 @@ const Login: React.FC = () => {
 
   const handleDevSuccess = () => {
     // Dev backdoor for testing - kept for compatibility
-    login({ id: 'dev-root', username: 'dev_engineer', role: 'superuser', department: 'ENGINEERING' } as any, 'dev-token');
+    login({ id: 'dev-root', username: 'dev_engineer', role: 'SUPER_ADMIN', department: 'ENGINEERING' } as any, 'dev-token');
     setShowDevModal(false);
-    navigate('/admin/stores');
+    navigate('/admin/dashboard');
   };
 
   return (
