@@ -338,9 +338,10 @@ app.post('/api/productos', authenticateToken, async (req, res) => {
             });
         }
 
+        console.log('✅ Producto creado exitosamente:', product.id);
         res.status(201).json(product);
     } catch (error) {
-        console.error('Error al crear producto:', error);
+        console.error('❌ Error al crear producto:', error);
         res.status(500).json({ error: 'Error al crear producto' });
     }
 });
