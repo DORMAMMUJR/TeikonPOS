@@ -1,7 +1,6 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import { Product, Sale, FinancialSettings, Role, User, CashSession, CartItem, SaleResult, SaleDetail, PendingSale } from '../types';
-import { authAPI, productsAPI, salesAPI, expensesAPI, dashboardAPI, setAuthToken, clearAuthToken, getAuthToken } from '../utils/api';
-import { addPendingSale, getPendingSales, removePendingSale, clearPendingSales } from '../utils/offlineSync';
+
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { Product, Sale, FinancialSettings, Role, User, CashSession, CartItem, SaleResult, SaleDetail } from '../types';
 
 interface StoreContextType {
   products: Product[];
@@ -11,25 +10,39 @@ interface StoreContextType {
   currentUser: User | null;
   currentUserRole: Role | undefined;
   currentSession: CashSession | null;
-  isOnline: boolean;
-
-  login: (user: User, token: string) => void;
+  
+  login: (user: User) => void;
   logout: () => void;
-  updateCurrentUser: (userData: Partial<User>) => void;
-  openSession: (startBalance: number) => Promise<void>;
-  closeSession: (endBalance: number) => Promise<void>;
-  addProduct: (product: Omit<Product, 'ownerId' | 'id'>, activeStoreId?: string) => Promise<void>;
-  updateProduct: (product: Product) => Promise<void>;
-  deleteProduct: (id: string) => Promise<void>;
+  updateCurrentUser: (userData: Partial<User>) => void; // Nueva función
+  openSession: (startBalance: number) => void;
+  closeSession: (endBalance: number) => void;
+  addProduct: (product: Omit<Product, 'ownerId' | 'id'>) => void;
+  updateProduct: (product: Product) => void;
   processSaleAndContributeToGoal: (cartItems: CartItem[], paymentMethod: 'CASH' | 'CARD' | 'TRANSFER') => Promise<SaleResult>;
-  cancelSale: (saleId: string) => Promise<void>;
+  cancelSale: (saleId: string) => void;
   updateSettings: (settings: FinancialSettings) => void;
-  getDashboardStats: (period: 'day' | 'month') => Promise<any>;
+  getDashboardStats: (period: 'day' | 'month') => any;
   calculateTotalInventoryValue: () => number;
-  syncData: () => Promise<void>;
 }
 
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
+
+const SEED_PRODUCTS: Product[] = [
+  {
+    id: 'seed-papas-001',
+    sku: '0003',
+    name: 'Papas',
+    category: 'Snacks',
+    costPrice: 15,
+    salePrice: 22,
+    unitProfit: 7,
+    stock: 12,
+    minStock: 3,
+    taxRate: 0,
+    isActive: true,
+    ownerId: 'usr-1'
+  }
+];
 
 export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
@@ -37,79 +50,33 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     return session ? JSON.parse(session) : null;
   });
 
-  const [products, setProducts] = useState<Product[]>([]);
-  const [sales, setSales] = useState<Sale[]>([]);
-  const [allSessions, setAllSessions] = useState<CashSession[]>([]);
-  const [settings, setSettings] = useState<FinancialSettings>({ monthlyFixedCosts: 10000 });
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [allProducts, setAllProducts] = useState<Product[]>(() => {
+    const saved = localStorage.getItem('products');
+    if (saved) return JSON.parse(saved);
+    return SEED_PRODUCTS;
+  });
 
-  const currentSession = allSessions.find(s => s.status === 'OPEN') || null;
+  const [allSales, setAllSales] = useState<Sale[]>(() => JSON.parse(localStorage.getItem('sales') || '[]'));
+  const [allSessions, setAllSessions] = useState<CashSession[]>(() => JSON.parse(localStorage.getItem('cash_sessions') || '[]'));
+  const [settings, setSettings] = useState<FinancialSettings>(() => JSON.parse(localStorage.getItem('settings') || '{"monthlyFixedCosts": 10000}'));
 
-  // Monitor online status
-  useEffect(() => {
-    const handleStatusChange = () => setIsOnline(navigator.onLine);
-    window.addEventListener('online', handleStatusChange);
-    window.addEventListener('offline', handleStatusChange);
-    return () => {
-      window.removeEventListener('online', handleStatusChange);
-      window.removeEventListener('offline', handleStatusChange);
-    };
-  }, []);
+  const products = allProducts.filter(p => p.ownerId === currentUser?.id);
+  const sales = allSales.filter(s => s.ownerId === currentUser?.id);
+  const currentSession = allSessions.find(s => s.ownerId === currentUser?.id && s.status === 'OPEN') || null;
 
-  // Initial Data Fetch
-  const syncData = useCallback(async () => {
-    if (!currentUser || !isOnline) return;
-    try {
-      // 1. Sync Pending Offline Sales first
-      const pendingSales = await getPendingSales();
-      if (pendingSales.length > 0) {
-        console.log(`Syncing ${pendingSales.length} offline sales...`);
-        // We sync one by one or batch if API supports it. Current API supports batch.
-        // Transforming PendingSale to structure API expects if needed, or just sending
-        // For 'sync' endpoint.
-        await salesAPI.sync(pendingSales);
-        await clearPendingSales();
-        console.log('Offline sales synced successfully');
-      }
+  useEffect(() => localStorage.setItem('products', JSON.stringify(allProducts)), [allProducts]);
+  useEffect(() => localStorage.setItem('sales', JSON.stringify(allSales)), [allSales]);
+  useEffect(() => localStorage.setItem('cash_sessions', JSON.stringify(allSessions)), [allSessions]);
+  useEffect(() => localStorage.setItem('settings', JSON.stringify(settings)), [settings]);
 
-      // 2. Fetch fresh data
-      const [fetchedProducts, fetchedSales] = await Promise.all([
-        productsAPI.getAll(),
-        salesAPI.getAll()
-      ]);
-
-      const mappedProducts = Array.isArray(fetchedProducts) ? fetchedProducts.map((p: any) => ({
-        ...p,
-        name: p.nombre || p.name || 'Sin Nombre',
-        category: p.categoria || p.category || 'General',
-        image: p.imagen || p.image
-      })) : [];
-
-      setProducts(mappedProducts as Product[]);
-      setSales(fetchedSales);
-
-      // Expenses and Sessions could be fetched here too if needed
-    } catch (error) {
-      console.error('Data Sync Error:', error);
-    }
-  }, [currentUser, isOnline]);
-
-  useEffect(() => {
-    syncData();
-  }, [syncData]);
-
-  const login = (user: User, token: string) => {
+  const login = (user: User) => {
     setCurrentUser(user);
-    setAuthToken(token);
     sessionStorage.setItem('user_session', JSON.stringify(user));
   };
 
   const logout = () => {
     setCurrentUser(null);
-    clearAuthToken();
     sessionStorage.removeItem('user_session');
-    setProducts([]);
-    setSales([]);
   };
 
   const updateCurrentUser = (userData: Partial<User>) => {
@@ -119,11 +86,8 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     sessionStorage.setItem('user_session', JSON.stringify(updatedUser));
   };
 
-  const openSession = async (startBalance: number) => {
-    // TODO: Implement API call for opening session (CashShift)
-    // Mocking strictly local for now as CashShift API integration wasn't explicitly detailed in the prompt request for this specific context method, 
-    // but ideally this should hit the API.
-    // For robustness, I'll keep local state update for now to unblock the UI flow.
+  const openSession = (startBalance: number) => {
+    if (!currentUser) return;
     const newSession: CashSession = {
       id: crypto.randomUUID(),
       startTime: new Date().toISOString(),
@@ -132,18 +96,18 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       cashSales: 0,
       refunds: 0,
       status: 'OPEN',
-      ownerId: currentUser?.id || 'unknown'
+      ownerId: currentUser.id
     };
     setAllSessions(prev => [...prev, newSession]);
   };
 
-  const closeSession = async (endBalanceReal: number) => {
+  const closeSession = (endBalanceReal: number) => {
     if (!currentSession) return;
-    // TODO: Implement API call
     const expected = currentSession.startBalance + currentSession.cashSales - currentSession.refunds;
-    setAllSessions(prev => prev.map(s => s.id === currentSession.id ? {
-      ...s,
-      status: 'CLOSED',
+    
+    setAllSessions(prev => prev.map(s => s.id === currentSession.id ? { 
+      ...s, 
+      status: 'CLOSED', 
       endTime: new Date().toISOString(),
       expectedBalance: expected,
       endBalanceReal
@@ -159,7 +123,7 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   };
 
   const processSaleAndContributeToGoal = async (cartItems: CartItem[], paymentMethod: 'CASH' | 'CARD' | 'TRANSFER'): Promise<SaleResult> => {
-    if (!currentUser) return { totalRevenueAdded: 0, totalProfitAdded: 0, success: false };
+    if (!currentUser || !currentSession) return { totalRevenueAdded: 0, totalProfitAdded: 0, success: false };
 
     let totalTransactionRevenue = 0;
     let totalTransactionProfit = 0;
@@ -167,11 +131,13 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     const saleItems: SaleDetail[] = cartItems.map(item => {
       const itemRevenue = item.sellingPrice * item.quantity;
       let itemProfit = 0;
+
       if (!item.unitCost || item.unitCost <= 0) {
         itemProfit = itemRevenue;
       } else {
         itemProfit = (item.sellingPrice - item.unitCost) * item.quantity;
       }
+
       totalTransactionRevenue += itemRevenue;
       totalTransactionProfit += itemProfit;
 
@@ -186,196 +152,88 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       };
     });
 
-    const newSale = {
-      storeId: currentUser.storeId || currentUser.store_id || 'unknown',
-      vendedor: currentUser.username,
+    totalTransactionRevenue = Math.round(totalTransactionRevenue * 100) / 100;
+    totalTransactionProfit = Math.round(totalTransactionProfit * 100) / 100;
+
+    const newSale: Sale = {
+      id: crypto.randomUUID(),
+      date: new Date().toISOString(),
+      sellerId: currentUser.username,
       subtotal: totalTransactionRevenue,
       totalDiscount: 0,
       taxTotal: 0,
       total: totalTransactionRevenue,
-      totalCost: totalTransactionRevenue - totalTransactionProfit, // Approximate
-      netProfit: totalTransactionProfit,
-      paymentMethod,
       status: 'ACTIVE',
+      paymentMethod,
       items: saleItems,
-      syncedAt: isOnline ? new Date() : null
+      ownerId: currentUser.id
     };
 
-    try {
-      if (isOnline) {
-        // Try online sync
-        const savedSale = await salesAPI.create(newSale);
-        // Update local state with real data from server
-        setSales(prev => [...prev, savedSale]);
+    setAllSales(prev => [...prev, newSale]);
 
-        // Optimistic stock update
-        setProducts(prevProducts => {
-          const nextProducts = [...prevProducts];
-          saleItems.forEach(item => {
-            const idx = nextProducts.findIndex(p => p.id === item.productId);
-            if (idx !== -1) nextProducts[idx] = { ...nextProducts[idx], stock: nextProducts[idx].stock - item.quantity };
-          });
-          return nextProducts;
-        });
-
-      } else {
-        // Offline mode
-        const offlineSale: PendingSale = {
-          ...newSale,
-          tempId: crypto.randomUUID(),
-          createdAt: new Date().toISOString()
-        } as any; // Casting to fit PendingSale if types slightly mismatch
-
-        await addPendingSale(offlineSale);
-        console.log('Sale saved offline');
-
-        // Update UI optimistically
-        // We need to cast it to 'Sale' type for local state
-        const optimisticSale: Sale = {
-          id: offlineSale.tempId || 'temp',
-          sellerId: newSale.vendedor,
-          date: new Date().toISOString(),
-          ownerId: currentUser.id,
-          ...newSale
-        } as any;
-
-        setSales(prev => [...prev, optimisticSale]);
-      }
-
-      // Update Session if CASH
-      if (paymentMethod === 'CASH' && currentSession) {
-        setAllSessions(prev => prev.map(s =>
-          s.id === currentSession.id
-            ? { ...s, cashSales: Math.round((s.cashSales + totalTransactionRevenue) * 100) / 100 }
-            : s
-        ));
-      }
-
-      return {
-        totalRevenueAdded: totalTransactionRevenue,
-        totalProfitAdded: totalTransactionProfit,
-        success: true
-      };
-
-    } catch (error) {
-      console.error('Sale processing error:', error);
-      return { totalRevenueAdded: 0, totalProfitAdded: 0, success: false };
+    if (paymentMethod === 'CASH') {
+      setAllSessions(prev => prev.map(s => 
+        s.id === currentSession.id 
+          ? { ...s, cashSales: Math.round((s.cashSales + totalTransactionRevenue) * 100) / 100 } 
+          : s
+      ));
     }
+
+    setAllProducts(prevProducts => {
+      const nextProducts = [...prevProducts];
+      saleItems.forEach(item => {
+        const idx = nextProducts.findIndex(p => p.id === item.productId);
+        if (idx !== -1) nextProducts[idx] = { ...nextProducts[idx], stock: nextProducts[idx].stock - item.quantity };
+      });
+      return nextProducts;
+    });
+    
+    return {
+      totalRevenueAdded: totalTransactionRevenue,
+      totalProfitAdded: totalTransactionProfit,
+      success: true
+    };
   };
 
-  const addProduct = async (productData: Omit<Product, 'ownerId' | 'id'>, activeStoreId?: string) => {
+  const addProduct = (productData: Omit<Product, 'ownerId' | 'id'>) => {
     if (!currentUser) return;
-    try {
-      if (isOnline) {
-        // Map frontend field names (English) to backend API names (Spanish)
-        const productPayload: any = {
-          sku: productData.sku,
-          nombre: productData.name,
-          categoria: productData.category || '',
-          costPrice: productData.costPrice,
-          salePrice: productData.salePrice,
-          stock: productData.stock || 0,
-          minStock: productData.minStock || 0,
-          taxRate: productData.taxRate || 0,
-          imagen: productData.image,
-          storeId: activeStoreId || (currentUser.role === 'SUPER_ADMIN'
-            ? (productData as any).storeId
-            : currentUser.storeId)
-        };
-
-        // DEBUG: Log payload before sending
-        console.log('📦 Payload:', JSON.stringify(productPayload, null, 2));
-        console.log('👤 User:', currentUser.username, 'Role:', currentUser.role);
-        console.log('🏪 StoreId:', productPayload.storeId);
-
-        // Validate storeId is present
-        if (!productPayload.storeId) {
-          console.error('❌ ERROR: storeId is null');
-          alert('Error: Debe seleccionar una tienda para crear el producto.');
-          throw new Error('Store ID is required to create products');
-        }
-
-        const newProduct = await productsAPI.create(productPayload);
-        console.log('✅ Product created:', newProduct);
-        setProducts(prev => [...prev, newProduct]);
-      } else {
-        console.warn('Cannot add products while offline');
-        alert('No se pueden agregar productos sin conexión a internet.');
-      }
-    } catch (e: any) {
-      console.error('Error creating product:', e);
-      alert(`Error al crear producto: ${e.message || 'Error desconocido'}`);
-    }
+    const newProduct: Product = { ...productData, id: crypto.randomUUID(), ownerId: currentUser.id };
+    setAllProducts(prev => [...prev, newProduct]);
   };
 
-
-  const updateProduct = async (updated: Product) => {
-    try {
-      if (isOnline) {
-        await productsAPI.update(updated.id, updated);
-        setProducts(prev => prev.map(p => p.id === updated.id ? updated : p));
-      }
-    } catch (e) {
-      console.error(e);
-    }
+  const updateProduct = (updated: Product) => {
+    if (updated.ownerId !== currentUser?.id) return;
+    setAllProducts(prev => prev.map(p => p.id === updated.id ? updated : p));
   };
 
-  const deleteProduct = async (id: string) => {
-    try {
-      if (isOnline) {
-        await productsAPI.delete(id);
-        setProducts(prev => prev.filter(p => p.id !== id));
-      } else {
-        alert("No se puede eliminar productos en modo offline");
-      }
-    } catch (e) {
-      console.error("Error deleting product:", e);
-      alert("Error al eliminar producto");
+  const cancelSale = (saleId: string) => {
+    const sale = allSales.find(s => s.id === saleId);
+    if (!sale || sale.status === 'CANCELLED' || !currentSession) return;
+
+    setAllSales(prev => prev.map(s => s.id === saleId ? { ...s, status: 'CANCELLED' } : s));
+
+    if (sale.paymentMethod === 'CASH') {
+      setAllSessions(prev => prev.map(s => s.id === currentSession.id ? { ...s, refunds: s.refunds + sale.total } : s));
     }
-  };
 
-  const cancelSale = async (saleId: string) => {
-    try {
-      if (isOnline) {
-        // Call API to cancel
-        // await salesAPI.cancel(saleId); // Need to implement this in API util if not existing
-      }
-      // Local update
-      const sale = sales.find(s => s.id === saleId);
-      if (!sale) return;
-
-      setSales(prev => prev.map(s => s.id === saleId ? { ...s, status: 'CANCELLED' } : s));
-
-      // Revert stock logic... (Simplified for now)
-    } catch (e) {
-      console.error(e);
-    }
+    setAllProducts(prevProducts => {
+      const nextProducts = [...prevProducts];
+      sale.items.forEach(item => {
+        const idx = nextProducts.findIndex(p => p.id === item.productId);
+        if (idx !== -1) nextProducts[idx] = { ...nextProducts[idx], stock: nextProducts[idx].stock + item.quantity };
+      });
+      return nextProducts;
+    });
   };
 
   const updateSettings = (newSettings: FinancialSettings) => setSettings(newSettings);
 
-  const getDashboardStats = async (period: 'day' | 'month', storeId?: string) => {
-    // If online, fetch from optimized endpoint
-    if (isOnline) {
-      try {
-        return await dashboardAPI.getSummary(period, storeId);
-      } catch (e) {
-        console.error('Failed to fetch dashboard stats, falling back to local calc', e);
-      }
-    }
-
-    // Fallback: Local calculation (same as before)
+  const getDashboardStats = (period: 'day' | 'month') => {
     const now = new Date();
     const todayStr = now.toISOString().split('T')[0];
     const monthStr = now.toISOString().slice(0, 7);
 
-    // Filter sales by storeId if provided
-    let relevantSales = sales;
-    if (storeId) {
-      relevantSales = sales.filter(s => s.storeId === storeId); // Assuming Sale has storeId locally, if not this fallback might be limited
-    }
-
-    const filteredSales = relevantSales.filter(s => {
+    const filteredSales = sales.filter(s => {
       if (s.status !== 'ACTIVE') return false;
       const saleDate = s.date.split('T')[0];
       if (period === 'day') return saleDate === todayStr;
@@ -384,24 +242,31 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     });
 
     const totalRevenue = filteredSales.reduce((acc, s) => acc + s.total, 0);
-    // ... Simplified cost/profit calc for offline fallback
+    
+    const totalCost = filteredSales.reduce((acc, s) => {
+      return acc + s.items.reduce((iAcc, item) => iAcc + (item.unitCost * item.quantity), 0);
+    }, 0);
+
+    const totalProfit = filteredSales.reduce((acc, s) => {
+      return acc + s.items.reduce((iAcc, item) => {
+        const profit = item.unitCost > 0 ? (item.unitPrice - item.unitCost) : item.unitPrice;
+        return iAcc + (profit * item.quantity);
+      }, 0);
+    }, 0);
+    
     return {
-      salesToday: totalRevenue, // Renamed to match new interface
       salesCount: filteredSales.length,
-      ordersCount: filteredSales.length, // Added alias
-      totalRevenue,
-      grossProfit: totalRevenue * 0.3, // Estimated 30% margin fallback
-      netProfit: totalRevenue * 0.2, // Estimated 20% margin fallback
-      investment: 0,
-      dailyTarget: 0,
-      dailyOperationalCost: 0
+      totalRevenue: Math.round(totalRevenue * 100) / 100,
+      totalCost: Math.round(totalCost * 100) / 100,
+      totalProfit: Math.round(totalProfit * 100) / 100,
+      ticketAverage: filteredSales.length > 0 ? totalRevenue / filteredSales.length : 0
     };
   };
 
   return (
     <StoreContext.Provider value={{
-      products, sales, allSessions, settings, currentUser, currentUserRole: currentUser?.role, currentSession, isOnline,
-      login, logout, updateCurrentUser, openSession, closeSession, addProduct, updateProduct, deleteProduct, processSaleAndContributeToGoal, cancelSale, updateSettings, getDashboardStats, calculateTotalInventoryValue, syncData
+      products, sales, allSessions, settings, currentUser, currentUserRole: currentUser?.role, currentSession,
+      login, logout, updateCurrentUser, openSession, closeSession, addProduct, updateProduct, processSaleAndContributeToGoal, cancelSale, updateSettings, getDashboardStats, calculateTotalInventoryValue
     }}>
       {children}
     </StoreContext.Provider>

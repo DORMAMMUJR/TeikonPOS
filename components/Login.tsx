@@ -1,152 +1,136 @@
+
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ShieldAlert, Terminal, User, Lock, Loader2 } from 'lucide-react';
+import { ShieldAlert, Terminal } from 'lucide-react';
 import Button from './Button';
 import { useStore } from '../context/StoreContext';
+import { User as UserType } from '../types';
 import TeikonLogo from './TeikonLogo';
 import TeikonWordmark from './TeikonWordmark';
 import DevLoginModal from './DevLoginModal';
-import { authAPI } from '../utils/api';
-
 
 const Login: React.FC = () => {
   const { login } = useStore();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [showDevModal, setShowDevModal] = useState(false);
-
-  // Navigation
-  const navigate = useNavigate();
-
-
-  // Form States
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState(false);
+  const [showDevModal, setShowDevModal] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const USERS_DB: Record<string, UserType & { pass: string }> = {
+    'ADMIN': { 
+      id: 'usr-1', 
+      username: 'admin', 
+      role: 'admin', 
+      department: 'CORE', 
+      pass: '1234',
+      storeName: 'TEIKON MATRIZ' // Usuario ya configurado
+    },
+    'LENTES_USER': { 
+      id: 'usr-2', 
+      username: 'lentes_user', 
+      role: 'seller', 
+      department: 'OPTICA', 
+      pass: 'lentes123' 
+      // Sin storeName para forzar ONBOARDING
+    }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
-    setLoading(true);
+    const normalizedUsername = username.trim().toUpperCase();
+    const user = USERS_DB[normalizedUsername];
 
-    try {
-      // REGISTER FLOW REMOVED
-
-      // LOGIN FLOW
-      const response = await authAPI.login(username, password);
-
-      // Update context
-      login(response.user, response.token);
-
-      // ---------------------------------------------------------
-      // LOGIC FOR SUPER ADMIN REDIRECTION
-      // ---------------------------------------------------------
-      if (response.user.role === 'SUPER_ADMIN') {
-        console.log("👑 Bienvenido Jefe - Redirigiendo a Panel de Tiendas");
-        navigate('/admin/dashboard');
-      } else {
-        console.log("💼 Bienvenido Cliente - Redirigiendo a su POS");
-        navigate('/dashboard');
-      }
-    } catch (err: any) {
-      console.error(err);
-      setError(err.message || 'Error de autenticación');
-    } finally {
-      setLoading(false);
+    if (user && user.pass === password) {
+      const { pass, ...userData } = user;
+      login(userData);
+    } else {
+      setError(true);
+      setTimeout(() => setError(false), 3000);
     }
   };
 
   const handleDevSuccess = () => {
-    // Dev backdoor for testing - kept for compatibility
-    login({ id: 'dev-root', username: 'dev_engineer', role: 'SUPER_ADMIN', department: 'ENGINEERING' } as any, 'dev-token');
+    // Al autenticarse como DEV, logueamos al usuario con rol SUPERUSER que ya tiene acceso al Admin Panel
+    login({ id: 'dev-root', username: 'dev_engineer', role: 'superuser', department: 'ENGINEERING' } as any);
     setShowDevModal(false);
-    navigate('/admin/dashboard');
   };
 
   return (
-    <>
-      <div className="min-h-screen flex items-center justify-center bg-brand-bg px-4 overflow-hidden relative">
-        {/* Background Elements */}
-        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-brand-purple/5 blur-[120px] rounded-full -mr-40 -mt-40 pointer-events-none"></div>
-        <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-brand-pink/5 blur-[120px] rounded-full -ml-40 -mb-40 pointer-events-none"></div>
+    <div className="min-h-screen flex items-center justify-center bg-brand-bg px-4 overflow-hidden relative">
+      {/* Luces de fondo sutiles */}
+      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-brand-purple/5 blur-[120px] rounded-full -mr-40 -mt-40"></div>
+      <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-brand-pink/5 blur-[120px] rounded-full -ml-40 -mb-40"></div>
 
-        <div className="max-w-md w-full relative z-10">
-          <div className="flex flex-col items-center mb-10 text-center">
-            <TeikonLogo size={80} className="mb-6" />
-            <TeikonWordmark height={24} className="text-slate-900 dark:text-white" />
-            <p className="text-[10px] font-black text-brand-muted uppercase tracking-[0.4em] mt-4">
-              INVENTORY SOFTWARE
-            </p>
-          </div>
-
-          <div className="bg-white dark:bg-brand-panel backdrop-blur-md p-8 border border-slate-200 dark:border-brand-border rounded-3xl shadow-2xl transition-all duration-300">
-            <form onSubmit={handleSubmit} className="space-y-4">
-
-
-
-              <div className="space-y-1.5">
-                <label className="text-[9px] font-black text-brand-muted uppercase tracking-widest pl-1">Usuario</label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-muted h-4 w-4" />
-                  <input
-                    type="text"
-                    required
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-black/20 border border-slate-200 dark:border-white/10 rounded-xl pl-10 pr-4 py-3 text-sm focus:border-brand-purple transition-all outline-none font-bold text-slate-900 dark:text-white uppercase placeholder:normal-case"
-                    placeholder="admin_user"
-                  />
-                </div>
-              </div>
-
-
-
-              <div className="space-y-1.5">
-                <label className="text-[9px] font-black text-brand-muted uppercase tracking-widest pl-1">Contraseña</label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-muted h-4 w-4" />
-                  <input
-                    type="password"
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-black/20 border border-slate-200 dark:border-white/10 rounded-xl pl-10 pr-4 py-3 text-sm focus:border-brand-purple transition-all outline-none font-bold text-slate-900 dark:text-white"
-                    placeholder="••••••••"
-                  />
-                </div>
-              </div>
-
-              {error && (
-                <div className="flex items-center gap-2 text-red-500 bg-red-500/10 p-3 text-[10px] font-bold rounded-xl border border-red-500/20 animate-in slide-in-from-top-2">
-                  <ShieldAlert size={14} className="shrink-0" />
-                  <span>{error}</span>
-                </div>
-              )}
-
-              <Button
-                type="submit"
-                variant="primary"
-                fullWidth
-                disabled={loading}
-                className="py-4 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-black border-none text-[10px] font-black tracking-widest shadow-xl mt-4 hover:scale-[1.02] active:scale-[0.98] transition-transform"
-              >
-                {loading ? <Loader2 className="animate-spin" /> : 'INICIAR SESIÓN'}
-              </Button>
-            </form>
-
-
-          </div>
+      <div className="max-w-xs w-full relative z-10">
+        <div className="flex flex-col items-center mb-10 text-center">
+          <TeikonLogo size={100} className="mb-6" />
+          <TeikonWordmark height={30} className="text-slate-900 dark:text-white" />
+          <p className="text-[10px] font-black text-brand-muted uppercase tracking-[0.4em] mt-6">Inventario Digital</p>
         </div>
 
+        <div className="bg-white dark:bg-brand-panel backdrop-blur-md p-8 border border-slate-200 dark:border-brand-border rounded-2xl shadow-2xl">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-1.5">
+              <label className="text-[9px] font-black text-brand-muted uppercase tracking-widest">Identificador</label>
+              <input
+                type="text"
+                required
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                className="w-full bg-slate-50 dark:bg-black/20 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm focus:border-brand-purple transition-all outline-none uppercase font-black text-slate-900 dark:text-white placeholder:text-brand-muted/20"
+                placeholder="USUARIO"
+              />
+            </div>
 
+            <div className="space-y-1.5">
+              <label className="text-[9px] font-black text-brand-muted uppercase tracking-widest">Clave</label>
+              <input
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full bg-slate-50 dark:bg-black/20 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm focus:border-brand-purple transition-all outline-none font-black text-slate-900 dark:text-white placeholder:text-brand-muted/20"
+                placeholder="••••••••"
+              />
+            </div>
+
+            {error && (
+              <div className="flex items-center gap-2 text-red-500 bg-red-500/10 p-3 text-[9px] font-black uppercase rounded-lg border border-red-500/20">
+                <ShieldAlert size={14} />
+                <span>Credenciales Invalidas</span>
+              </div>
+            )}
+
+            <Button
+              type="submit"
+              variant="primary"
+              fullWidth
+              className="py-4 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-black border-none text-[10px] font-black tracking-widest shadow-xl"
+            >
+              ENTRAR
+            </Button>
+          </form>
+        </div>
+        
+        <div className="mt-8 flex flex-col items-center gap-4">
+          <p className="text-center text-[8px] font-bold text-brand-muted uppercase tracking-[0.4em] opacity-40">
+            TEIKON OS // V2.9 CORE
+          </p>
+          <button 
+            onClick={() => setShowDevModal(true)}
+            className="flex items-center gap-2 text-[8px] font-black text-slate-400 hover:text-indigo-500 transition-colors uppercase tracking-[0.3em] opacity-30 hover:opacity-100"
+          >
+            <Terminal size={12} /> Acceso Desarrollador
+          </button>
+        </div>
       </div>
 
       {showDevModal && (
-        <DevLoginModal
+        <DevLoginModal 
           onSuccess={handleDevSuccess}
           onClose={() => setShowDevModal(false)}
         />
       )}
-    </>
+    </div>
   );
 };
 

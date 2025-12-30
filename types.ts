@@ -1,41 +1,13 @@
 
 export type Role = 'admin' | 'seller' | 'superuser';
 
-// ==========================================
-// NUEVAS INTERFACES PARA BACKEND
-// ==========================================
-
-export interface Organization {
-  id: string;
-  nombre: string;
-  slug: string;
-  propietario: string;
-  email: string;
-  telefono?: string;
-  activo: boolean;
-}
-
-export interface Store {
-  id: string;
-  organizationId: string;
-  nombre: string;
-  slug: string;
-  usuario: string;
-  direccion?: string;
-  telefono?: string;
-  activo: boolean;
-}
-
 export interface User {
   id: string;
   username: string;
   role: Role;
   department: string;
-  storeName?: string;
-  phone?: string;
-  // Nuevos campos para backend
-  storeId?: string;
-  organizationId?: string;
+  storeName?: string; // Nuevo campo para validación de onboarding
+  phone?: string;     // Nuevo campo opcional
 }
 
 export interface CashSession {
@@ -53,11 +25,10 @@ export interface CashSession {
 
 export interface Product {
   id: string;
-  storeId: string; // Cambiado de ownerId
   sku: string;
   name: string;
   category: string;
-  costPrice: number; // Costo histórico
+  costPrice: number;
   salePrice: number;
   unitProfit: number;
   stock: number;
@@ -65,6 +36,7 @@ export interface Product {
   taxRate: number;
   isActive: boolean;
   image?: string;
+  ownerId: string;
 }
 
 export interface SaleDetail {
@@ -106,72 +78,10 @@ export interface Sale {
   totalDiscount: number;
   taxTotal: number;
   total: number;
-  totalCost: number; // Nuevo: costo total
-  netProfit: number; // Nuevo: utilidad bruta
-  status: 'ACTIVE' | 'CANCELLED' | 'PENDING_SYNC'; // Agregado PENDING_SYNC
+  status: 'ACTIVE' | 'CANCELLED';
   paymentMethod: 'CASH' | 'CARD' | 'TRANSFER';
   items: SaleDetail[];
-  storeId: string; // Cambiado de ownerId
-  syncedAt?: string; // Nuevo: timestamp de sincronización
-}
-
-// ==========================================
-// NUEVAS INTERFACES PARA GESTIÓN DE NEGOCIO
-// ==========================================
-
-export interface Expense {
-  id: string;
-  storeId: string;
-  categoria: 'RENT' | 'UTILITIES' | 'PAYROLL' | 'SUPPLIES' | 'MAINTENANCE' | 'OTHER';
-  descripcion: string;
-  monto: number;
-  fecha: string;
-  recurrente: boolean;
-  comprobante?: string;
-  registradoPor: string;
-  createdAt: string;
-}
-
-export interface StockMovement {
-  id: string;
-  productId: string;
-  storeId: string;
-  tipo: 'SALE' | 'PURCHASE' | 'ADJUSTMENT' | 'THEFT' | 'RETURN' | 'TRANSFER';
-  cantidad: number;
-  stockAnterior: number;
-  stockNuevo: number;
-  motivo: string;
-  referenciaId?: string;
-  registradoPor: string;
-  createdAt: string;
-}
-
-export interface CashShift {
-  id: string;
-  storeId: string;
-  cajero: string;
-  apertura: string;
-  cierre?: string;
-  montoInicial: number;
-  ventasEfectivo: number;
-  ventasTarjeta: number;
-  ventasTransferencia: number;
-  gastos: number;
-  montoEsperado?: number;
-  montoReal?: number;
-  diferencia?: number;
-  notas?: string;
-  status: 'OPEN' | 'CLOSED';
-}
-
-// Interfaz para cola offline
-export interface PendingSale {
-  tempId: string;
-  vendedor: string;
-  items: CartItem[];
-  paymentMethod: 'CASH' | 'CARD' | 'TRANSFER';
-  total: number;
-  createdAt: string;
+  ownerId: string;
 }
 
 export interface FinancialSettings {

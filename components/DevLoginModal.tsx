@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { X, Lock, User, ShieldAlert, Terminal } from 'lucide-react';
 
@@ -26,7 +27,7 @@ const DevLoginModal: React.FC<DevLoginModalProps> = ({ onSuccess, onClose }) => 
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
       {/* Backdrop */}
-      <div
+      <div 
         className="absolute inset-0 bg-slate-950/80 backdrop-blur-md transition-opacity"
         onClick={onClose}
       />
@@ -35,7 +36,7 @@ const DevLoginModal: React.FC<DevLoginModalProps> = ({ onSuccess, onClose }) => 
       <div className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden transform transition-all">
         {/* Background decorative elements */}
         <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 blur-3xl -mr-16 -mt-16 pointer-events-none" />
-
+        
         <div className="p-10">
           <div className="flex justify-between items-start mb-8">
             <div className="flex items-center gap-3">
@@ -47,7 +48,7 @@ const DevLoginModal: React.FC<DevLoginModalProps> = ({ onSuccess, onClose }) => 
                 <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Módulo de Ingeniería</p>
               </div>
             </div>
-            <button
+            <button 
               onClick={onClose}
               className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors text-slate-400 hover:text-slate-900 dark:hover:text-white"
             >

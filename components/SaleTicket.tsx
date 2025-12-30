@@ -9,7 +9,6 @@ interface SaleTicketProps {
   paymentMethod: string;
   sellerId: string;
   folio: string;
-  date?: string;
   onClose: () => void;
   storeInfo?: {
     name: string;
@@ -19,13 +18,12 @@ interface SaleTicketProps {
   footerMessage?: string;
 }
 
-const SaleTicket: React.FC<SaleTicketProps> = ({
-  items,
-  total,
-  paymentMethod,
-  sellerId,
-  folio,
-  date,
+const SaleTicket: React.FC<SaleTicketProps> = ({ 
+  items, 
+  total, 
+  paymentMethod, 
+  sellerId, 
+  folio, 
   onClose,
   storeInfo = {
     name: "TEIKON CONCEPT STORE",
@@ -34,8 +32,6 @@ const SaleTicket: React.FC<SaleTicketProps> = ({
   },
   footerMessage = "¡GRACIAS POR SU PREFERENCIA!"
 }) => {
-
-  const ticketDate = date ? new Date(date) : new Date();
 
   const handlePrint = () => {
     window.print();
@@ -53,13 +49,13 @@ const SaleTicket: React.FC<SaleTicketProps> = ({
   return (
     <div className="fixed inset-0 z-[250] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md no-print">
       <div className="absolute inset-0" onClick={onClose}></div>
-
+      
       {/* Visual Preview Container */}
       <div className="relative bg-white w-full max-w-[320px] shadow-2xl overflow-hidden animate-in zoom-in duration-300 rounded-sm">
-
+        
         {/* ÁREA DE IMPRESIÓN (ID: printable-ticket usado en index.html) */}
         <div id="printable-ticket" className="bg-white p-6 font-mono text-black leading-tight">
-
+          
           {/* ENCABEZADO */}
           <div className="text-center mb-4 space-y-1">
             <div className="flex justify-center mb-2 grayscale">
@@ -77,11 +73,11 @@ const SaleTicket: React.FC<SaleTicketProps> = ({
             </div>
             <div className="flex justify-between">
               <span>FECHA:</span>
-              <span>{ticketDate.toLocaleDateString()}</span>
+              <span>{new Date().toLocaleDateString()}</span>
             </div>
             <div className="flex justify-between">
               <span>HORA:</span>
-              <span>{ticketDate.toLocaleTimeString()}</span>
+              <span>{new Date().toLocaleTimeString()}</span>
             </div>
           </div>
 
@@ -95,9 +91,9 @@ const SaleTicket: React.FC<SaleTicketProps> = ({
             <div className="space-y-2">
               {items.map((item, idx) => (
                 <div key={idx} className="flex justify-between items-start">
-                  <span className="w-8">{item.quantity || item.cantidad}</span>
-                  <span className="flex-1 px-2 uppercase truncate">{item.name || item.nombre || item.productName}</span>
-                  <span className="w-16 text-right">${(item.subtotal || ((item.sellingPrice || item.unitPrice) * (item.quantity || item.cantidad))).toLocaleString()}</span>
+                  <span className="w-8">{item.quantity}</span>
+                  <span className="flex-1 px-2 uppercase truncate">{item.name || item.productName}</span>
+                  <span className="w-16 text-right">${(item.subtotal || (item.sellingPrice * item.quantity)).toLocaleString()}</span>
                 </div>
               ))}
             </div>
@@ -125,7 +121,7 @@ const SaleTicket: React.FC<SaleTicketProps> = ({
           {/* PIE DE TICKET */}
           <div className="text-center mt-6 pt-4 border-t border-black border-dashed space-y-3">
             <p className="text-[10px] font-bold leading-tight">{footerMessage}</p>
-
+            
             {/* Simulación de QR Digital */}
             <div className="flex flex-col items-center gap-1 opacity-80">
               <div className="w-16 h-16 border-2 border-black p-1">
@@ -136,20 +132,20 @@ const SaleTicket: React.FC<SaleTicketProps> = ({
               </div>
               <span className="text-[7px] font-black uppercase tracking-widest">Ticket Digital Verified</span>
             </div>
-
+            
             <p className="text-[8px] opacity-40 uppercase tracking-tighter">Atendido por: {sellerId}</p>
           </div>
         </div>
 
         {/* CONTROLES DE PANTALLA (No se imprimen) */}
         <div className="flex gap-1 p-4 bg-slate-50 border-t border-slate-100 no-print">
-          <button
+          <button 
             onClick={onClose}
             className="flex-1 py-3 text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-slate-900 transition-colors active:scale-95"
           >
             Cerrar
           </button>
-          <button
+          <button 
             onClick={handlePrint}
             className="flex-1 py-3 bg-black text-white text-[10px] font-black uppercase tracking-widest rounded-sm flex items-center justify-center gap-2 hover:bg-slate-800 transition-all active:scale-95 shadow-lg shadow-black/10"
           >
