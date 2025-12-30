@@ -1,5 +1,5 @@
 // API Base URL - automatically uses current domain in production
-const API_URL = import.meta.env.PROD ? '' : 'http://localhost:80';
+const API_URL = (import.meta as any).env?.PROD ? '' : 'http://localhost:80';
 
 // Get auth token from localStorage
 export const getAuthToken = (): string | null => {
@@ -8,7 +8,7 @@ export const getAuthToken = (): string | null => {
 
 // Set auth token
 export const setAuthToken = (token: string): void => {
-    localStorage.setItem('authToken');
+    localStorage.setItem('authToken', token);
 };
 
 // Clear auth token

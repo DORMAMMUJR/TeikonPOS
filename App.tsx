@@ -16,7 +16,7 @@ import { Power } from 'lucide-react';
 
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 
-const ProtectedRoute = ({ children, requireAdmin = false }: { children: JSX.Element, requireAdmin?: boolean }) => {
+const ProtectedRoute = ({ children, requireAdmin = false }: { children: React.ReactNode, requireAdmin?: boolean }) => {
   const { currentUser } = useStore();
   const location = useLocation();
 
@@ -31,7 +31,7 @@ const ProtectedRoute = ({ children, requireAdmin = false }: { children: JSX.Elem
   return children;
 };
 
-const StoreGuard = ({ children }: { children: JSX.Element }) => {
+const StoreGuard = ({ children }: { children: React.ReactNode }) => {
   const { currentUser, currentSession, openSession } = useStore();
   const [openingBalance, setOpeningBalance] = useState('');
 
@@ -104,7 +104,7 @@ const AppContent: React.FC = () => {
 
   return (
     <Routes>
-      <Route path="/login" element={!currentUser ? <Login /> : <Navigate to={currentUser.role === 'SUPER_ADMIN' ? "/admin/dashboard" : "/dashboard"} replace />} />
+      <Route path="/login" element={!currentUser ? <Login /> : <Navigate to={currentUser.role === 'SUPER_ADMIN' ? "/admin/stores" : "/dashboard"} replace />} />
 
       {/* Super Admin Routes */}
       <Route path="/admin/*" element={

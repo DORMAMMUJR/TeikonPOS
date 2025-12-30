@@ -50,10 +50,11 @@ const ProductList: React.FC = () => {
     };
 
     if (editingProduct.id) {
-      updateProduct({ 
-        ...productData, 
+      updateProduct({
+        ...productData,
         id: editingProduct.id,
-        ownerId: editingProduct.ownerId || ''
+        ownerId: editingProduct.ownerId || '',
+        storeId: editingProduct.storeId || ''
       } as Product);
     } else {
       addProduct(productData);
@@ -82,14 +83,14 @@ const ProductList: React.FC = () => {
     setIsModalOpen(true);
   };
 
-  const filtered = products.filter(p => 
-    p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+  const filtered = products.filter(p =>
+    p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     p.sku.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const calculatedProfit = (editingProduct.salePrice || 0) - (editingProduct.costPrice || 0);
-  const calculatedMargin = editingProduct.salePrice && editingProduct.salePrice > 0 
-    ? (calculatedProfit / editingProduct.salePrice) * 100 
+  const calculatedMargin = editingProduct.salePrice && editingProduct.salePrice > 0
+    ? (calculatedProfit / editingProduct.salePrice) * 100
     : 0;
 
   return (
@@ -97,26 +98,26 @@ const ProductList: React.FC = () => {
       {/* HEADER KPI SECTION */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="card-premium p-5 flex items-center justify-between bg-white dark:bg-slate-900 border-l-4 border-l-orange-500">
-           <div className="flex items-center gap-4">
-             <div className="p-3 bg-orange-100 dark:bg-orange-500/10 rounded-xl text-orange-600">
-               <DollarSign size={24} />
-             </div>
-             <div>
-               <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Valor de Inversión</p>
-               <p className="text-2xl font-black text-slate-900 dark:text-white">${totalInvestment.toLocaleString()}</p>
-             </div>
-           </div>
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-orange-100 dark:bg-orange-500/10 rounded-xl text-orange-600">
+              <DollarSign size={24} />
+            </div>
+            <div>
+              <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Valor de Inversión</p>
+              <p className="text-2xl font-black text-slate-900 dark:text-white">${totalInvestment.toLocaleString()}</p>
+            </div>
+          </div>
         </div>
         <div className="card-premium p-5 flex items-center justify-between bg-white dark:bg-slate-900 border-l-4 border-l-brand-blue">
-           <div className="flex items-center gap-4">
-             <div className="p-3 bg-blue-100 dark:bg-blue-500/10 rounded-xl text-brand-blue">
-               <PieChart size={24} />
-             </div>
-             <div>
-               <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Unidades Totales</p>
-               <p className="text-2xl font-black text-slate-900 dark:text-white">{totalUnits.toLocaleString()}</p>
-             </div>
-           </div>
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-blue-100 dark:bg-blue-500/10 rounded-xl text-brand-blue">
+              <PieChart size={24} />
+            </div>
+            <div>
+              <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Unidades Totales</p>
+              <p className="text-2xl font-black text-slate-900 dark:text-white">{totalUnits.toLocaleString()}</p>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -124,9 +125,9 @@ const ProductList: React.FC = () => {
       <div className="flex flex-col md:flex-row justify-between items-stretch md:items-center gap-4 bg-orange-50 dark:bg-orange-950/20 p-4 rounded-2xl border border-orange-100 dark:border-orange-900/30">
         <div className="relative w-full md:w-96">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-orange-500 h-5 w-5" />
-          <input 
-            type="text" 
-            placeholder="Buscar por SKU o Nombre..." 
+          <input
+            type="text"
+            placeholder="Buscar por SKU o Nombre..."
             className="w-full pl-12 pr-4 py-3.5 bg-white dark:bg-slate-900 border border-orange-200 dark:border-orange-800/40 rounded-xl text-sm font-bold text-slate-900 dark:text-white focus:outline-none focus:border-orange-500 shadow-sm transition-all"
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
@@ -140,47 +141,47 @@ const ProductList: React.FC = () => {
       {/* MOBILE LIST VIEW (Cards) */}
       <div className="block md:hidden space-y-4">
         {filtered.map((p) => {
-           const margin = p.salePrice > 0 ? ((p.salePrice - p.costPrice) / p.salePrice) * 100 : 0;
-           return (
-             <div key={p.id} onClick={() => openEdit(p)} className="card-premium bg-white dark:bg-slate-900 p-4 active:scale-[0.98] transition-transform border border-slate-200 dark:border-slate-800">
-               <div className="flex gap-4">
-                  <div className="h-20 w-20 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-800 shrink-0 border border-slate-200 dark:border-slate-700">
-                    {p.image ? (
-                      <img src={p.image} className="h-full w-full object-cover" alt={p.name} />
-                    ) : (
-                      <div className="h-full w-full flex items-center justify-center text-slate-300">
-                         <ImageIcon size={24} />
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex justify-between items-start">
-                      <h4 className="font-black text-sm text-slate-900 dark:text-white uppercase truncate pr-2">{p.name}</h4>
-                      <span className="text-[10px] font-black text-brand-muted bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md">{p.sku}</span>
+          const margin = p.salePrice > 0 ? ((p.salePrice - p.costPrice) / p.salePrice) * 100 : 0;
+          return (
+            <div key={p.id} onClick={() => openEdit(p)} className="card-premium bg-white dark:bg-slate-900 p-4 active:scale-[0.98] transition-transform border border-slate-200 dark:border-slate-800">
+              <div className="flex gap-4">
+                <div className="h-20 w-20 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-800 shrink-0 border border-slate-200 dark:border-slate-700">
+                  {p.image ? (
+                    <img src={p.image} className="h-full w-full object-cover" alt={p.name} />
+                  ) : (
+                    <div className="h-full w-full flex items-center justify-center text-slate-300">
+                      <ImageIcon size={24} />
                     </div>
-                    <div className="flex items-end justify-between mt-2">
-                       <div>
-                         <p className="text-[10px] text-slate-500 font-bold uppercase">Precio Venta</p>
-                         <p className="text-xl font-black text-orange-500">${p.salePrice.toLocaleString()}</p>
-                       </div>
-                       <div className="text-right">
-                         <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase border ${p.stock <= p.minStock ? 'bg-red-500 text-white border-red-600' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700'}`}>
-                           Stock: {p.stock}
-                         </span>
-                       </div>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex justify-between items-start">
+                    <h4 className="font-black text-sm text-slate-900 dark:text-white uppercase truncate pr-2">{p.name}</h4>
+                    <span className="text-[10px] font-black text-brand-muted bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md">{p.sku}</span>
+                  </div>
+                  <div className="flex items-end justify-between mt-2">
+                    <div>
+                      <p className="text-[10px] text-slate-500 font-bold uppercase">Precio Venta</p>
+                      <p className="text-xl font-black text-orange-500">${p.salePrice.toLocaleString()}</p>
+                    </div>
+                    <div className="text-right">
+                      <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase border ${p.stock <= p.minStock ? 'bg-red-500 text-white border-red-600' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700'}`}>
+                        Stock: {p.stock}
+                      </span>
                     </div>
                   </div>
-               </div>
-               <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center">
-                  <span className="text-[10px] font-bold text-emerald-500 flex items-center gap-1">
-                    <TrendingUp size={12} /> MG: {margin.toFixed(1)}%
-                  </span>
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1">
-                    <Edit size={12} /> Editar
-                  </span>
-               </div>
-             </div>
-           );
+                </div>
+              </div>
+              <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center">
+                <span className="text-[10px] font-bold text-emerald-500 flex items-center gap-1">
+                  <TrendingUp size={12} /> MG: {margin.toFixed(1)}%
+                </span>
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1">
+                  <Edit size={12} /> Editar
+                </span>
+              </div>
+            </div>
+          );
         })}
       </div>
 
@@ -210,7 +211,7 @@ const ProductList: React.FC = () => {
                             <img src={p.image} className="h-full w-full object-cover" alt="" />
                           ) : (
                             <div className="h-full w-full flex items-center justify-center text-slate-300">
-                               <ImageIcon size={18} />
+                              <ImageIcon size={18} />
                             </div>
                           )}
                         </div>
@@ -226,9 +227,9 @@ const ProductList: React.FC = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-center">
-                        <span className={`px-2 py-1 rounded text-[9px] font-black uppercase border ${p.stock <= p.minStock ? 'bg-red-500/10 text-red-500 border-red-500/20' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-transparent'}`}>
-                          {p.stock}
-                        </span>
+                      <span className={`px-2 py-1 rounded text-[9px] font-black uppercase border ${p.stock <= p.minStock ? 'bg-red-500/10 text-red-500 border-red-500/20' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-transparent'}`}>
+                        {p.stock}
+                      </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-center">
                       <button onClick={() => openEdit(p)} className="p-2 text-orange-500 hover:bg-orange-500/10 rounded-lg transition-all active:scale-90">
@@ -255,7 +256,7 @@ const ProductList: React.FC = () => {
             </div>
             <div className="flex-1 w-full text-center sm:text-left">
               <label className="cursor-pointer bg-orange-600 text-white px-6 py-3 text-[10px] font-black uppercase tracking-widest hover:bg-orange-500 transition-all active:scale-95 flex items-center justify-center sm:justify-start gap-2 rounded-xl shadow-lg shadow-orange-600/20 min-h-[44px]">
-                <Upload size={16}/>
+                <Upload size={16} />
                 <span>Cargar Imagen</span>
                 <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} />
               </label>
@@ -265,42 +266,42 @@ const ProductList: React.FC = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1">
               <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">SKU</label>
-              <input required className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-xs font-bold focus:border-orange-500 outline-none uppercase" value={editingProduct.sku || ''} onChange={e => setEditingProduct(prev => ({...prev, sku: e.target.value}))} />
+              <input required className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-xs font-bold focus:border-orange-500 outline-none uppercase" value={editingProduct.sku || ''} onChange={e => setEditingProduct(prev => ({ ...prev, sku: e.target.value }))} />
             </div>
             <div className="space-y-1">
               <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Categoría</label>
-              <input className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-xs font-bold focus:border-orange-500 outline-none uppercase" value={editingProduct.category || ''} onChange={e => setEditingProduct(prev => ({...prev, category: e.target.value}))} />
+              <input className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-xs font-bold focus:border-orange-500 outline-none uppercase" value={editingProduct.category || ''} onChange={e => setEditingProduct(prev => ({ ...prev, category: e.target.value }))} />
             </div>
           </div>
-          
+
           <div className="space-y-1">
             <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Nombre</label>
-            <input required className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-xs font-bold focus:border-orange-500 outline-none uppercase" value={editingProduct.name || ''} onChange={e => setEditingProduct(prev => ({...prev, name: e.target.value}))} />
+            <input required className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-xs font-bold focus:border-orange-500 outline-none uppercase" value={editingProduct.name || ''} onChange={e => setEditingProduct(prev => ({ ...prev, name: e.target.value }))} />
           </div>
 
           <div className="grid grid-cols-2 gap-3 p-4 bg-emerald-500/5 dark:bg-emerald-500/10 rounded-2xl border border-emerald-500/10">
-             <div className="space-y-1">
-               <p className="text-[8px] font-black text-emerald-600 uppercase tracking-widest flex items-center gap-1">
-                 <DollarSign size={10} /> Utilidad Bruta
-               </p>
-               <p className="text-lg font-black text-emerald-500">${calculatedProfit.toLocaleString()}</p>
-             </div>
-             <div className="space-y-1">
-               <p className="text-[8px] font-black text-emerald-600 uppercase tracking-widest flex items-center gap-1">
-                 <TrendingUp size={10} /> Margen Bruto
-               </p>
-               <p className="text-lg font-black text-emerald-500">{calculatedMargin.toFixed(2)}%</p>
-             </div>
+            <div className="space-y-1">
+              <p className="text-[8px] font-black text-emerald-600 uppercase tracking-widest flex items-center gap-1">
+                <DollarSign size={10} /> Utilidad Bruta
+              </p>
+              <p className="text-lg font-black text-emerald-500">${calculatedProfit.toLocaleString()}</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-[8px] font-black text-emerald-600 uppercase tracking-widest flex items-center gap-1">
+                <TrendingUp size={10} /> Margen Bruto
+              </p>
+              <p className="text-lg font-black text-emerald-500">{calculatedMargin.toFixed(2)}%</p>
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
               <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Costo Compra</label>
-              <input type="number" step="0.01" required className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-xs font-bold" value={editingProduct.costPrice || ''} onChange={e => setEditingProduct(prev => ({...prev, costPrice: parseFloat(e.target.value)}))} />
+              <input type="number" step="0.01" required className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-xs font-bold" value={editingProduct.costPrice || ''} onChange={e => setEditingProduct(prev => ({ ...prev, costPrice: parseFloat(e.target.value) }))} />
             </div>
             <div className="space-y-1">
               <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Precio Venta</label>
-              <input type="number" step="0.01" required className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-xs font-bold" value={editingProduct.salePrice || ''} onChange={e => setEditingProduct(prev => ({...prev, salePrice: parseFloat(e.target.value)}))} />
+              <input type="number" step="0.01" required className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-xs font-bold" value={editingProduct.salePrice || ''} onChange={e => setEditingProduct(prev => ({ ...prev, salePrice: parseFloat(e.target.value) }))} />
             </div>
           </div>
 
@@ -309,17 +310,17 @@ const ProductList: React.FC = () => {
               <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">
                 {editingProduct.id ? 'Ajuste Stock' : 'Stock Inicial'}
               </label>
-              <input 
-                type="number" 
-                required 
-                className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-xs font-bold focus:border-orange-500 shadow-sm" 
-                value={editingProduct.stock || 0} 
-                onChange={e => setEditingProduct(prev => ({...prev, stock: parseInt(e.target.value) || 0}))} 
+              <input
+                type="number"
+                required
+                className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-xs font-bold focus:border-orange-500 shadow-sm"
+                value={editingProduct.stock || 0}
+                onChange={e => setEditingProduct(prev => ({ ...prev, stock: parseInt(e.target.value) || 0 }))}
               />
             </div>
             <div className="space-y-1">
               <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Mínimo Crítico</label>
-              <input type="number" required className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-xs font-bold focus:border-orange-500 shadow-sm" value={editingProduct.minStock || 0} onChange={e => setEditingProduct(prev => ({...prev, minStock: parseInt(e.target.value) || 0}))} />
+              <input type="number" required className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-xs font-bold focus:border-orange-500 shadow-sm" value={editingProduct.minStock || 0} onChange={e => setEditingProduct(prev => ({ ...prev, minStock: parseInt(e.target.value) || 0 }))} />
             </div>
           </div>
 
