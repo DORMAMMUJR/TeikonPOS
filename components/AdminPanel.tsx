@@ -11,7 +11,9 @@ import ProductList from './ProductList';
 import Button from './Button';
 import Dashboard from './Dashboard';
 import SalesHistory from './SalesHistory';
-import { storesAPI } from '../utils/api';
+import SettingsMenu from './SettingsMenu';
+import StoreOperations from './StoreOperations';
+import { storesAPI, clearAuthToken } from '../utils/api';
 import { useStore } from '../context/StoreContext';
 
 interface StoreData {
@@ -34,7 +36,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
   const { products: allProducts, sales: allSales } = useStore();
 
   const [activeView, setActiveView] = useState<'stores' | 'detail'>('stores');
-  const [detailTab, setDetailTab] = useState<'dashboard' | 'products' | 'sales'>('dashboard');
+  const [detailTab, setDetailTab] = useState<'dashboard' | 'products' | 'sales' | 'operations'>('dashboard');
   const [selectedStore, setSelectedStore] = useState<StoreData | null>(null);
 
   const [stores, setStores] = useState<StoreData[]>([]);
@@ -222,6 +224,14 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
               <TrendingUp size={16} className="inline mr-2" />
               VENTAS
             </button>
+            <button
+              onClick={() => setDetailTab('operations')}
+              className={`px-4 py-2 rounded-lg text-sm font-black transition-all ${detailTab === 'operations' ? 'bg-indigo-500 text-white shadow-lg' : 'text-white/60 hover:text-white'
+                }`}
+            >
+              <Zap size={16} className="inline mr-2" />
+              OPERACIONES
+            </button>
           </div>
         </div>
 
@@ -260,6 +270,10 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                         For MVP, products creation was the critical bug. */}
             </div>
           )}
+
+          {detailTab === 'operations' && (
+            <StoreOperations storeId={selectedStore.id} />
+          )}
         </div>
       </div>
     );
@@ -285,8 +299,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
           <button
             onClick={handleBackToMain}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${activeView === 'stores'
-                ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20'
-                : 'text-white/60 hover:bg-white/5 hover:text-white'
+              ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20'
+              : 'text-white/60 hover:bg-white/5 hover:text-white'
               }`}
           >
             <Store size={20} />
