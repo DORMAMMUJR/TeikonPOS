@@ -623,12 +623,12 @@ Store.hasMany(Sale, { foreignKey: 'storeId', as: 'sales', onDelete: 'CASCADE' })
 Sale.belongsTo(Store, { foreignKey: 'storeId', as: 'store' });
 
 // Sale <-> SaleItem (1:N)
-Sale.hasMany(SaleItem, { foreignKey: 'saleId', as: 'itemsList' });
-SaleItem.belongsTo(Sale, { foreignKey: 'saleId', as: 'sale' });
+Sale.hasMany(SaleItem, { foreignKey: 'saleId' });
+SaleItem.belongsTo(Sale, { foreignKey: 'saleId' });
 
 // Product <-> SaleItem (1:N)
-Product.hasMany(SaleItem, { foreignKey: 'productId', as: 'salesItems' });
-SaleItem.belongsTo(Product, { foreignKey: 'productId', as: 'product' });
+Product.hasMany(SaleItem, { foreignKey: 'productId' });
+SaleItem.belongsTo(Product, { foreignKey: 'productId' });
 
 // Store -> Expense (1:N)
 Store.hasMany(Expense, { foreignKey: 'storeId', as: 'expenses', onDelete: 'CASCADE' });
