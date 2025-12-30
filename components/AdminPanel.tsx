@@ -12,7 +12,7 @@ import Dashboard from './Dashboard';
 import SalesHistory from './SalesHistory';
 import StoreOperations from './StoreOperations';
 // import SettingsMenu from './SettingsMenu'; // Ensure this exists or comment out if not. Assuming it exists based on previous code.
-import { storesAPI, clearAuthToken } from '../utils/api';
+import { storesAPI, ticketsAPI, clearAuthToken } from '../utils/api';
 import { useStore } from '../context/StoreContext';
 
 interface StoreData {

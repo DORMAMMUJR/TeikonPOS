@@ -1,6 +1,6 @@
 // API Base URL - automatically uses current domain in production
 // API Base URL - Environment aware
-const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '' : 'http://localhost:80');
+const API_URL = (import.meta as any).env?.VITE_API_URL || ((import.meta as any).env?.PROD ? '' : 'http://localhost:80');
 
 // Get auth token from localStorage
 export const getAuthToken = (): string | null => {
@@ -118,104 +118,7 @@ export const storesAPI = {
         });
         if (!response.ok) throw new Error(await response.text());
         return response.json();
-    }
-};
-
-export const ticketsAPI = {
-    getAll: async () => {
-        const response = await fetch(`${API_URL}/api/tickets`, {
-            headers: getHeaders()
-        });
-        if (!response.ok) throw new Error(await response.text());
-        return response.json();
-    }
-};
-
-// ==========================================
-// SALES API
-// ==========================================
-
-export const salesAPI = {
-    getAll: async () => {
-        const response = await fetch(`${API_URL}/api/ventas`, {
-            headers: getHeaders()
-        });
-        if (!response.ok) throw new Error(await response.text());
-        return response.json();
     },
-
-    create: async (sale: any) => {
-        const response = await fetch(`${API_URL}/api/ventas`, {
-            method: 'POST',
-            headers: getHeaders(),
-            body: JSON.stringify(sale)
-        });
-        if (!response.ok) throw new Error(await response.text());
-        return response.json();
-    },
-
-    sync: async (sales: any[]) => {
-        const response = await fetch(`${API_URL}/api/ventas/sync`, {
-            method: 'POST',
-            headers: getHeaders(),
-            body: JSON.stringify({ ventas: sales })
-        });
-        if (!response.ok) throw new Error(await response.text());
-        return response.json();
-    }
-};
-
-// ==========================================
-// DASHBOARD API
-// ==========================================
-
-export const dashboardAPI = {
-    getSummary: async (period: 'day' | 'week' | 'month' | 'year' = 'month') => {
-        const response = await fetch(`${API_URL}/api/dashboard/summary?period=${period}`, {
-            headers: getHeaders()
-        });
-        if (!response.ok) throw new Error(await response.text());
-        return response.json();
-    }
-};
-
-// ==========================================
-// EXPENSES API
-// ==========================================
-
-export const expensesAPI = {
-    getAll: async () => {
-        const response = await fetch(`${API_URL}/api/gastos`, {
-            headers: getHeaders()
-        });
-        if (!response.ok) throw new Error(await response.text());
-        return response.json();
-    },
-
-    create: async (expense: any) => {
-        const response = await fetch(`${API_URL}/api/gastos`, {
-            method: 'POST',
-            headers: getHeaders(),
-            body: JSON.stringify(expense)
-        });
-        if (!response.ok) throw new Error(await response.text());
-        return response.json();
-    }
-};
-
-// ==========================================
-// STORES API
-// ==========================================
-
-export const storesAPI = {
-    getAll: async () => {
-        const response = await fetch(`${API_URL}/api/stores`, {
-            headers: getHeaders()
-        });
-        if (!response.ok) throw new Error(await response.text());
-        return response.json();
-    },
-
     delete: async (id: string) => {
         const response = await fetch(`${API_URL}/api/stores/${id}`, {
             method: 'DELETE',
