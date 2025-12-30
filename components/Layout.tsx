@@ -1,25 +1,13 @@
-
 import React, { useState, useEffect } from 'react';
-import {
-  LayoutDashboard,
-  ShoppingCart,
-  Package,
-  Settings as SettingsIcon, // Renamed to avoid confusion with Settings Tab
-  LogOut,
-  History,
-  Sun,
-  Moon,
-  LifeBuoy,
-  Menu,
-  ChevronLeft,
-  X
-} from 'lucide-react';
+import { Menu, X } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import { useTheme } from '../context/ThemeContext';
 import TeikonLogo from './TeikonLogo';
-import TeikonWordmark from './TeikonWordmark';
 import SupportTicketModal from './SupportTicketModal';
+import SalesGoalModal from './SalesGoalModal';
+import CashRegisterModal from './CashRegisterModal';
 import ConnectionStatus from './ConnectionStatus';
+import Sidebar from './Sidebar';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -28,11 +16,11 @@ interface LayoutProps {
 }
 
 const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => {
-  const { currentUser, logout, settings, getDashboardStats } = useStore();
-  const { theme, toggleTheme } = useTheme();
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const { currentUser, getDashboardStats, settings } = useStore();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
+  const [isGoalModalOpen, setIsGoalModalOpen] = useState(false);
+  const [isCashCloseOpen, setIsCashCloseOpen] = useState(false);
   const [stats, setStats] = useState<any>({ totalProfit: 0 });
 
   useEffect(() => {
@@ -45,23 +33,13 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => 
       }
     };
     fetchStats();
-    // Refresh stats every minute? Or rely on global re-renders
     const interval = setInterval(fetchStats, 60000);
     return () => clearInterval(interval);
   }, [getDashboardStats]);
 
-  // Lógica de Meta Operativa (Read-Only)
   const dailyTarget = settings.monthlyFixedCosts / 30;
   const currentProfit = stats.totalProfit || 0;
   const progressPercent = dailyTarget > 0 ? Math.min(Math.max((currentProfit / dailyTarget) * 100, 0), 100) : 0;
-
-  const navItems = [
-    { id: 'dashboard', label: 'Inicio', icon: LayoutDashboard, color: 'text-brand-purple' },
-    { id: 'pos', label: 'Ventas', icon: ShoppingCart, color: 'text-brand-emerald' },
-    { id: 'history', label: 'Historial', icon: History, color: 'text-brand-pink' },
-    { id: 'products', label: 'Inventario', icon: Package, color: 'text-orange-600' },
-    { id: 'settings', label: 'Admin', icon: SettingsIcon, adminOnly: true, color: 'text-brand-blue' },
-  ];
 
   const getPageTitle = () => {
     switch (activeTab) {
@@ -80,12 +58,12 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => 
   };
 
   return (
-    <div className="flex h-[100dvh] bg-brand-bg text-brand-text overflow-hidden transition-colors duration-500 flex-col md:flex-row">
+    <div className="flex h-[100dvh] bg-brand-bg text-brand-text overflow-hidden transition-colors duration-500">
 
       <ConnectionStatus />
 
-      {/* --- 1. NAVBAR MÓVIL SUPERIOR (Mobile Header) --- */}
-      <div className="md:hidden bg-brand-panel border-b border-brand-border px-4 py-3 flex justify-between items-center shrink-0 z-[60] shadow-sm relative">
+      {/* --- MOBILE HEADER --- */}
+      <div className="md:hidden bg-brand-panel border-b border-brand-border px-4 py-3 flex justify-between items-center shrink-0 z-[60] shadow-sm fixed top-0 left-0 right-0">
         <div className="flex items-center gap-3">
           <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -98,102 +76,22 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => 
             <h1 className="text-sm font-black uppercase tracking-tight text-slate-900 dark:text-white">Teikon POS</h1>
           </div>
         </div>
-
-        {/* Mobile Profile / Actions can go here */}
       </div>
 
-      {/* --- 2. SIDEBAR / DRAWER --- */}
-      <aside
-        className={`
-          flex flex-col bg-brand-panel border-r border-brand-border transition-all duration-300 z-[70] shrink-0
-          /* Móvil: Drawer Fixed (Slide-in) */
-          fixed inset-y-0 left-0 w-64 shadow-2xl transform ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
-          /* Desktop: Relative Static Sidebar */
-          md:relative md:translate-x-0 md:shadow-none md:flex md:h-full
-          ${isCollapsed ? 'md:w-20' : 'md:w-64'}
-        `}
-      >
-        {/* Header del Sidebar (Solo Desktop) */}
-        <div className="hidden md:flex h-20 items-center px-4 border-b border-brand-border shrink-0 overflow-hidden whitespace-nowrap">
-          <div className={`flex items-center flex-1 transition-opacity duration-300 ${isCollapsed ? 'opacity-0 w-0' : 'opacity-100 w-auto'}`}>
-            <TeikonLogo size={32} className="shrink-0" />
-            <div className="ml-3">
-              <TeikonWordmark height={14} className="text-slate-900 dark:text-white" />
-            </div>
-          </div>
-          <button
-            onClick={() => setIsCollapsed(!isCollapsed)}
-            className={`p-2 rounded-xl text-brand-muted hover:bg-black/5 dark:hover:bg-white/5 transition-all active:scale-90 ${isCollapsed ? 'mx-auto' : 'ml-auto'}`}
-          >
-            {isCollapsed ? <Menu size={20} /> : <ChevronLeft size={20} />}
-          </button>
-        </div>
-
-        {/* Navegación Principal */}
-        <nav className="flex-1 overflow-y-auto no-scrollbar py-6 px-3 space-y-2">
-          {navItems.map(item => {
-            if (item.adminOnly && currentUser?.role !== 'admin' && currentUser?.role !== 'superuser') return null;
-            const active = activeTab === item.id;
-            return (
-              <button
-                key={item.id}
-                onClick={() => handleMobileNav(item.id)}
-                className={`flex items-center w-full rounded-2xl transition-all duration-150 ease-in-out group min-h-[52px] active:scale-[0.97] ${active
-                    ? 'bg-slate-900 dark:bg-white text-white dark:text-black shadow-lg shadow-black/10'
-                    : 'text-brand-muted hover:bg-black/5 dark:hover:bg-white/5'
-                  } 
-                /* Mobile: siempre expandido */
-                justify-start px-4 gap-4
-                /* Desktop: depende de isCollapsed */
-                md:${isCollapsed ? 'justify-center px-0' : 'px-4 gap-4'}
-                `}
-              >
-                <item.icon size={22} className={`shrink-0 ${active ? 'text-inherit' : item.color}`} />
-
-                <span className={`text-xs font-black uppercase tracking-widest truncate 
-                  /* Mobile: siempre visible */
-                  block
-                  /* Desktop: oculto si colapsado */
-                  md:${isCollapsed ? 'hidden' : 'block'}
-                `}>
-                  {item.label}
-                </span>
-
-                {active && !isCollapsed && (
-                  <div className="ml-auto w-1.5 h-1.5 rounded-full bg-brand-emerald animate-pulse hidden md:block" />
-                )}
-              </button>
-            );
-          })}
-        </nav>
-
-        {/* Footer del Sidebar */}
-        <div className="p-3 border-t border-brand-border space-y-2 bg-black/5 dark:bg-white/5 shrink-0">
-          <button
-            onClick={() => { setIsSupportModalOpen(true); setIsMobileMenuOpen(false); }}
-            className={`flex items-center w-full rounded-xl py-3 text-brand-muted hover:text-indigo-500 hover:bg-indigo-500/5 transition-all font-bold active:scale-95 px-4 gap-4 md:${isCollapsed ? 'justify-center px-0' : 'px-4 gap-4'}`}
-          >
-            <LifeBuoy size={20} />
-            <span className={`text-[10px] font-black uppercase tracking-widest block md:${isCollapsed ? 'hidden' : 'block'}`}>Soporte</span>
-          </button>
-
-          <button
-            onClick={() => { toggleTheme(); setIsMobileMenuOpen(false); }}
-            className={`flex items-center w-full rounded-xl py-3 text-brand-muted hover:text-amber-500 hover:bg-amber-500/5 transition-all font-bold active:scale-95 px-4 gap-4 md:${isCollapsed ? 'justify-center px-0' : 'px-4 gap-4'}`}
-          >
-            {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
-            <span className={`text-[10px] font-black uppercase tracking-widest block md:${isCollapsed ? 'hidden' : 'block'}`}>{theme === 'dark' ? 'Modo Luz' : 'Modo Oscuro'}</span>
-          </button>
-
-          <button
-            onClick={logout}
-            className={`flex items-center w-full rounded-xl py-3 text-red-500/60 hover:text-red-500 hover:bg-red-500/5 transition-all font-bold active:scale-95 px-4 gap-4 md:${isCollapsed ? 'justify-center px-0' : 'px-4 gap-4'}`}
-          >
-            <LogOut size={20} />
-            <span className={`text-[10px] font-black uppercase tracking-widest block md:${isCollapsed ? 'hidden' : 'block'}`}>Salir</span>
-          </button>
-        </div>
-      </aside>
+      {/* --- SIDEBAR (Desktop) / DRAWER (Mobile) --- */}
+      <div className={`
+        fixed inset-y-0 left-0 z-[70] transform transition-transform duration-300
+        ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
+        md:relative md:translate-x-0 md:flex
+      `}>
+        <Sidebar
+          activeTab={activeTab}
+          onTabChange={handleMobileNav}
+          onOpenGoalModal={() => setIsGoalModalOpen(true)}
+          onOpenCashClose={() => setIsCashCloseOpen(true)}
+          onOpenSupport={() => setIsSupportModalOpen(true)}
+        />
+      </div>
 
       {/* Overlay para cerrar drawer en móvil */}
       {isMobileMenuOpen && (
@@ -203,11 +101,11 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => 
         />
       )}
 
-      {/* --- 3. ÁREA DE CONTENIDO PRINCIPAL --- */}
-      <div className="flex-1 flex flex-col min-w-0 relative w-full h-full bg-brand-bg">
+      {/* --- MAIN CONTENT AREA --- */}
+      <div className="flex-1 flex flex-col min-w-0 relative w-full h-full bg-brand-bg mt-14 md:mt-0">
 
-        {/* Top Header Desktop (Info Bar) y Mobile Title */}
-        <header className="h-14 md:h-20 bg-brand-panel border-b border-brand-border flex items-center justify-between px-4 md:px-8 shrink-0 z-40 sticky top-0 md:relative">
+        {/* Top Header */}
+        <header className="h-14 md:h-20 bg-brand-panel border-b border-brand-border flex items-center justify-between px-4 md:px-8 shrink-0 z-40 sticky top-0">
           <div className="flex flex-col min-w-0">
             <h2 className="text-sm md:text-xl font-black text-slate-900 dark:text-white uppercase tracking-tighter truncate">
               {getPageTitle()}
@@ -219,6 +117,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => 
             </div>
           </div>
 
+          {/* Daily Goal Progress */}
           <div className="flex flex-col items-end gap-1.5 max-w-[150px] md:max-w-[300px] w-full hidden sm:flex">
             <div className="flex justify-between w-full text-[8px] font-black uppercase tracking-widest text-brand-muted">
               <span>Meta Diaria</span>
@@ -233,7 +132,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => 
           </div>
         </header>
 
-        {/* Main Scrollable Area */}
+        {/* Main Scrollable Content */}
         <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-8 custom-scrollbar scroll-smooth">
           <div className="max-w-7xl mx-auto space-y-6 md:space-y-10 min-h-full pb-20">
             {children}
@@ -245,10 +144,12 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => 
         </main>
       </div>
 
+      {/* Modals */}
       <SupportTicketModal isOpen={isSupportModalOpen} onClose={() => setIsSupportModalOpen(false)} />
+      <SalesGoalModal isOpen={isGoalModalOpen} onClose={() => setIsGoalModalOpen(false)} />
+      <CashRegisterModal isOpen={isCashCloseOpen} onClose={() => setIsCashCloseOpen(false)} />
     </div>
   );
 };
 
 export default Layout;
-
