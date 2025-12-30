@@ -61,6 +61,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
     }
   };
 
+  const handleLogout = () => {
+    clearAuthToken();
+    onExit();
+  };
+
   const handleSelectStore = (store: StoreData) => {
     setSelectedStore(store);
     setActiveView('detail');
@@ -335,48 +340,38 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
         </div>
       </div>
 
-  const handleLogout = () => {
-        clearAuthToken();
-      onExit();
-  };
+      {/* MAIN CONTENT AREA */}
+      <div className="flex-1 h-full overflow-hidden flex flex-col relative w-full">
 
-      return (
-      <div className="flex flex-col md:flex-row h-screen font-sans selection:bg-emerald-500/30 transition-colors duration-300 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 overflow-hidden">
-
-        {/* SIDEBAR ... (omitted, assuming it's part of the file structure) */}
-
-        {/* MAIN CONTENT AREA */}
-        <div className="flex-1 h-full overflow-hidden flex flex-col relative w-full">
-
-          {/* GLOBAL HEADER (DESKTOP) - Floating Top Right */}
-          <div className="hidden md:flex absolute top-6 right-8 z-50">
-            <SettingsMenu
-              onLogout={handleLogout}
-              isDarkMode={isDarkMode}
-              setIsDarkMode={setIsDarkMode}
-              username="Super Admin"
-            />
-          </div>
-
-          {/* TOP BAR Mobile */}
-          <div className="md:hidden p-4 bg-slate-900 text-white flex justify-between items-center shrink-0">
-            <TeikonLogo variant="light" size="sm" />
-            <SettingsMenu
-              onLogout={handleLogout}
-              isDarkMode={isDarkMode}
-              setIsDarkMode={setIsDarkMode}
-              username="Super Admin"
-            />
-          </div>
-
-          <main className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar">
-            <div className="max-w-7xl mx-auto h-full">
-              {activeView === 'stores' ? renderStoresTable() : renderDetailView()}
-            </div>
-          </main>
+        {/* GLOBAL HEADER (DESKTOP) - Floating Top Right */}
+        <div className="hidden md:flex absolute top-6 right-8 z-50">
+          <SettingsMenu
+            onLogout={handleLogout}
+            isDarkMode={isDarkMode}
+            setIsDarkMode={setIsDarkMode}
+            username="Super Admin"
+          />
         </div>
+
+        {/* TOP BAR Mobile */}
+        <div className="md:hidden p-4 bg-slate-900 text-white flex justify-between items-center shrink-0">
+          <TeikonLogo variant="light" size="sm" />
+          <SettingsMenu
+            onLogout={handleLogout}
+            isDarkMode={isDarkMode}
+            setIsDarkMode={setIsDarkMode}
+            username="Super Admin"
+          />
+        </div>
+
+        <main className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar">
+          <div className="max-w-7xl mx-auto h-full">
+            {activeView === 'stores' ? renderStoresTable() : renderDetailView()}
+          </div>
+        </main>
       </div>
-      );
+    </div>
+  );
 };
 
-      export default AdminPanel;
+export default AdminPanel;
