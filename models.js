@@ -302,6 +302,44 @@ const Sale = sequelize.define('Sale', {
 });
 
 // ==========================================
+// MODELO: SaleItem (Detalle de Venta)
+// ==========================================
+const SaleItem = sequelize.define('SaleItem', {
+    id: {
+        type: DataTypes.UUID,
+        defaultValue: DataTypes.UUIDV4,
+        primaryKey: true
+    },
+    saleId: {
+        type: DataTypes.UUID,
+        allowNull: false
+    },
+    productId: {
+        type: DataTypes.UUID,
+        allowNull: true
+    },
+    nombre: {
+        type: DataTypes.STRING,
+        allowNull: false
+    },
+    cantidad: {
+        type: DataTypes.INTEGER,
+        allowNull: false
+    },
+    precio: {
+        type: DataTypes.DECIMAL(10, 2),
+        allowNull: false
+    },
+    costo: {
+        type: DataTypes.DECIMAL(10, 2),
+        defaultValue: 0
+    }
+}, {
+    tableName: 'sale_items',
+    timestamps: true
+});
+
+// ==========================================
 // MODELO: Client (Cliente Final)
 // ==========================================
 const Client = sequelize.define('Client', {
@@ -584,6 +622,14 @@ Product.belongsTo(Store, { foreignKey: 'storeId', as: 'store' });
 Store.hasMany(Sale, { foreignKey: 'storeId', as: 'sales', onDelete: 'CASCADE' });
 Sale.belongsTo(Store, { foreignKey: 'storeId', as: 'store' });
 
+// Sale <-> SaleItem (1:N)
+Sale.hasMany(SaleItem, { foreignKey: 'saleId', as: 'itemsList' });
+SaleItem.belongsTo(Sale, { foreignKey: 'saleId', as: 'sale' });
+
+// Product <-> SaleItem (1:N)
+Product.hasMany(SaleItem, { foreignKey: 'productId', as: 'salesItems' });
+SaleItem.belongsTo(Product, { foreignKey: 'productId', as: 'product' });
+
 // Store -> Expense (1:N)
 Store.hasMany(Expense, { foreignKey: 'storeId', as: 'expenses', onDelete: 'CASCADE' });
 Expense.belongsTo(Store, { foreignKey: 'storeId', as: 'store' });
@@ -705,6 +751,7 @@ export {
     User,
     Product,
     Sale,
+    SaleItem,
     Expense,
     StockMovement,
     CashShift,
