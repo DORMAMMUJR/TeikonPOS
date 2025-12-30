@@ -511,11 +511,60 @@ app.get('/api/ventas', authenticateToken, async (req, res) => {
 // POST /api/ventas - Crear venta (ATOMIC TRANSACTION)
 app.post('/api/ventas', authenticateToken, async (req, res) => {
     try {
-        const { vendedor, items, paymentMethod } = req.body;
+        const { vendedor, items, paymentMethod, total } = req.body;
 
+        // ==========================================
+        // SANITIZACIÓN ROBUSTA - PREVENIR NaN
+        // ==========================================
+
+        // 1. Validar y Convertir Totales
+        if (total !== undefined) {
+            const totalVenta = Number(total);
+            if (isNaN(totalVenta)) {
+                return res.status(400).json({ error: "El total de la venta es inválido (NaN)" });
+            }
+        }
+
+        // 2. Validar Store ID
+        const storeId = req.storeId;
+        if (!storeId || storeId === 'null' || storeId === 'undefined') {
+            return res.status(400).json({ error: "Falta el ID de la tienda" });
+        }
+
+        // 3. Validar Items
         if (!items || items.length === 0) {
             return res.status(400).json({ error: 'El carrito está vacío' });
         }
+
+        // 4. Sanitizar Productos (Convertir strings a números y prevenir NaN)
+        const sanitizedItems = items.map((p, index) => {
+            const precio = Number(p.price || p.precio || p.unitPrice || p.sellingPrice || 0);
+            const cantidad = Number(p.quantity || p.cantidad || 1);
+            const costo = Number(p.cost || p.costo || p.unitCost || p.costPrice || 0);
+
+            // Validar que no sean NaN
+            if (isNaN(precio) || isNaN(cantidad) || isNaN(costo)) {
+                throw new Error(`Producto en posición ${index + 1} tiene valores numéricos inválidos (NaN)`);
+            }
+
+            // Validar que sean positivos
+            if (precio < 0 || cantidad <= 0 || costo < 0) {
+                throw new Error(`Producto en posición ${index + 1} tiene valores negativos o cantidad cero`);
+            }
+
+            return {
+                productId: p.productId || p.id,
+                nombre: p.name || p.nombre,
+                cantidad: cantidad,
+                unitPrice: precio,
+                unitCost: costo,
+                sellingPrice: precio, // Alias
+                costPrice: costo      // Alias
+            };
+        });
+
+        // Usar items sanitizados en lugar de los originales
+        const processItems = sanitizedItems;
 
         const result = await sequelize.transaction(async (t) => {
             let calculatedTotal = 0;
@@ -523,7 +572,7 @@ app.post('/api/ventas', authenticateToken, async (req, res) => {
             const enrichedItems = [];
 
             // 1. Verificación y Bloqueo (Iterar items para validar antes de escribir nada)
-            for (const item of items) {
+            for (const item of processItems) {
                 // LOCK: Consultar producto con bloqueo "SELECT ... FOR UPDATE"
                 // Esto impide que dos ventas simultáneas resten el mismo stock causando negativos.
                 const product = await Product.findOne({
@@ -1784,13 +1833,13 @@ const startServer = async () => {
             console.log('✅ Base de datos sincronizada (Schema Updated)');
 
             // Crear usuario SuperAdmin por defecto si no existe
-            createSuperAdmin();
+            // await createSuperAdmin(); // COMMENTED: Function not defined, admin may already exist in production
         }).catch(err => {
             console.error('❌ Error al sincronizar BD:', err);
         });
 
         // Crear usuario SuperAdmin por defecto si no existe
-        createSuperAdmin();
+        // await createSuperAdmin(); // COMMENTED: Function not defined, admin may already exist in production
 
         // ==========================================
         // ENDPOINTS DE TICKETS (SOPORTE)
