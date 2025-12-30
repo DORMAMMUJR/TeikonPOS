@@ -287,6 +287,24 @@ app.post('/api/productos', authenticateToken, async (req, res) => {
             targetStoreId = req.body.storeId;
         }
 
+        // FALLBACK: Si es SUPER_ADMIN y NO tiene storeId, buscar primera tienda activa
+        if (req.role === 'SUPER_ADMIN' && !targetStoreId) {
+            console.log('🔍 SUPER_ADMIN sin storeId - Buscando primera tienda activa...');
+            const firstStore = await Store.findOne({
+                where: { activo: true },
+                order: [['createdAt', 'ASC']]
+            });
+
+            if (firstStore) {
+                targetStoreId = firstStore.id;
+                console.log(`✅ Asignando producto a tienda: ${firstStore.nombre} (${firstStore.id})`);
+            } else {
+                return res.status(400).json({
+                    error: 'No hay tiendas activas disponibles. Por favor, crea una tienda primero.'
+                });
+            }
+        }
+
         if (!targetStoreId) {
             return res.status(400).json({ error: 'Store ID es requerido para crear productos' });
         }
