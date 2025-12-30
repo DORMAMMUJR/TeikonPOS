@@ -10,14 +10,13 @@ import dotenv from 'dotenv';
 // Cargar variables de entorno
 dotenv.config();
 
-import {
-    sequelize,
-    Organization,
-    Sale,
-    Expense,
+sequelize,
     Organization,
     Store,
     User,
+    Product,
+    Sale,
+    Expense,
     StockMovement,
     CashShift,
     Client,
