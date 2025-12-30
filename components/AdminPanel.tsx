@@ -383,312 +383,385 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
               <div className={`pt-4 md:pt-6 border-t ${isDarkMode ? 'border-white/10' : 'border-slate-100'} flex items-center justify-between`}>
                 <span className={`text-[8px] md:text-[10px] font-black uppercase tracking-widest ${themeClasses.subtext}`}>ACCESO</span>
                 <button
-                  <div className={`w-3 md:w-4 h-3 md:h-4 bg-white rounded-full shadow-sm transform transition-transform duration-300 ${store.status === 'active' ? 'translate-x-5 md:translate-x-6' : 'translate-x-0'} flex items-center justify-center`}>
-                     {store.status === 'active' ? <Unlock size={8} className="text-emerald-500" /> : <Lock size={8} className="text-red-500" />}
+                  onClick={() => toggleStoreStatus(store.id)}
+                  className={`relative w-12 md:w-14 h-6 md:h-7 rounded-full transition-colors duration-300 ${store.status === 'active' ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-700'}`}
+                >
+                  <div className={`w-3 md:w-4 h-3 md:h-4 bg-white rounded-full shadow-sm transform transition-transform duration-300 ${store.status === 'active' ? 'translate-x-5 md:translate-x-6' : 'translate-x-0'} flex items-center justify-center absolute top-1/2 -translate-y-1/2 left-1`}>
+                    {store.status === 'active' ? <Unlock size={8} className="text-emerald-500" /> : <Lock size={8} className="text-red-500" />}
                   </div>
                 </button>
-                <button 
-                    onClick={() => deleteStore(store.id)}
-                    className="p-2 rounded-full bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-colors"
-                    title="Eliminar Tienda"
+                <button
+                  onClick={() => deleteStore(store.id)}
+                  className="p-2 rounded-full bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-colors"
+                  title="Eliminar Tienda"
                 >
-                    <Trash2 size={14} />
+                  <Trash2 size={14} />
                 </button>
               </div>
-      </div>
-    ))
-  }
+            </div>
+          ))
+          }
         </div >
       </div >
     );
   };
 
-const renderSupport = () => (
-  <div className="space-y-4 md:space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4 px-2">
-      <div>
-        <h3 className={`text-[10px] md:text-xs font-black uppercase tracking-[0.3em] ${themeClasses.subtext}`}>Tickets de Soporte</h3>
-        <p className={`text-[8px] md:text-[9px] font-bold uppercase tracking-widest mt-1 ${themeClasses.subtext}`}>Gestión Centralizada</p>
-      </div>
-      <span className="flex items-center gap-1.5 text-[8px] md:text-[9px] font-black text-red-500 bg-red-500/5 px-3 py-1 rounded-full uppercase">
-        <Circle size={8} className="fill-current" /> {tickets.filter(t => t.status === 'pending').length} Pendientes
-      </span>
-    </div>
-    <div className="grid grid-cols-1 gap-4">
-      {tickets.length === 0 ? (
-        <div className="py-20 flex flex-col items-center justify-center text-center opacity-20 space-y-4">
-          <Ticket size={48} className={themeClasses.text} />
-          <p className={`text-[10px] md:text-xs font-black uppercase tracking-[0.4em] ${themeClasses.text}`}>Sin reportes</p>
+  const renderSupport = () => (
+    <div className="space-y-4 md:space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4 px-2">
+        <div>
+          <h3 className={`text-[10px] md:text-xs font-black uppercase tracking-[0.3em] ${themeClasses.subtext}`}>Tickets de Soporte</h3>
+          <p className={`text-[8px] md:text-[9px] font-bold uppercase tracking-widest mt-1 ${themeClasses.subtext}`}>Gestión Centralizada</p>
         </div>
-      ) : (
-        tickets.map((ticket, idx) => (
-          <div key={ticket.id} style={{ animationDelay: `${idx * 40}ms` }} className={`${themeClasses.card} border p-6 md:p-8 rounded-2xl md:rounded-[2rem] flex flex-col md:flex-row items-start md:items-center justify-between hover:scale-[1.01] transition-all group gap-6 active:scale-[0.99] animate-fade-in-up`}>
-            <div className="flex items-start gap-4 md:gap-6 flex-1 min-w-0">
-              <div className={`p-3 md:p-4 rounded-xl md:rounded-2xl shrink-0 ${ticket.status === 'pending' ? 'bg-red-500/10 text-red-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
-                {ticket.status === 'pending' ? <AlertCircle size={20} /> : <CheckCircle2 size={20} />}
-              </div>
-              <div className="min-w-0">
-                <div className="flex items-center gap-3 mb-1">
-                  <span className={`text-[8px] md:text-[10px] font-black uppercase tracking-widest ${themeClasses.subtext}`}>{ticket.storeName}</span>
-                  <span className={`text-[8px] md:text-[10px] font-black uppercase tracking-tighter ${themeClasses.subtext}`}>REF: {ticket.id}</span>
+        <span className="flex items-center gap-1.5 text-[8px] md:text-[9px] font-black text-red-500 bg-red-500/5 px-3 py-1 rounded-full uppercase">
+          <Circle size={8} className="fill-current" /> {tickets.filter(t => t.status === 'pending').length} Pendientes
+        </span>
+      </div>
+      <div className="grid grid-cols-1 gap-4">
+        {tickets.length === 0 ? (
+          <div className="py-20 flex flex-col items-center justify-center text-center opacity-20 space-y-4">
+            <Ticket size={48} className={themeClasses.text} />
+            <p className={`text-[10px] md:text-xs font-black uppercase tracking-[0.4em] ${themeClasses.text}`}>Sin reportes</p>
+          </div>
+        ) : (
+          tickets.map((ticket, idx) => (
+            <div key={ticket.id} style={{ animationDelay: `${idx * 40}ms` }} className={`${themeClasses.card} border p-6 md:p-8 rounded-2xl md:rounded-[2rem] flex flex-col md:flex-row items-start md:items-center justify-between hover:scale-[1.01] transition-all group gap-6 active:scale-[0.99] animate-fade-in-up`}>
+              <div className="flex items-start gap-4 md:gap-6 flex-1 min-w-0">
+                <div className={`p-3 md:p-4 rounded-xl md:rounded-2xl shrink-0 ${ticket.status === 'pending' ? 'bg-red-500/10 text-red-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
+                  {ticket.status === 'pending' ? <AlertCircle size={20} /> : <CheckCircle2 size={20} />}
                 </div>
-                <h4 className={`text-xs md:text-sm font-black uppercase tracking-tight line-clamp-1 mb-2 ${themeClasses.text}`}>Solicitante: {ticket.requesterName}</h4>
-                <p className={`text-[10px] md:text-xs font-bold leading-relaxed max-w-2xl line-clamp-2 uppercase ${themeClasses.subtext}`}>{ticket.description}</p>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-3 mb-1">
+                    <span className={`text-[8px] md:text-[10px] font-black uppercase tracking-widest ${themeClasses.subtext}`}>{ticket.storeName}</span>
+                    <span className={`text-[8px] md:text-[10px] font-black uppercase tracking-tighter ${themeClasses.subtext}`}>REF: {ticket.id}</span>
+                  </div>
+                  <h4 className={`text-xs md:text-sm font-black uppercase tracking-tight line-clamp-1 mb-2 ${themeClasses.text}`}>Solicitante: {ticket.requesterName}</h4>
+                  <p className={`text-[10px] md:text-xs font-bold leading-relaxed max-w-2xl line-clamp-2 uppercase ${themeClasses.subtext}`}>{ticket.description}</p>
+                </div>
               </div>
+              {ticket.status === 'pending' && (
+                <button
+                  onClick={() => markAsResolved(ticket.id)}
+                  className="w-full md:w-auto px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 shadow-md"
+                >
+                  Resolver
+                </button>
+              )}
             </div>
-            {ticket.status === 'pending' && (
-              <button
-                onClick={() => markAsResolved(ticket.id)}
-                className="w-full md:w-auto px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 shadow-md"
-              >
-                Resolver
-              </button>
-            )}
-          </div>
-        ))
-      )}
-    </div>
-  </div>
-);
-
-const renderProducts = () => (
-  <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-    <div className="flex justify-between items-center mb-6">
-      <h2 className={`text-xl font-black uppercase tracking-widest ${themeClasses.text}`}>Inventario {selectedStoreFilter === 'all' ? 'Global' : 'Filtrado'}</h2>
-      <div className="text-[10px] font-bold text-brand-muted uppercase tracking-widest">{filteredProducts.length} Productos</div>
-    </div>
-    <div className="grid grid-cols-1 gap-4">
-      {filteredProducts.map((product) => (
-        <div key={product.id} className={`${themeClasses.card} border p-4 rounded-2xl flex items-center justify-between`}>
-          <div className="flex items-center gap-4">
-            <div className="h-10 w-10 rounded-lg bg-gray-100 dark:bg-white/5 flex items-center justify-center">
-              <Package size={20} className="text-brand-purple" />
-            </div>
-            <div>
-              <h4 className={`text-sm font-black uppercase ${themeClasses.text}`}>{product.nombre}</h4>
-              <div className="flex items-center gap-2 mt-1">
-                <span className="text-[9px] font-bold bg-slate-100 dark:bg-white/10 px-2 py-0.5 rounded text-slate-500 dark:text-slate-400">
-                  SKU: {product.sku}
-                </span>
-                <span className="text-[9px] font-bold bg-indigo-50 dark:bg-indigo-500/10 px-2 py-0.5 rounded text-indigo-500">
-                  STORE: {product.storeId}
-                </span>
-              </div>
-            </div>
-          </div>
-          <div className="text-right">
-            <div className={`text-sm font-black ${themeClasses.text}`}>${product.salePrice}</div>
-            <div className={`text-[10px] font-bold ${product.stock < 5 ? 'text-red-500' : 'text-emerald-500'}`}>
-              {product.stock} un.
-            </div>
-          </div>
-        </div>
-      ))}
-    </div>
-  </div>
-);
-
-return (
-  <div className={`flex flex-col md:flex-row h-screen font-sans selection:bg-emerald-500/30 transition-colors duration-300 ${themeClasses.bg} ${themeClasses.text} overflow-hidden`}>
-
-    {/* HEADER MÓVIL EXCLUSIVO */}
-    <header className="md:hidden flex items-center justify-between px-6 py-4 bg-brand-panel border-b border-brand-border z-[120] sticky top-0 shrink-0 shadow-sm">
-      <div className="flex items-center gap-3">
-        <TeikonLogo size={32} className="drop-shadow-[0_0_8px_rgba(255,255,255,0.2)]" />
-        <span className="text-[10px] font-black uppercase tracking-widest">Admin OS</span>
+          ))
+        )}
       </div>
-      <button
-        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-        className="p-2.5 rounded-xl bg-slate-100 dark:bg-white/5 text-brand-text border border-brand-border active:scale-90 transition-transform"
-      >
-        {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
-      </button>
-    </header>
+    </div>
+  );
 
-    {/* OVERLAY MÓVIL */}
-    {isMobileMenuOpen && (
-      <div
-        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] md:hidden"
-        onClick={() => setIsMobileMenuOpen(false)}
-      />
-    )}
+  const renderProducts = () => (
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="flex justify-between items-center mb-6">
+        <h2 className={`text-xl font-black uppercase tracking-widest ${themeClasses.text}`}>Inventario {selectedStoreFilter === 'all' ? 'Global' : 'Filtrado'}</h2>
+        <div className="text-[10px] font-bold text-brand-muted uppercase tracking-widest">{filteredProducts.length} Productos</div>
+      </div>
+      <div className="grid grid-cols-1 gap-4">
+        {filteredProducts.map((product) => (
+          <div key={product.id} className={`${themeClasses.card} border p-4 rounded-2xl flex items-center justify-between`}>
+            <div className="flex items-center gap-4">
+              <div className="h-10 w-10 rounded-lg bg-gray-100 dark:bg-white/5 flex items-center justify-center">
+                <Package size={20} className="text-brand-purple" />
+              </div>
+              <div>
+                <h4 className={`text-sm font-black uppercase ${themeClasses.text}`}>{product.nombre}</h4>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-[9px] font-bold bg-slate-100 dark:bg-white/10 px-2 py-0.5 rounded text-slate-500 dark:text-slate-400">
+                    SKU: {product.sku}
+                  </span>
+                  <span className="text-[9px] font-bold bg-indigo-50 dark:bg-indigo-500/10 px-2 py-0.5 rounded text-indigo-500">
+                    STORE: {product.storeId}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div className="text-right">
+              <div className={`text-sm font-black ${themeClasses.text}`}>${product.salePrice}</div>
+              <div className={`text-[10px] font-bold ${product.stock < 5 ? 'text-red-500' : 'text-emerald-500'}`}>
+                {product.stock} un.
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 
-    {/* SIDEBAR RESPONSIVO */}
-    <aside
-      className={`
+  const renderSales = () => (
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="flex justify-between items-center mb-6">
+        <h2 className={`text-xl font-black uppercase tracking-widest ${themeClasses.text}`}>Ventas {selectedStoreFilter === 'all' ? 'Globales' : 'Filtradas'}</h2>
+        <div className="text-[10px] font-bold text-brand-muted uppercase tracking-widest">{filteredSales.length} Transacciones</div>
+      </div>
+      <div className="grid grid-cols-1 gap-4">
+        {filteredSales.length === 0 ? (
+          <div className="py-20 flex flex-col items-center justify-center text-center opacity-20 space-y-4">
+            <ShoppingCart size={48} className={themeClasses.text} />
+            <p className={`text-[10px] md:text-xs font-black uppercase tracking-[0.4em] ${themeClasses.text}`}>Sin ventas registradas</p>
+          </div>
+        ) : (
+          filteredSales.map((sale: any, idx: number) => (
+            <div key={sale.id || idx} className={`${themeClasses.card} border p-4 rounded-2xl flex items-center justify-between`}>
+              <div className="flex items-center gap-4">
+                <div className="h-10 w-10 rounded-lg bg-emerald-100 dark:bg-emerald-500/10 flex items-center justify-center">
+                  <ShoppingCart size={20} className="text-emerald-500" />
+                </div>
+                <div>
+                  <h4 className={`text-sm font-black uppercase ${themeClasses.text}`}>Venta #{sale.id || idx + 1}</h4>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-[9px] font-bold bg-slate-100 dark:bg-white/10 px-2 py-0.5 rounded text-slate-500 dark:text-slate-400">
+                      {new Date(sale.fecha || sale.createdAt).toLocaleDateString()}
+                    </span>
+                    {sale.storeId && (
+                      <span className="text-[9px] font-bold bg-indigo-50 dark:bg-indigo-500/10 px-2 py-0.5 rounded text-indigo-500">
+                        STORE: {sale.storeId}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className={`text-sm font-black text-emerald-500`}>${parseFloat(sale.total || 0).toLocaleString()}</div>
+                <div className={`text-[10px] font-bold ${themeClasses.subtext}`}>
+                  {sale.paymentMethod || 'CASH'}
+                </div>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+
+  const deleteStore = async (storeId: string) => {
+    if (!confirm('¿Estás seguro de que deseas eliminar esta tienda? Esta acción no se puede deshacer.')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`http://localhost:80/api/stores/${storeId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('authToken')}` }
+      });
+
+      if (!response.ok) {
+        throw new Error('Error al eliminar la tienda');
+      }
+
+      // Remove from local state
+      setStores(stores.filter(s => s.id !== storeId));
+      alert('Tienda eliminada exitosamente');
+    } catch (error) {
+      console.error(error);
+      alert('Error al eliminar la tienda');
+    }
+  };
+
+  return (
+    <div className={`flex flex-col md:flex-row h-screen font-sans selection:bg-emerald-500/30 transition-colors duration-300 ${themeClasses.bg} ${themeClasses.text} overflow-hidden`}>
+
+      {/* HEADER MÓVIL EXCLUSIVO */}
+      <header className="md:hidden flex items-center justify-between px-6 py-4 bg-brand-panel border-b border-brand-border z-[120] sticky top-0 shrink-0 shadow-sm">
+        <div className="flex items-center gap-3">
+          <TeikonLogo size={32} className="drop-shadow-[0_0_8px_rgba(255,255,255,0.2)]" />
+          <span className="text-[10px] font-black uppercase tracking-widest">Admin OS</span>
+        </div>
+        <button
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          className="p-2.5 rounded-xl bg-slate-100 dark:bg-white/5 text-brand-text border border-brand-border active:scale-90 transition-transform"
+        >
+          {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+        </button>
+      </header>
+
+      {/* OVERLAY MÓVIL */}
+      {isMobileMenuOpen && (
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] md:hidden"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
+      {/* SIDEBAR RESPONSIVO */}
+      <aside
+        className={`
           fixed inset-y-0 left-0 z-[110] transform transition-transform duration-300 bg-brand-panel border-r border-brand-border
           md:relative md:translate-x-0 md:flex md:flex-col items-center py-10
           ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
           ${isCollapsed ? 'md:w-20' : 'md:w-64'}
           w-64 shrink-0
         `}
-    >
-      <div className={`flex items-center justify-between w-full px-6 mb-12 hidden md:flex`}>
-        <div className={`flex items-center gap-3 transition-opacity duration-300 ${isCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>
-          <TeikonLogo size={32} className="drop-shadow-[0_0_8px_rgba(255,255,255,0.15)]" />
-          <span className="text-[10px] font-black uppercase tracking-[0.2em] whitespace-nowrap">Teikon OS</span>
-        </div>
-        <button
-          onClick={() => setIsCollapsed(!isCollapsed)}
-          className={`p-2 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 transition-all active:scale-90 ${isCollapsed ? 'mx-auto' : ''}`}
-        >
-          {isCollapsed ? <Menu size={20} /> : <ChevronLeft size={20} />}
-        </button>
-      </div>
-
-      {/* LOGO EN MÓVIL DENTRO DEL SIDEBAR */}
-      <div className="md:hidden flex flex-col items-center mb-10 w-full px-6">
-        <TeikonLogo size={64} className="mb-4 drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]" />
-        <p className="text-[9px] font-black uppercase tracking-[0.4em] text-brand-muted">Admin Terminal</p>
-      </div>
-
-      <nav className="flex-1 flex flex-col gap-4 w-full px-4 overflow-y-auto no-scrollbar">
-        {navItems.map((item) => {
-          const isActive = activeView === item.id;
-          return (
-            <button
-              key={item.id}
-              onClick={() => handleNavClick(item.id)}
-              className={`flex items-center transition-all duration-150 ease-in-out active:scale-[0.97] rounded-2xl group relative overflow-hidden h-14 ${isActive
-                ? themeClasses.navActive
-                : `${themeClasses.navItem} hover:bg-black/5 dark:hover:bg-white/5`
-                } ${isCollapsed ? 'md:justify-center' : 'px-5 gap-4'}`}
-            >
-              <item.icon size={22} className="shrink-0" />
-              <span className={`text-xs font-black uppercase tracking-widest truncate ${isCollapsed ? 'md:hidden' : 'block'}`}>
-                {item.label}
-              </span>
-              {isActive && !isCollapsed && (
-                <div className="ml-auto w-1.5 h-1.5 rounded-full bg-emerald-500 hidden md:block" />
-              )}
-            </button>
-          );
-        })}
-      </nav>
-
-      <div className="w-full px-4 mt-auto pt-6 border-t md:border-t-0 border-brand-border">
-        <button
-          onClick={onExit}
-          className={`flex items-center w-full py-4 text-red-500/70 hover:text-red-500 hover:bg-red-500/5 rounded-2xl transition-all duration-150 active:scale-95 ${isCollapsed ? 'md:justify-center' : 'px-5 gap-4'}`}
-        >
-          <LogOut size={22} className="shrink-0" />
-          <span className={`text-xs font-black uppercase tracking-widest ${isCollapsed ? 'md:hidden' : 'block'}`}>Salir</span>
-        </button>
-      </div>
-    </aside>
-
-    {/* MAIN CONTENT AREA */}
-    <main className="flex-1 overflow-y-auto px-4 py-8 md:px-12 md:py-12 no-scrollbar">
-      <header className="flex flex-col md:flex-row justify-between items-start md:items-end mb-10 md:mb-16 gap-6">
-        <div>
-          <h1 className={`text-2xl md:text-4xl font-black uppercase tracking-tighter ${themeClasses.text}`}>
-            {activeView === 'dashboard' && 'PANEL DE CONTROL'}
-            {activeView === 'stores' && 'TIENDAS'}
-            {activeView === 'products' && 'INVENTARIO'}
-            {activeView === 'sales' && 'VENTAS'}
-            {activeView === 'support' && 'SOPORTE'}
-          </h1>
-          <p className={`text-[8px] md:text-[10px] font-black uppercase tracking-[0.4em] mt-2 md:mt-3 ${themeClasses.subtext}`}>TEIKON OS // ADMIN MODE</p>
-        </div>
-        <div className="flex items-center gap-4 md:gap-6 self-end md:self-auto">
-          {/* STORE SELECTOR */}
-          <div className="relative">
-            <select
-              value={selectedStoreFilter}
-              onChange={(e) => setSelectedStoreFilter(e.target.value)}
-              className={`appearance-none cursor-pointer pl-4 pr-10 py-3 rounded-xl border ${themeClasses.card} shadow-sm text-[10px] font-black uppercase tracking-widest outline-none focus:border-emerald-500 transition-all ${themeClasses.text}`}
-            >
-              <option value="all">Filtrar por Tienda: Todas</option>
-              {stores.map(s => (
-                <option key={s.id} value={s.id}>{s.name}</option>
-              ))}
-            </select>
-            <Store size={14} className={`absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none ${themeClasses.subtext}`} />
+      >
+        <div className={`flex items-center justify-between w-full px-6 mb-12 hidden md:flex`}>
+          <div className={`flex items-center gap-3 transition-opacity duration-300 ${isCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>
+            <TeikonLogo size={32} className="drop-shadow-[0_0_8px_rgba(255,255,255,0.15)]" />
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] whitespace-nowrap">Teikon OS</span>
           </div>
-
-          <button onClick={() => setIsDarkMode(!isDarkMode)} className={`p-3 rounded-xl border ${themeClasses.card} shadow-sm active:scale-90 transition-transform`}>
-            {isDarkMode ? <Sun size={18} className="text-amber-400" /> : <Moon size={18} className="text-indigo-500" />}
+          <button
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            className={`p-2 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 transition-all active:scale-90 ${isCollapsed ? 'mx-auto' : ''}`}
+          >
+            {isCollapsed ? <Menu size={20} /> : <ChevronLeft size={20} />}
           </button>
         </div>
-      </header>
 
-      <div className="max-w-7xl mx-auto pb-10">
-        {activeView === 'dashboard' && renderDashboard()}
-        {activeView === 'stores' && renderStores()}
-        {activeView === 'products' && renderProducts()}
-        {activeView === 'sales' && renderSales()}
-        {activeView === 'support' && renderSupport()}
-      </div>
-    </main>
+        {/* LOGO EN MÓVIL DENTRO DEL SIDEBAR */}
+        <div className="md:hidden flex flex-col items-center mb-10 w-full px-6">
+          <TeikonLogo size={64} className="mb-4 drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]" />
+          <p className="text-[9px] font-black uppercase tracking-[0.4em] text-brand-muted">Admin Terminal</p>
+        </div>
 
-    {/* MODAL DE ALTA DE NUEVA TIENDA RESPONSIVO */}
-    {isNewStoreModalOpen && (
-      <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-        <div className="absolute inset-0 bg-slate-900/60 dark:bg-black/80 backdrop-blur-md" onClick={() => setIsNewStoreModalOpen(false)} />
-        <div className={`relative w-full max-w-md ${isDarkMode ? 'bg-[#264a5e] border-white/10' : 'bg-white border-slate-200'} border p-6 md:p-10 rounded-[2rem] md:rounded-[2.5rem] shadow-2xl animate-in zoom-in duration-300`}>
-          <div className="flex justify-between items-center mb-8">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-emerald-600 rounded-xl">
-                <Plus size={20} className="text-white" />
-              </div>
-              <div>
-                <h3 className={`text-[10px] md:text-xs font-black uppercase tracking-[0.3em] ${themeClasses.text}`}>Nueva Tienda</h3>
-                <p className={`text-[8px] md:text-[9px] font-bold uppercase tracking-widest mt-0.5 ${themeClasses.subtext}`}>Alta de Cliente</p>
-              </div>
+        <nav className="flex-1 flex flex-col gap-4 w-full px-4 overflow-y-auto no-scrollbar">
+          {navItems.map((item) => {
+            const isActive = activeView === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => handleNavClick(item.id)}
+                className={`flex items-center transition-all duration-150 ease-in-out active:scale-[0.97] rounded-2xl group relative overflow-hidden h-14 ${isActive
+                  ? themeClasses.navActive
+                  : `${themeClasses.navItem} hover:bg-black/5 dark:hover:bg-white/5`
+                  } ${isCollapsed ? 'md:justify-center' : 'px-5 gap-4'}`}
+              >
+                <item.icon size={22} className="shrink-0" />
+                <span className={`text-xs font-black uppercase tracking-widest truncate ${isCollapsed ? 'md:hidden' : 'block'}`}>
+                  {item.label}
+                </span>
+                {isActive && !isCollapsed && (
+                  <div className="ml-auto w-1.5 h-1.5 rounded-full bg-emerald-500 hidden md:block" />
+                )}
+              </button>
+            );
+          })}
+        </nav>
+
+        <div className="w-full px-4 mt-auto pt-6 border-t md:border-t-0 border-brand-border">
+          <button
+            onClick={onExit}
+            className={`flex items-center w-full py-4 text-red-500/70 hover:text-red-500 hover:bg-red-500/5 rounded-2xl transition-all duration-150 active:scale-95 ${isCollapsed ? 'md:justify-center' : 'px-5 gap-4'}`}
+          >
+            <LogOut size={22} className="shrink-0" />
+            <span className={`text-xs font-black uppercase tracking-widest ${isCollapsed ? 'md:hidden' : 'block'}`}>Salir</span>
+          </button>
+        </div>
+      </aside>
+
+      {/* MAIN CONTENT AREA */}
+      <main className="flex-1 overflow-y-auto px-4 py-8 md:px-12 md:py-12 no-scrollbar">
+        <header className="flex flex-col md:flex-row justify-between items-start md:items-end mb-10 md:mb-16 gap-6">
+          <div>
+            <h1 className={`text-2xl md:text-4xl font-black uppercase tracking-tighter ${themeClasses.text}`}>
+              {activeView === 'dashboard' && 'PANEL DE CONTROL'}
+              {activeView === 'stores' && 'TIENDAS'}
+              {activeView === 'products' && 'INVENTARIO'}
+              {activeView === 'sales' && 'VENTAS'}
+              {activeView === 'support' && 'SOPORTE'}
+            </h1>
+            <p className={`text-[8px] md:text-[10px] font-black uppercase tracking-[0.4em] mt-2 md:mt-3 ${themeClasses.subtext}`}>TEIKON OS // ADMIN MODE</p>
+          </div>
+          <div className="flex items-center gap-4 md:gap-6 self-end md:self-auto">
+            {/* STORE SELECTOR */}
+            <div className="relative">
+              <select
+                value={selectedStoreFilter}
+                onChange={(e) => setSelectedStoreFilter(e.target.value)}
+                className={`appearance-none cursor-pointer pl-4 pr-10 py-3 rounded-xl border ${themeClasses.card} shadow-sm text-[10px] font-black uppercase tracking-widest outline-none focus:border-emerald-500 transition-all ${themeClasses.text}`}
+              >
+                <option value="all">Filtrar por Tienda: Todas</option>
+                {stores.map(s => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
+              </select>
+              <Store size={14} className={`absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none ${themeClasses.subtext}`} />
             </div>
-            <button onClick={() => setIsNewStoreModalOpen(false)} className={`${themeClasses.subtext} hover:${themeClasses.text} transition-all active:scale-90`}>
-              <X size={24} />
+
+            <button onClick={() => setIsDarkMode(!isDarkMode)} className={`p-3 rounded-xl border ${themeClasses.card} shadow-sm active:scale-90 transition-transform`}>
+              {isDarkMode ? <Sun size={18} className="text-amber-400" /> : <Moon size={18} className="text-indigo-500" />}
             </button>
           </div>
+        </header>
 
-          <form onSubmit={handleCreateStore} className="space-y-4 md:space-y-6">
-            <div className="space-y-1.5">
-              <label className={`text-[8px] md:text-[10px] font-black uppercase tracking-widest ml-1 ${themeClasses.subtext}`}>Email del Cliente</label>
-              <div className="relative group">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-emerald-500 transition-colors" size={16} />
-                <input
-                  type="email"
-                  required
-                  placeholder="ejemplo@cliente.com"
-                  value={newStoreEmail}
-                  onChange={(e) => setNewStoreEmail(e.target.value)}
-                  className={`w-full pl-12 pr-6 py-4 rounded-xl md:rounded-2xl border ${isDarkMode ? 'bg-[#1e323d] border-white/5' : 'bg-slate-50 border-slate-100'} text-xs font-bold outline-none focus:border-emerald-500/50 transition-all ${themeClasses.text}`}
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className={`text-[8px] md:text-[10px] font-black uppercase tracking-widest ml-1 ${themeClasses.subtext}`}>Contraseña Temporal</label>
-              <div className="relative group">
-                <Key className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-emerald-500 transition-colors" size={16} />
-                <input
-                  type="text"
-                  required
-                  placeholder="Contraseña inicial"
-                  value={newStorePassword}
-                  onChange={(e) => setNewStorePassword(e.target.value)}
-                  className={`w-full pl-12 pr-6 py-4 rounded-xl md:rounded-2xl border ${isDarkMode ? 'bg-[#1e323d] border-white/5' : 'bg-slate-50 border-slate-100'} text-xs font-bold outline-none focus:border-emerald-500/50 transition-all ${themeClasses.text}`}
-                />
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-4 md:py-5 rounded-xl md:rounded-2xl text-[10px] md:text-[11px] font-black uppercase tracking-[0.3em] shadow-xl shadow-emerald-600/10 transition-all active:scale-[0.98] mt-4 flex items-center justify-center gap-2"
-            >
-              {isSubmitting ? (
-                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              ) : (
-                <>Crear Tienda</>
-              )}
-            </button>
-          </form>
+        <div className="max-w-7xl mx-auto pb-10">
+          {activeView === 'dashboard' && renderDashboard()}
+          {activeView === 'stores' && renderStores()}
+          {activeView === 'products' && renderProducts()}
+          {activeView === 'sales' && renderSales()}
+          {activeView === 'support' && renderSupport()}
         </div>
-      </div>
-    )}
-  </div>
-);
+      </main>
+
+      {/* MODAL DE ALTA DE NUEVA TIENDA RESPONSIVO */}
+      {isNewStoreModalOpen && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-900/60 dark:bg-black/80 backdrop-blur-md" onClick={() => setIsNewStoreModalOpen(false)} />
+          <div className={`relative w-full max-w-md ${isDarkMode ? 'bg-[#264a5e] border-white/10' : 'bg-white border-slate-200'} border p-6 md:p-10 rounded-[2rem] md:rounded-[2.5rem] shadow-2xl animate-in zoom-in duration-300`}>
+            <div className="flex justify-between items-center mb-8">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-emerald-600 rounded-xl">
+                  <Plus size={20} className="text-white" />
+                </div>
+                <div>
+                  <h3 className={`text-[10px] md:text-xs font-black uppercase tracking-[0.3em] ${themeClasses.text}`}>Nueva Tienda</h3>
+                  <p className={`text-[8px] md:text-[9px] font-bold uppercase tracking-widest mt-0.5 ${themeClasses.subtext}`}>Alta de Cliente</p>
+                </div>
+              </div>
+              <button onClick={() => setIsNewStoreModalOpen(false)} className={`${themeClasses.subtext} hover:${themeClasses.text} transition-all active:scale-90`}>
+                <X size={24} />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateStore} className="space-y-4 md:space-y-6">
+              <div className="space-y-1.5">
+                <label className={`text-[8px] md:text-[10px] font-black uppercase tracking-widest ml-1 ${themeClasses.subtext}`}>Email del Cliente</label>
+                <div className="relative group">
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-emerald-500 transition-colors" size={16} />
+                  <input
+                    type="email"
+                    required
+                    placeholder="ejemplo@cliente.com"
+                    value={newStoreEmail}
+                    onChange={(e) => setNewStoreEmail(e.target.value)}
+                    className={`w-full pl-12 pr-6 py-4 rounded-xl md:rounded-2xl border ${isDarkMode ? 'bg-[#1e323d] border-white/5' : 'bg-slate-50 border-slate-100'} text-xs font-bold outline-none focus:border-emerald-500/50 transition-all ${themeClasses.text}`}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className={`text-[8px] md:text-[10px] font-black uppercase tracking-widest ml-1 ${themeClasses.subtext}`}>Contraseña Temporal</label>
+                <div className="relative group">
+                  <Key className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-emerald-500 transition-colors" size={16} />
+                  <input
+                    type="text"
+                    required
+                    placeholder="Contraseña inicial"
+                    value={newStorePassword}
+                    onChange={(e) => setNewStorePassword(e.target.value)}
+                    className={`w-full pl-12 pr-6 py-4 rounded-xl md:rounded-2xl border ${isDarkMode ? 'bg-[#1e323d] border-white/5' : 'bg-slate-50 border-slate-100'} text-xs font-bold outline-none focus:border-emerald-500/50 transition-all ${themeClasses.text}`}
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-4 md:py-5 rounded-xl md:rounded-2xl text-[10px] md:text-[11px] font-black uppercase tracking-[0.3em] shadow-xl shadow-emerald-600/10 transition-all active:scale-[0.98] mt-4 flex items-center justify-center gap-2"
+              >
+                {isSubmitting ? (
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <>Crear Tienda</>
+                )}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 };
 
 export default AdminPanel;

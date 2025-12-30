@@ -23,7 +23,14 @@ const __dirname = dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 80;
-const JWT_SECRET = process.env.JWT_SECRET || 'teikon-secret-key-change-in-production';
+
+// Seguridad: JWT_SECRET debe estar en variables de entorno
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+    console.error('❌ ERROR CRÍTICO: JWT_SECRET no está configurado en las variables de entorno');
+    console.error('Por favor, configura JWT_SECRET antes de iniciar el servidor');
+    process.exit(1);
+}
 
 // ==========================================
 // MIDDLEWARE
@@ -318,9 +325,14 @@ app.post('/api/productos', authenticateToken, async (req, res) => {
 // PUT /api/productos/:id - Actualizar producto
 app.put('/api/productos/:id', authenticateToken, async (req, res) => {
     try {
-        const product = await Product.findOne({
-            where: { id: req.params.id, storeId: req.storeId }
-        });
+        const where = { id: req.params.id };
+
+        // Aislamiento de tiendas: Solo filtrar por storeId si NO es SUPER_ADMIN
+        if (req.role !== 'SUPER_ADMIN') {
+            where.storeId = req.storeId;
+        }
+
+        const product = await Product.findOne({ where });
 
         if (!product) {
             return res.status(404).json({ error: 'Producto no encontrado' });
@@ -337,9 +349,14 @@ app.put('/api/productos/:id', authenticateToken, async (req, res) => {
 // DELETE /api/productos/:id - Eliminar producto (soft delete)
 app.delete('/api/productos/:id', authenticateToken, async (req, res) => {
     try {
-        const product = await Product.findOne({
-            where: { id: req.params.id, storeId: req.storeId }
-        });
+        const where = { id: req.params.id };
+
+        // Aislamiento de tiendas: Solo filtrar por storeId si NO es SUPER_ADMIN
+        if (req.role !== 'SUPER_ADMIN') {
+            where.storeId = req.storeId;
+        }
+
+        const product = await Product.findOne({ where });
 
         if (!product) {
             return res.status(404).json({ error: 'Producto no encontrado' });
@@ -361,7 +378,12 @@ app.delete('/api/productos/:id', authenticateToken, async (req, res) => {
 app.get('/api/ventas', authenticateToken, async (req, res) => {
     try {
         const { status, startDate, endDate } = req.query;
-        const where = { storeId: req.storeId };
+        const where = {};
+
+        // Aislamiento de tiendas: Solo filtrar por storeId si NO es SUPER_ADMIN
+        if (req.role !== 'SUPER_ADMIN') {
+            where.storeId = req.storeId;
+        }
 
         if (status) where.status = status;
         if (startDate && endDate) {

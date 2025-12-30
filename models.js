@@ -616,7 +616,6 @@ export {
     Sale,
     Expense,
     StockMovement,
-    StockMovement,
     CashShift,
     Client
 };
