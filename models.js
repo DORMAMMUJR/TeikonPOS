@@ -1,4 +1,8 @@
 import { Sequelize, DataTypes } from 'sequelize';
+import dotenv from 'dotenv';
+
+// Cargar variables de entorno
+dotenv.config();
 
 // Inicializar Sequelize con DATABASE_URL
 const sequelize = new Sequelize(process.env.DATABASE_URL, {

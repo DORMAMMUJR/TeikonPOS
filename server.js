@@ -5,6 +5,10 @@ import jwt from 'jsonwebtoken';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
+import dotenv from 'dotenv';
+
+// Cargar variables de entorno
+dotenv.config();
 
 import {
     sequelize,
