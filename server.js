@@ -44,10 +44,12 @@ const authenticateToken = (req, res, next) => {
         if (err) {
             return res.status(403).json({ error: 'Token inválido' });
         }
+        req.user = user; // Backup de todo el usuario
         req.storeId = user.storeId;
         req.organizationId = user.organizationId;
         req.storeName = user.storeName;
-        req.usuario = user.usuario;
+        req.usuario = user.username || user.usuario; // Compensar diferencia entre user y store legacy
+        req.role = user.role || 'SELLER'; // Default a SELLER si no hay rol
         next();
     });
 };
@@ -160,7 +162,8 @@ app.post('/api/auth/login', async (req, res) => {
                     username: user.username,
                     role: user.role,
                     storeId: user.storeId,
-                    storeName: user.storeId ? 'Store' : 'Teikon HQ' // Placeholder
+                    store_id: user.storeId, // Explicit field requested
+                    storeName: user.storeId ? 'Store' : 'Teikon HQ'
                 }
             });
         }
@@ -252,8 +255,15 @@ app.post('/api/stores/new', authenticateToken, async (req, res) => {
 // GET /api/productos - Listar productos de la store
 app.get('/api/productos', authenticateToken, async (req, res) => {
     try {
+        const where = { activo: true };
+
+        // Si no es SUPER_ADMIN, filtrar por storeId
+        if (req.role !== 'SUPER_ADMIN') {
+            where.storeId = req.storeId;
+        }
+
         const products = await Product.findAll({
-            where: { storeId: req.storeId, activo: true },
+            where,
             order: [['nombre', 'ASC']]
         });
         res.json(products);
@@ -272,8 +282,20 @@ app.post('/api/productos', authenticateToken, async (req, res) => {
             return res.status(400).json({ error: 'Faltan campos requeridos' });
         }
 
+        // Determinar storeId:
+        // Si es SUPER_ADMIN y envía storeId, usarlo.
+        // Si no, usar req.storeId.
+        let targetStoreId = req.storeId;
+        if (req.role === 'SUPER_ADMIN' && req.body.storeId) {
+            targetStoreId = req.body.storeId;
+        }
+
+        if (!targetStoreId) {
+            return res.status(400).json({ error: 'Store ID es requerido para crear productos' });
+        }
+
         const product = await Product.create({
-            storeId: req.storeId,
+            storeId: targetStoreId,
             sku,
             nombre,
             categoria,
@@ -289,7 +311,7 @@ app.post('/api/productos', authenticateToken, async (req, res) => {
         if (stock > 0) {
             await StockMovement.create({
                 productId: product.id,
-                storeId: req.storeId,
+                storeId: targetStoreId,
                 tipo: 'PURCHASE',
                 cantidad: stock,
                 stockAnterior: 0,
