@@ -415,7 +415,16 @@ app.post('/api/ventas', authenticateToken, async (req, res) => {
 
             // Actualizar stock y crear movimientos
             for (const item of enrichedItems) {
-                const product = await Product.findByPk(item.productId, { transaction: t });
+                // HARDENING: Verify product belongs to storeId transactionally
+                const product = await Product.findOne({
+                    where: { id: item.productId, storeId: req.storeId },
+                    transaction: t
+                });
+
+                if (!product) {
+                    throw new Error(`Producto ${item.productId} no pertenece a la tienda o no existe`);
+                }
+
                 const stockAnterior = product.stock;
                 const stockNuevo = stockAnterior - item.cantidad;
 

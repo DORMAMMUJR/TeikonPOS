@@ -27,6 +27,7 @@ import {
   X,
   Menu,
   ChevronLeft,
+  Package,
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import TeikonLogo from './TeikonLogo';
@@ -63,7 +64,8 @@ const DEFAULT_STORES: StoreData[] = [
 const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [activeView, setActiveView] = useState<'dashboard' | 'stores' | 'support'>('dashboard');
+  const [activeView, setActiveView] = useState<'dashboard' | 'stores' | 'support' | 'products'>('dashboard');
+  const [products, setProducts] = useState<any[]>([]);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -84,6 +86,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
       setActiveView('stores');
     } else if (path.includes('/admin/support')) {
       setActiveView('support');
+    } else if (path.includes('/admin/products')) {
+      setActiveView('products');
     } else {
       setActiveView('dashboard');
     }
@@ -115,8 +119,27 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
       if (raw) setTickets(JSON.parse(raw));
     };
 
+    const loadProducts = async () => {
+      try {
+        const response = await fetch('http://localhost:80/api/productos', {
+          headers: { 'Authorization': `Bearer ${localStorage.getItem('authToken')}` }
+        });
+        if (response.ok) {
+          setProducts(await response.json());
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    // Refresh products when view changes to products
+    if (activeView === 'products') {
+      loadProducts();
+    }
+
     loadStores();
     loadTickets();
+    loadProducts();
 
     window.addEventListener('storage', (e) => {
       if (e.key === 'teikon_all_stores') loadStores();
@@ -211,6 +234,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
   const navItems = [
     { id: 'dashboard', icon: LayoutDashboard, label: 'Resumen' },
     { id: 'stores', icon: Store, label: 'Tiendas' },
+    { id: 'products', icon: Package, label: 'Inventario' },
     { id: 'support', icon: Ticket, label: 'Soporte' },
   ];
 
@@ -386,6 +410,43 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
     </div>
   );
 
+  const renderProducts = () => (
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="flex justify-between items-center mb-6">
+        <h2 className={`text-xl font-black uppercase tracking-widest ${themeClasses.text}`}>Inventario Global</h2>
+        <div className="text-[10px] font-bold text-brand-muted uppercase tracking-widest">{products.length} Productos Total</div>
+      </div>
+      <div className="grid grid-cols-1 gap-4">
+        {products.map((product) => (
+          <div key={product.id} className={`${themeClasses.card} border p-4 rounded-2xl flex items-center justify-between`}>
+            <div className="flex items-center gap-4">
+              <div className="h-10 w-10 rounded-lg bg-gray-100 dark:bg-white/5 flex items-center justify-center">
+                <Package size={20} className="text-brand-purple" />
+              </div>
+              <div>
+                <h4 className={`text-sm font-black uppercase ${themeClasses.text}`}>{product.nombre}</h4>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-[9px] font-bold bg-slate-100 dark:bg-white/10 px-2 py-0.5 rounded text-slate-500 dark:text-slate-400">
+                    SKU: {product.sku}
+                  </span>
+                  <span className="text-[9px] font-bold bg-indigo-50 dark:bg-indigo-500/10 px-2 py-0.5 rounded text-indigo-500">
+                    STORE: {product.storeId}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div className="text-right">
+              <div className={`text-sm font-black ${themeClasses.text}`}>${product.salePrice}</div>
+              <div className={`text-[10px] font-bold ${product.stock < 5 ? 'text-red-500' : 'text-emerald-500'}`}>
+                {product.stock} un.
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
   return (
     <div className={`flex flex-col md:flex-row h-screen font-sans selection:bg-emerald-500/30 transition-colors duration-300 ${themeClasses.bg} ${themeClasses.text} overflow-hidden`}>
 
@@ -496,6 +557,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
         <div className="max-w-7xl mx-auto pb-10">
           {activeView === 'dashboard' && renderDashboard()}
           {activeView === 'stores' && renderStores()}
+          {activeView === 'products' && renderProducts()}
           {activeView === 'support' && renderSupport()}
         </div>
       </main>
