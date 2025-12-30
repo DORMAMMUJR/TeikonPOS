@@ -259,14 +259,32 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     if (!currentUser) return;
     try {
       if (isOnline) {
-        const newProduct = await productsAPI.create(productData);
+        // Prepare product data with storeId
+        const productPayload = {
+          ...productData,
+          // For SUPER_ADMIN: use storeId from productData if provided, otherwise show error
+          // For regular users: use currentUser.storeId
+          storeId: currentUser.role === 'SUPER_ADMIN'
+            ? (productData as any).storeId || null
+            : currentUser.storeId
+        };
+
+        // Validate storeId is present
+        if (!productPayload.storeId) {
+          alert('Error: Debe seleccionar una tienda para crear el producto.');
+          throw new Error('Store ID is required to create products');
+        }
+
+        const newProduct = await productsAPI.create(productPayload);
         setProducts(prev => [...prev, newProduct]);
       } else {
         console.warn('Cannot add products while offline');
+        alert('No se pueden agregar productos sin conexión a internet.');
         // Optionally implement offline product creation queue
       }
-    } catch (e) {
-      console.error(e);
+    } catch (e: any) {
+      console.error('Error creating product:', e);
+      alert(`Error al crear producto: ${e.message || 'Error desconocido'}`);
     }
   };
 
