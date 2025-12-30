@@ -84,8 +84,8 @@ const ProductList: React.FC = () => {
   };
 
   const filtered = products.filter(p =>
-    p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.sku.toLowerCase().includes(searchTerm.toLowerCase())
+    (p.name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+    (p.sku?.toLowerCase() || '').includes(searchTerm.toLowerCase())
   );
 
   const calculatedProfit = (editingProduct.salePrice || 0) - (editingProduct.costPrice || 0);
