@@ -10,7 +10,8 @@ import dotenv from 'dotenv';
 // Cargar variables de entorno
 dotenv.config();
 
-sequelize,
+import {
+    sequelize,
     Organization,
     Store,
     User,
