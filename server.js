@@ -442,7 +442,7 @@ app.get('/api/ventas', authenticateToken, async (req, res) => {
 
         if (status) where.status = status;
         if (startDate && endDate) {
-            where.created_at = {
+            where.createdAt = {
                 [sequelize.Sequelize.Op.between]: [new Date(startDate), new Date(endDate)]
             };
         }
