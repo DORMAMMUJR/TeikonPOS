@@ -5,34 +5,34 @@ import { Product, CartItem, CartItemState } from '../types';
 import Button from './Button';
 import Modal from './Modal';
 import SaleTicket from './SaleTicket';
-import { 
-  Search, 
-  Trash2, 
-  Plus, 
-  Minus, 
-  ImageOff, 
-  ShoppingCart, 
+import {
+  Search,
+  Trash2,
+  Plus,
+  Minus,
+  ImageOff,
+  ShoppingCart,
   Scan,
 } from 'lucide-react';
 
 const POS: React.FC = () => {
   const { products, processSaleAndContributeToGoal, currentUser } = useStore();
   const [searchTerm, setSearchTerm] = useState('');
-  const [cart, setCart] = useState<CartItemState[]>([]); 
+  const [cart, setCart] = useState<CartItemState[]>([]);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [amountReceived, setAmountReceived] = useState('');
   const [lastAddedId, setLastAddedId] = useState<string | null>(null);
-  const [saleSummary, setSaleSummary] = useState<{revenue: number, profit: number, items: any[], folio: string} | null>(null);
+  const [saleSummary, setSaleSummary] = useState<{ revenue: number, profit: number, items: any[], folio: string } | null>(null);
   const [showTicket, setShowTicket] = useState(false);
   const [animateCart, setAnimateCart] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Auto-focus Logic con detección de móvil para no abrir teclado virtual
   useEffect(() => {
-    const focusSearch = () => { 
-        if (!isCheckoutOpen && !showTicket && window.innerWidth > 768) {
-            searchInputRef.current?.focus(); 
-        }
+    const focusSearch = () => {
+      if (!isCheckoutOpen && !showTicket && window.innerWidth > 768) {
+        searchInputRef.current?.focus();
+      }
     };
     focusSearch();
     window.addEventListener('focus', focusSearch);
@@ -47,7 +47,7 @@ const POS: React.FC = () => {
     }
   }, [cart.length]);
 
-  const filteredProducts = products.filter(p => 
+  const filteredProducts = products.filter(p =>
     p.isActive && (p.name.toLowerCase().includes(searchTerm.toLowerCase()) || p.sku.toUpperCase().includes(searchTerm.toUpperCase().trim()))
   );
 
@@ -55,9 +55,9 @@ const POS: React.FC = () => {
     setCart(prev => {
       const existing = prev.find(item => item.productId === product.id);
       if (existing) {
-        return prev.map(item => 
-          item.productId === product.id 
-            ? { ...item, quantity: item.quantity + 1, subtotal: (item.quantity + 1) * item.sellingPrice } 
+        return prev.map(item =>
+          item.productId === product.id
+            ? { ...item, quantity: item.quantity + 1, subtotal: (item.quantity + 1) * item.sellingPrice }
             : item
         );
       }
@@ -75,7 +75,7 @@ const POS: React.FC = () => {
     setSearchTerm('');
     // En móvil, devolver foco al input es molesto porque re-abre teclado
     if (window.innerWidth > 768) {
-        searchInputRef.current?.focus();
+      searchInputRef.current?.focus();
     }
   };
 
@@ -93,33 +93,46 @@ const POS: React.FC = () => {
   const change = (parseFloat(amountReceived) || 0) - total;
 
   const finalize = async () => {
-    if (change < 0) return;
-    
+    // 1. Sanitización Defensiva: Conversiones Seguras
+    const pay = parseFloat(amountReceived) || 0;
+    const safeTotal = Number(total) || 0;
+    const safeChange = pay - safeTotal;
+
+    // 2. Protección de Envío: Bloquear NaNs
+    if (isNaN(safeTotal) || isNaN(safeChange) || safeTotal < 0) {
+      alert('⚠️ Error Crítico: Hay un cálculo inválido en la venta (NaN). Por favor revisa los precios de los productos.');
+      console.error('Calculo inválido:', { total, pay, safeChange });
+      return;
+    }
+
+    if (safeChange < 0) return;
+
+    // 3. Preparación de Payload Limpio
     const itemsToProcess: CartItem[] = cart.map(i => ({
       productId: i.productId,
       name: i.name,
-      sellingPrice: i.sellingPrice,
-      unitCost: i.unitCost,
-      quantity: i.quantity
+      sellingPrice: Number(i.sellingPrice) || 0, // Fuerza número
+      unitCost: Number(i.unitCost) || 0,        // Fuerza número
+      quantity: Number(i.quantity) || 1
     }));
 
     const cartSnapshot = [...cart];
     const result = await processSaleAndContributeToGoal(itemsToProcess, 'CASH');
-    
+
     if (result.success) {
       const folioId = crypto.randomUUID().slice(0, 8);
-      setSaleSummary({ 
-        revenue: result.totalRevenueAdded, 
+      setSaleSummary({
+        revenue: result.totalRevenueAdded,
         profit: result.totalProfitAdded,
         items: cartSnapshot,
         folio: folioId
       });
-      
+
       setCart([]);
       setIsCheckoutOpen(false);
       setAmountReceived('');
       setShowTicket(true);
-      
+
       setTimeout(() => setSaleSummary(null), 10000);
     }
   };
@@ -131,7 +144,7 @@ const POS: React.FC = () => {
         <div className="p-4 border-b border-brand-border bg-slate-50 dark:bg-emerald-950/20 shrink-0">
           <div className="relative group">
             <Scan className="absolute left-5 top-1/2 -translate-y-1/2 text-brand-emerald h-5 w-5 animate-pulse" />
-            <input 
+            <input
               ref={searchInputRef}
               className="w-full pl-14 pr-6 py-4 bg-white dark:bg-slate-950 border-2 border-slate-200 dark:border-slate-800 rounded-[1.2rem] focus:border-brand-emerald outline-none transition-all text-base font-black text-slate-900 dark:text-white placeholder:text-slate-300 uppercase tracking-widest shadow-sm"
               placeholder="ESCANEAR SKU..."
@@ -140,17 +153,16 @@ const POS: React.FC = () => {
             />
           </div>
         </div>
-        
+
         <div className="flex-1 overflow-y-auto p-4 grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4 content-start">
           {filteredProducts.map((p, idx) => (
-            <div 
-              key={p.id} 
-              onClick={() => addToCart(p)} 
-              className={`group relative p-2 md:p-2.5 bg-white dark:bg-slate-800 border-2 rounded-2xl cursor-pointer transition-all duration-150 ease-in-out active:scale-95 hover:shadow-lg ${
-                lastAddedId === p.id 
-                  ? 'border-brand-emerald ring-4 ring-brand-emerald/10' 
+            <div
+              key={p.id}
+              onClick={() => addToCart(p)}
+              className={`group relative p-2 md:p-2.5 bg-white dark:bg-slate-800 border-2 rounded-2xl cursor-pointer transition-all duration-150 ease-in-out active:scale-95 hover:shadow-lg ${lastAddedId === p.id
+                  ? 'border-brand-emerald ring-4 ring-brand-emerald/10'
                   : 'border-slate-100 dark:border-slate-700 hover:border-brand-emerald/40'
-              }`}
+                }`}
             >
               <div className="relative aspect-square w-full bg-slate-50 dark:bg-slate-900 rounded-xl mb-2 md:mb-3 flex items-center justify-center overflow-hidden border border-slate-100 dark:border-slate-700">
                 {p.image ? (
@@ -158,12 +170,11 @@ const POS: React.FC = () => {
                 ) : (
                   <ImageOff className="text-slate-200 dark:text-slate-700" size={32} />
                 )}
-                
-                <div className={`absolute top-2 right-2 px-1.5 py-0.5 rounded-md text-[7px] md:text-[8px] font-black uppercase tracking-tighter ${
-                  p.stock <= p.minStock 
-                    ? 'bg-red-500 text-white animate-pulse' 
+
+                <div className={`absolute top-2 right-2 px-1.5 py-0.5 rounded-md text-[7px] md:text-[8px] font-black uppercase tracking-tighter ${p.stock <= p.minStock
+                    ? 'bg-red-500 text-white animate-pulse'
                     : 'bg-black/40 dark:bg-white/10 text-white backdrop-blur-sm'
-                }`}>
+                  }`}>
                   {p.stock} U.
                 </div>
               </div>
@@ -203,14 +214,14 @@ const POS: React.FC = () => {
             <div key={item.productId} className="p-3 rounded-[1.2rem] border-2 border-slate-50 dark:border-slate-800 bg-white dark:bg-black/20 animate-fade-in-up">
               <div className="flex justify-between items-start mb-2">
                 <p className="text-[10px] font-black uppercase truncate max-w-[150px]">{item.name}</p>
-                <button onClick={() => setCart(c => c.filter(i => i.productId !== item.productId))} className="text-slate-300 hover:text-red-500 active:scale-90 transition-transform"><Trash2 size={16}/></button>
+                <button onClick={() => setCart(c => c.filter(i => i.productId !== item.productId))} className="text-slate-300 hover:text-red-500 active:scale-90 transition-transform"><Trash2 size={16} /></button>
               </div>
               <div className="flex justify-between items-center">
                 <div className="flex flex-col">
                   <div className="flex items-center gap-2">
-                    <button onClick={() => updateQuantity(item.productId, -1)} className="p-1 bg-slate-100 dark:bg-slate-800 rounded-lg active:scale-90 transition-transform"><Minus size={12}/></button>
+                    <button onClick={() => updateQuantity(item.productId, -1)} className="p-1 bg-slate-100 dark:bg-slate-800 rounded-lg active:scale-90 transition-transform"><Minus size={12} /></button>
                     <span className="text-sm font-black w-6 text-center">{item.quantity}</span>
-                    <button onClick={() => updateQuantity(item.productId, 1)} className="p-1 bg-slate-100 dark:bg-slate-800 rounded-lg active:scale-90 transition-transform"><Plus size={12}/></button>
+                    <button onClick={() => updateQuantity(item.productId, 1)} className="p-1 bg-slate-100 dark:bg-slate-800 rounded-lg active:scale-90 transition-transform"><Plus size={12} /></button>
                   </div>
                   <span className="text-[8px] font-bold text-slate-400 uppercase mt-1">u. ${(item.sellingPrice || 0).toLocaleString()}</span>
                 </div>
@@ -220,8 +231,8 @@ const POS: React.FC = () => {
           ))}
           {cart.length === 0 && (
             <div className="h-full flex flex-col items-center justify-center text-center py-10 opacity-20">
-               <ShoppingCart size={40} className="mb-2" />
-               <p className="text-[9px] font-black uppercase tracking-[0.3em]">Carrito Vacío</p>
+              <ShoppingCart size={40} className="mb-2" />
+              <p className="text-[9px] font-black uppercase tracking-[0.3em]">Carrito Vacío</p>
             </div>
           )}
         </div>
@@ -241,13 +252,13 @@ const POS: React.FC = () => {
             <p className="text-[10px] font-black text-brand-muted uppercase tracking-[0.5em] mb-2">Total</p>
             <p className="text-4xl md:text-6xl font-black text-brand-emerald tracking-tighter">${(total || 0).toLocaleString()}</p>
           </div>
-          
+
           <div className="space-y-2 px-2">
             <label className="block text-[10px] font-black uppercase tracking-widest">Efectivo Recibido</label>
-            <input 
-              type="number" 
+            <input
+              type="number"
               className="w-full py-5 text-4xl font-black bg-slate-50 dark:bg-slate-950 border-4 border-slate-100 dark:border-slate-800 rounded-[2rem] outline-none focus:border-brand-emerald text-center"
-              value={amountReceived} 
+              value={amountReceived}
               onChange={e => setAmountReceived(e.target.value)}
               placeholder="0"
               autoFocus
@@ -267,7 +278,7 @@ const POS: React.FC = () => {
       </Modal>
 
       {showTicket && saleSummary && (
-        <SaleTicket 
+        <SaleTicket
           items={saleSummary.items}
           total={saleSummary.revenue}
           paymentMethod="CASH"
