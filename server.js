@@ -40,7 +40,9 @@ if (!JWT_SECRET) {
 // MIDDLEWARE
 // ==========================================
 app.use(cors());
-app.use(express.json());
+// Aumentar límite para subida de imágenes en Base64
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // Middleware de autenticación
 const authenticateToken = (req, res, next) => {
