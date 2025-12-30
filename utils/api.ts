@@ -129,3 +129,109 @@ export const storesAPI = {
     }
 };
 
+// ==========================================
+// SALES API
+// ==========================================
+
+export const salesAPI = {
+    getAll: async () => {
+        const response = await fetch(`${API_URL}/api/ventas`, {
+            headers: getHeaders()
+        });
+        if (!response.ok) throw new Error(await response.text());
+        return response.json();
+    },
+
+    create: async (sale: any) => {
+        const response = await fetch(`${API_URL}/api/ventas`, {
+            method: 'POST',
+            headers: getHeaders(),
+            body: JSON.stringify(sale)
+        });
+        if (!response.ok) throw new Error(await response.text());
+        return response.json();
+    },
+
+    sync: async (pendingSales: any[]) => {
+        const response = await fetch(`${API_URL}/api/ventas/sync`, {
+            method: 'POST',
+            headers: getHeaders(),
+            body: JSON.stringify({ sales: pendingSales })
+        });
+        if (!response.ok) throw new Error(await response.text());
+        return response.json();
+    }
+};
+
+// ==========================================
+// EXPENSES API
+// ==========================================
+
+export const expensesAPI = {
+    getAll: async () => {
+        const response = await fetch(`${API_URL}/api/expenses`, {
+            headers: getHeaders()
+        });
+        if (!response.ok) throw new Error(await response.text());
+        return response.json();
+    },
+
+    create: async (expense: any) => {
+        const response = await fetch(`${API_URL}/api/expenses`, {
+            method: 'POST',
+            headers: getHeaders(),
+            body: JSON.stringify(expense)
+        });
+        if (!response.ok) throw new Error(await response.text());
+        return response.json();
+    }
+};
+
+// ==========================================
+// DASHBOARD API
+// ==========================================
+
+export const dashboardAPI = {
+    getSummary: async (period: 'day' | 'month') => {
+        const response = await fetch(`${API_URL}/api/dashboard/summary?period=${period}`, {
+            headers: getHeaders()
+        });
+        if (!response.ok) throw new Error(await response.text());
+        return response.json();
+    }
+};
+
+// ==========================================
+// TICKETS API
+// ==========================================
+
+export const ticketsAPI = {
+    getAll: async () => {
+        const response = await fetch(`${API_URL}/api/tickets`, {
+            headers: getHeaders()
+        });
+        if (!response.ok) throw new Error(await response.text());
+        return response.json();
+    },
+
+    create: async (ticket: any) => {
+        const response = await fetch(`${API_URL}/api/tickets`, {
+            method: 'POST',
+            headers: getHeaders(),
+            body: JSON.stringify(ticket)
+        });
+        if (!response.ok) throw new Error(await response.text());
+        return response.json();
+    },
+
+    update: async (id: string, updates: any) => {
+        const response = await fetch(`${API_URL}/api/tickets/${id}`, {
+            method: 'PUT',
+            headers: getHeaders(),
+            body: JSON.stringify(updates)
+        });
+        if (!response.ok) throw new Error(await response.text());
+        return response.json();
+    }
+};
+

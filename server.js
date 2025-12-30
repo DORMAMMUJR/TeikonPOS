@@ -1789,9 +1789,119 @@ const startServer = async () => {
             console.error('❌ Error al sincronizar BD:', err);
         });
 
+        // Crear usuario SuperAdmin por defecto si no existe
+        createSuperAdmin();
+
+        // ==========================================
+        // ENDPOINTS DE TICKETS (SOPORTE)
+        // ==========================================
+
+        // GET /api/tickets - Listar tickets
+        app.get('/api/tickets', authenticateToken, async (req, res) => {
+            try {
+                const where = {};
+
+                // Si no es SUPER_ADMIN, solo ve los de su tienda
+                if (req.role !== 'SUPER_ADMIN') {
+                    where.storeId = req.storeId;
+                }
+
+                const tickets = await Ticket.findOne({ where }) // Check if any exist first to fail fast? No, findAll returns []
+                    ? await Ticket.findAll({
+                        where,
+                        include: req.role === 'SUPER_ADMIN' ? [{
+                            model: Store,
+                            as: 'store',
+                            attributes: ['nombre']
+                        }] : [],
+                        order: [
+                            ['status', 'ASC'], // OPEN first
+                            ['prioridad', 'DESC'], // URGENT first
+                            ['createdAt', 'DESC']
+                        ]
+                    })
+                    : []; // Optimization if needed, but standard findAll is fine.
+
+                // Re-doing the query standard way
+                const finalTickets = await Ticket.findAll({
+                    where,
+                    include: req.role === 'SUPER_ADMIN' ? [{
+                        model: Store,
+                        as: 'store',
+                        attributes: ['nombre']
+                    }] : [],
+                    order: [['createdAt', 'DESC']]
+                });
+
+                res.json(finalTickets);
+            } catch (error) {
+                console.error('Error al obtener tickets:', error);
+                res.status(500).json({ error: 'Error al obtener tickets' });
+            }
+        });
+
+        // POST /api/tickets - Crear ticket
+        app.post('/api/tickets', authenticateToken, async (req, res) => {
+            try {
+                const { titulo, descripcion, prioridad } = req.body;
+
+                if (!titulo || !descripcion) {
+                    return res.status(400).json({ error: 'Título y descripción requeridos' });
+                }
+
+                const ticket = await Ticket.create({
+                    storeId: req.storeId,
+                    titulo,
+                    descripcion,
+                    prioridad: prioridad || 'MEDIUM',
+                    status: 'OPEN',
+                    creadoPor: req.usuario
+                });
+
+                res.status(201).json(ticket);
+            } catch (error) {
+                console.error('Error al crear ticket:', error);
+                res.status(500).json({ error: 'Error al crear ticket' });
+            }
+        });
+
+        // PUT /api/tickets/:id - Actualizar ticket (Status/Prioridad)
+        app.put('/api/tickets/:id', authenticateToken, async (req, res) => {
+            try {
+                const { status, prioridad } = req.body;
+                const where = { id: req.params.id };
+
+                // Isolar: Si no es SA, solo puede editar sus propios tickets (opcionalmente) 
+                // Normalmente SA es quien edita el status a RESOLVED, pero dejaremos ambos por ahora.
+                if (req.role !== 'SUPER_ADMIN') {
+                    where.storeId = req.storeId;
+                }
+
+                const ticket = await Ticket.findOne({ where });
+
+                if (!ticket) {
+                    return res.status(404).json({ error: 'Ticket no encontrado' });
+                }
+
+                await ticket.update({
+                    status: status || ticket.status,
+                    prioridad: prioridad || ticket.prioridad
+                });
+
+                res.json(ticket);
+            } catch (error) {
+                console.error('Error al actualizar ticket:', error);
+                res.status(500).json({ error: 'Error al actualizar ticket' });
+            }
+        });
+
         // Iniciar servidor
+        // ==========================================
+        // INICIAR SERVIDOR
+        // ==========================================
         app.listen(PORT, '0.0.0.0', () => {
-            console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
+            console.log(`✅ Servidor corriendo en puerto ${PORT}`);
+            console.log(`🔧 Ambiente: ${process.env.NODE_ENV || 'development'}`);
             console.log(`📊 Dashboard API: http://localhost:${PORT}/api/dashboard/summary`);
         });
     } catch (error) {

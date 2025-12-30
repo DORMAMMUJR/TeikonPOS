@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import {
-  LayoutDashboard, Store, Ticket, LogOut, ShieldCheck, TrendingUp, Users, Activity,
+  LayoutDashboard, Store, Ticket, LogOut, ShieldCheck, TrendingUp,
   Search, Plus, User, ChevronLeft, Package, Zap, X, Eye
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -398,16 +398,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
           >
             <Ticket size={18} />
             TICKETS SOPORTE
-          </button>
-
-          <button className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold text-slate-400 hover:bg-white/5 hover:text-white transition-all">
-            <Activity size={18} />
-            MONITOREO DE SERVIDOR
-          </button>
-
-          <button className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold text-slate-400 hover:bg-white/5 hover:text-white transition-all">
-            <Users size={18} />
-            GESTIÓN DE USUARIOS
           </button>
         </nav>
 
