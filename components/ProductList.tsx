@@ -6,13 +6,28 @@ import Button from './Button';
 import Modal from './Modal';
 import { Edit, Plus, Search, Image as ImageIcon, Upload, TrendingUp, DollarSign, PieChart, AlertTriangle } from 'lucide-react';
 
-const ProductList: React.FC = () => {
-  const { products, addProduct, updateProduct, calculateTotalInventoryValue } = useStore();
+interface ProductListProps {
+  products?: Product[];
+  targetStoreId?: string;
+}
+
+const ProductList: React.FC<ProductListProps> = ({ products: propProducts, targetStoreId }) => {
+  const { products: contextProducts, addProduct, updateProduct, calculateTotalInventoryValue } = useStore();
+
+  // Use props if provided (Drill-Down mode), otherwise use context (Context mode)
+  const products = propProducts || contextProducts;
+
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Partial<Product>>({});
 
-  const totalInvestment = calculateTotalInventoryValue();
+  // Recalculate based on current products view
+  const totalInvestment = products.reduce((acc, product) => {
+    const cost = Number(product.costPrice) || 0;
+    const currentStock = Number(product.stock) || 0;
+    return acc + (cost * currentStock);
+  }, 0);
+
   const totalUnits = products.reduce((acc, p) => acc + (p.stock || 0), 0);
 
   const handleSave = (e: React.FormEvent) => {
@@ -57,7 +72,10 @@ const ProductList: React.FC = () => {
         storeId: editingProduct.storeId || ''
       } as Product);
     } else {
-      addProduct(productData);
+      addProduct({
+        ...productData,
+        storeId: targetStoreId || (productData as any).storeId // Use forced ID if in Drill-Down mode
+      });
     }
     setIsModalOpen(false);
   };
