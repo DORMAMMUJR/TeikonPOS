@@ -275,19 +275,25 @@ app.get('/api/productos', authenticateToken, async (req, res) => {
 // POST /api/productos - Crear producto
 app.post('/api/productos', authenticateToken, async (req, res) => {
     try {
+        console.log('🔵 POST /api/productos - Request recibido');
+        console.log('👤 Usuario:', req.usuario, 'Role:', req.role);
+        console.log('📦 Body:', JSON.stringify(req.body, null, 2));
+
         const { sku, nombre, categoria, costPrice, salePrice, stock, minStock, taxRate, imagen } = req.body;
 
         // Validar solo campos críticos (categoría es opcional)
         if (!sku || !nombre || costPrice === undefined || salePrice === undefined) {
-            return res.status(400).json({ error: 'Faltan campos requeridos (sku, nombre, costPrice, salePrice)' });
+            console.error('❌ Faltan campos requeridos:', { sku, nombre, costPrice, salePrice });
+            return res.status(400).json({
+                error: 'Faltan campos requeridos (sku, nombre, costPrice, salePrice)'
+            });
         }
 
-        // Asignar categoría por defecto si viene vacía
-        const finalCategoria = categoria && categoria.trim() !== '' ? categoria : 'General';
+        // SANITIZACIÓN: Asignar categoría por defecto si viene vacía o null
+        const finalCategoria = (categoria && categoria.trim() !== '') ? categoria.trim() : 'General';
+        console.log('📋 Categoría sanitizada:', finalCategoria);
 
-        // Determinar storeId:
-        // Si es SUPER_ADMIN y envía storeId, usarlo.
-        // Si no, usar req.storeId.
+        // Determinar storeId
         let targetStoreId = req.storeId;
         if (req.role === 'SUPER_ADMIN' && req.body.storeId) {
             targetStoreId = req.body.storeId;
@@ -305,6 +311,7 @@ app.post('/api/productos', authenticateToken, async (req, res) => {
                 targetStoreId = firstStore.id;
                 console.log(`✅ Asignando producto a tienda: ${firstStore.nombre} (${firstStore.id})`);
             } else {
+                console.error('❌ No hay tiendas activas');
                 return res.status(400).json({
                     error: 'No hay tiendas activas disponibles. Por favor, crea una tienda primero.'
                 });
@@ -312,9 +319,13 @@ app.post('/api/productos', authenticateToken, async (req, res) => {
         }
 
         if (!targetStoreId) {
+            console.error('❌ Store ID requerido pero no encontrado');
             return res.status(400).json({ error: 'Store ID es requerido para crear productos' });
         }
 
+        console.log('💾 Creando producto con storeId:', targetStoreId);
+
+        // CREAR PRODUCTO CON MANEJO ROBUSTO DE ERRORES
         const product = await Product.create({
             storeId: targetStoreId,
             sku,
@@ -325,28 +336,44 @@ app.post('/api/productos', authenticateToken, async (req, res) => {
             stock: stock || 0,
             minStock: minStock || 0,
             taxRate: taxRate || 0,
-            imagen
+            imagen: imagen || null  // Asegurar que imagen sea null si no existe
         });
+
+        console.log('✅ Producto creado exitosamente:', product.id);
 
         // Crear movimiento inicial de stock si hay stock
         if (stock > 0) {
-            await StockMovement.create({
-                productId: product.id,
-                storeId: targetStoreId,
-                tipo: 'PURCHASE',
-                cantidad: stock,
-                stockAnterior: 0,
-                stockNuevo: stock,
-                motivo: 'Stock inicial',
-                registradoPor: req.usuario
-            });
+            try {
+                await StockMovement.create({
+                    productId: product.id,
+                    storeId: targetStoreId,
+                    tipo: 'PURCHASE',
+                    cantidad: stock,
+                    stockAnterior: 0,
+                    stockNuevo: stock,
+                    motivo: 'Stock inicial',
+                    registradoPor: req.usuario
+                });
+                console.log('✅ Movimiento de stock creado');
+            } catch (stockError) {
+                console.error('⚠️ Error al crear movimiento de stock:', stockError);
+                // No fallar la creación del producto por esto
+            }
         }
 
-        console.log('✅ Producto creado exitosamente:', product.id);
         res.status(201).json(product);
     } catch (error) {
         console.error('❌ Error al crear producto:', error);
-        res.status(500).json({ error: 'Error al crear producto' });
+        console.error('Stack trace:', error.stack);
+
+        // Responder SIEMPRE al cliente para evitar carga infinita
+        if (!res.headersSent) {
+            res.status(500).json({
+                error: 'Error al crear producto',
+                details: error.message,
+                hint: 'Revisa los logs del servidor para más información'
+            });
+        }
     }
 });
 
