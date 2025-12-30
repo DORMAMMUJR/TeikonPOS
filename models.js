@@ -209,7 +209,7 @@ const Product = sequelize.define('Product', {
         defaultValue: true
     },
     imagen: {
-        type: DataTypes.STRING,
+        type: DataTypes.TEXT,  // Changed from STRING to TEXT for Base64 images
         allowNull: true
     }
 }, {
