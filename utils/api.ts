@@ -172,3 +172,27 @@ export const expensesAPI = {
         return response.json();
     }
 };
+
+// ==========================================
+// STORES API
+// ==========================================
+
+export const storesAPI = {
+    getAll: async () => {
+        const response = await fetch(`${API_URL}/api/stores`, {
+            headers: getHeaders()
+        });
+        if (!response.ok) throw new Error(await response.text());
+        return response.json();
+    },
+
+    delete: async (id: string) => {
+        const response = await fetch(`${API_URL}/api/stores/${id}`, {
+            method: 'DELETE',
+            headers: getHeaders()
+        });
+        if (!response.ok) throw new Error(await response.text());
+        return response.json();
+    }
+};
+
