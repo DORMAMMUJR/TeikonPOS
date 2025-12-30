@@ -277,9 +277,13 @@ app.post('/api/productos', authenticateToken, async (req, res) => {
     try {
         const { sku, nombre, categoria, costPrice, salePrice, stock, minStock, taxRate, imagen } = req.body;
 
-        if (!sku || !nombre || !categoria || costPrice === undefined || salePrice === undefined) {
-            return res.status(400).json({ error: 'Faltan campos requeridos' });
+        // Validar solo campos críticos (categoría es opcional)
+        if (!sku || !nombre || costPrice === undefined || salePrice === undefined) {
+            return res.status(400).json({ error: 'Faltan campos requeridos (sku, nombre, costPrice, salePrice)' });
         }
+
+        // Asignar categoría por defecto si viene vacía
+        const finalCategoria = categoria && categoria.trim() !== '' ? categoria : 'General';
 
         // Determinar storeId:
         // Si es SUPER_ADMIN y envía storeId, usarlo.
