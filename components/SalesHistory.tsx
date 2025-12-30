@@ -116,8 +116,8 @@ const SalesHistory: React.FC = () => {
                   </td>
                   <td className="px-8 py-5 whitespace-nowrap text-center">
                     <span className={`px-4 py-1 rounded-full text-[9px] font-black uppercase ${sale.status === 'ACTIVE'
-                        ? 'bg-emerald-500/10 text-emerald-500'
-                        : 'bg-red-500/10 text-red-500'
+                      ? 'bg-emerald-500/10 text-emerald-500'
+                      : 'bg-red-500/10 text-red-500'
                       }`}>
                       {sale.status === 'ACTIVE' ? 'Aprobada' : 'Devolución'}
                     </span>
@@ -158,6 +158,7 @@ const SalesHistory: React.FC = () => {
           paymentMethod={selectedSale.paymentMethod}
           sellerId={selectedSale.sellerId}
           folio={selectedSale.id.slice(0, 8)}
+          date={selectedSale.date}
           onClose={() => setSelectedSale(null)}
           storeInfo={{
             name: currentUser?.storeName || "TEIKON OS TERMINAL",
