@@ -1689,7 +1689,7 @@ app.get('/api/dashboard/summary', authenticateToken, async (req, res) => {
             where: {
                 storeId: req.storeId,
                 status: 'ACTIVE',
-                created_at: {
+                createdAt: {
                     [sequelize.Sequelize.Op.gte]: startDate
                 }
             },
