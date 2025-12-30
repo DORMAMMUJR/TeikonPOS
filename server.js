@@ -289,19 +289,25 @@ app.post('/api/productos', authenticateToken, async (req, res) => {
         console.log('📦 Body:', JSON.stringify(req.body, null, 2));
 
         // DESESTRUCTURACIÓN CON SANITIZACIÓN ROBUSTA E INYECCIÓN DE DEFAULTS
+        // Mapeo explicito FE (Ingles) -> BE (Español)
+        const nombre = req.body.nombre || req.body.name;
+        const categoria = req.body.categoria || req.body.category;
+        const costPrice = req.body.costPrice || req.body.cost;
+        const salePrice = req.body.salePrice || req.body.price;
+        const imagen = req.body.imagen || req.body.image;
+        const codigoBarras = req.body.sku || req.body.barcode; // SKU o Barcode
+
         let {
             sku,
-            nombre,
-            categoria,
-            costPrice,
-            salePrice,
-            stock,
             minStock,
             taxRate,
-            imagen,
             isActive,
-            activo
+            activo,
+            stock
         } = req.body;
+
+        // Si sku no vino arriba, usar codigoBarras
+        sku = sku || codigoBarras;
 
         // 1. INYECCIÓN DE DEFAULTS Y CONVERSIÓN DE TIPOS
         // isActive: Si no viene, forzar a true. (Mapear isActive o activo)

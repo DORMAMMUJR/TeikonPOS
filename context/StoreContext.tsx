@@ -18,7 +18,7 @@ interface StoreContextType {
   updateCurrentUser: (userData: Partial<User>) => void;
   openSession: (startBalance: number) => Promise<void>;
   closeSession: (endBalance: number) => Promise<void>;
-  addProduct: (product: Omit<Product, 'ownerId' | 'id'>) => Promise<void>;
+  addProduct: (product: Omit<Product, 'ownerId' | 'id'>, activeStoreId?: string) => Promise<void>;
   updateProduct: (product: Product) => Promise<void>;
   processSaleAndContributeToGoal: (cartItems: CartItem[], paymentMethod: 'CASH' | 'CARD' | 'TRANSFER') => Promise<SaleResult>;
   cancelSale: (saleId: string) => Promise<void>;
@@ -262,7 +262,7 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     }
   };
 
-  const addProduct = async (productData: Omit<Product, 'ownerId' | 'id'>) => {
+  const addProduct = async (productData: Omit<Product, 'ownerId' | 'id'>, activeStoreId?: string) => {
     if (!currentUser) return;
     try {
       if (isOnline) {
@@ -277,9 +277,9 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
           minStock: productData.minStock || 0,
           taxRate: productData.taxRate || 0,
           imagen: productData.image,
-          storeId: currentUser.role === 'SUPER_ADMIN'
-            ? (productData as any).storeId || null
-            : currentUser.storeId
+          storeId: activeStoreId || (currentUser.role === 'SUPER_ADMIN'
+            ? (productData as any).storeId
+            : currentUser.storeId)
         };
 
         // DEBUG: Log payload before sending
