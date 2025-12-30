@@ -192,8 +192,12 @@ export const expensesAPI = {
 // ==========================================
 
 export const dashboardAPI = {
-    getSummary: async (period: 'day' | 'month') => {
-        const response = await fetch(`${API_URL}/api/dashboard/summary?period=${period}`, {
+    getSummary: async (period: 'day' | 'month', storeId?: string) => {
+        let url = `${API_URL}/api/dashboard/summary?period=${period}`;
+        if (storeId) {
+            url += `&storeId=${storeId}`;
+        }
+        const response = await fetch(url, {
             headers: getHeaders()
         });
         if (!response.ok) throw new Error(await response.text());

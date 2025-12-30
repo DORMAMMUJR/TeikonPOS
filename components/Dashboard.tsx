@@ -13,7 +13,11 @@ interface DashboardStats {
   dailyOperationalCost: number;
 }
 
-const Dashboard: React.FC = () => {
+interface DashboardProps {
+  storeId?: string;
+}
+
+const Dashboard: React.FC<DashboardProps> = ({ storeId }) => {
   const { getDashboardStats, products, isOnline } = useStore();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -22,7 +26,7 @@ const Dashboard: React.FC = () => {
     const fetchStats = async () => {
       setLoading(true);
       try {
-        const data = await getDashboardStats('day');
+        const data = await getDashboardStats('day', storeId);
         setStats(data);
       } catch (e) {
         console.error("Dashboard fetch error", e);
@@ -31,7 +35,7 @@ const Dashboard: React.FC = () => {
       }
     };
     fetchStats();
-  }, [getDashboardStats]);
+  }, [getDashboardStats, storeId]);
 
   const dailyFixedCost = stats?.dailyOperationalCost || 0;
   const netDailyProfit = stats?.netProfit || 0;
