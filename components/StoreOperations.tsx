@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { DollarSign, Target, Save, Calculator, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import Button from './Button';
-import { getAuthToken } from '../utils/api';
+import { getAuthToken, API_URL } from '../utils/api';
 
 interface StoreOperationsProps {
     storeId: string;
@@ -38,13 +38,18 @@ const StoreOperations: React.FC<StoreOperationsProps> = ({ storeId }) => {
     const loadSummary = async () => {
         setIsLoading(true);
         try {
-            const res = await fetch('http://localhost:80/api/finance/daily-summary', { headers: getHeaders() });
-            if (res.ok) {
-                const data = await res.json();
-                setSummary(data);
-            }
-        } catch (e) { console.error(e); }
-        finally { setIsLoading(false); }
+            // Updated to use the new specific Cash Close endpoint
+            const res = await fetch(`${API_URL}/api/sales/cash-close?storeId=${storeId}`, { headers: getHeaders() });
+            if (!res.ok) throw new Error('Error fetching cash close data');
+
+            const data = await res.json();
+            setSummary(data);
+        } catch (e) {
+            console.error("Error cargando corte:", e);
+            alert("No se pudo cargar el corte de caja. Por favor intente de nuevo.");
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const savedGoal = async () => {

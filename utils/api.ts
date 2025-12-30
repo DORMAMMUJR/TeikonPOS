@@ -1,6 +1,7 @@
 // API Base URL - automatically uses current domain in production
 // API Base URL - Environment aware
-const API_URL = (import.meta as any).env?.VITE_API_URL || ((import.meta as any).env?.PROD ? '' : 'http://localhost:80');
+// API Base URL - Environment aware
+export const API_URL = (import.meta as any).env?.VITE_API_URL || ((import.meta as any).env?.PROD ? '' : 'http://localhost:80');
 
 // Get auth token from localStorage
 export const getAuthToken = (): string | null => {
