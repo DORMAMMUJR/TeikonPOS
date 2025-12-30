@@ -3,9 +3,19 @@ import React, { useState, useEffect } from 'react';
 import { useStore } from '../context/StoreContext';
 import { DollarSign, ShoppingBag, TrendingUp, AlertTriangle, Target, ShieldAlert, CheckCircle2, Briefcase } from 'lucide-react';
 
+interface DashboardStats {
+  salesToday: number;
+  ordersCount: number;
+  grossProfit: number;
+  netProfit: number;
+  investment: number;
+  dailyTarget: number;
+  dailyOperationalCost: number;
+}
+
 const Dashboard: React.FC = () => {
-  const { getDashboardStats, products, settings, calculateTotalInventoryValue, isOnline } = useStore();
-  const [stats, setStats] = useState<any>(null);
+  const { getDashboardStats, products, isOnline } = useStore();
+  const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -23,10 +33,11 @@ const Dashboard: React.FC = () => {
     fetchStats();
   }, [getDashboardStats]);
 
-  const dailyFixedCost = (settings?.monthlyFixedCosts || 0) / 30;
-  const dailyGrossProfit = stats?.totalProfit || 0;
-  const netDailyProfit = dailyGrossProfit - dailyFixedCost;
-  const totalInventoryValue = calculateTotalInventoryValue();
+  const dailyFixedCost = stats?.dailyOperationalCost || 0;
+  const netDailyProfit = stats?.netProfit || 0;
+  const totalInventoryValue = stats?.investment || 0;
+  // Fallback to client-side salesToday if needed, but backend is preferred
+  const salesRevenue = stats?.salesToday || 0;
 
   const isProfitable = netDailyProfit > 0;
   const isBreakeven = Math.abs(netDailyProfit) < 0.01;
@@ -35,10 +46,10 @@ const Dashboard: React.FC = () => {
   const lowStockProducts = (products || []).filter(p => p.isActive && p.stock > 0 && p.stock <= p.minStock);
 
   const kpis = [
-    { label: 'Facturación Hoy', val: `$${(stats?.totalRevenue || 0).toLocaleString()}`, icon: ShoppingBag, color: 'text-brand-emerald' },
-    { label: 'Capital Inventario', val: `$${(totalInventoryValue || 0).toLocaleString()}`, icon: Briefcase, color: 'text-orange-500' },
-    { label: 'Órdenes Totales', val: stats?.salesCount || 0, icon: Target, color: 'text-brand-purple' },
-    { label: 'Inversión Mercancía', val: `$${(stats?.totalCost || 0).toLocaleString()}`, icon: DollarSign, color: 'text-slate-400' },
+    { label: 'Facturación Hoy', val: `$${salesRevenue.toLocaleString()}`, icon: ShoppingBag, color: 'text-brand-emerald' },
+    { label: 'Capital Inventario', val: `$${totalInventoryValue.toLocaleString()}`, icon: Briefcase, color: 'text-orange-500' },
+    { label: 'Órdenes Totales', val: stats?.ordersCount || 0, icon: Target, color: 'text-brand-purple' },
+    { label: 'Inversión Mercancía', val: `$${totalInventoryValue.toLocaleString()}`, icon: DollarSign, color: 'text-slate-400' },
   ];
 
   if (loading && !stats) {
@@ -94,7 +105,7 @@ const Dashboard: React.FC = () => {
           </div>
           <div className="p-4 bg-brand-purple/5 dark:bg-brand-purple/10 rounded-2xl border border-brand-purple/20 dark:border-brand-purple/20">
             <p className="text-[10px] font-black text-brand-purple uppercase tracking-widest mb-1">Utilidad Bruta Generada</p>
-            <p className="text-xl font-black text-brand-purple">${(dailyGrossProfit || 0).toLocaleString()}</p>
+            <p className="text-xl font-black text-brand-purple">${(stats?.grossProfit || 0).toLocaleString()}</p>
           </div>
         </div>
       </div>

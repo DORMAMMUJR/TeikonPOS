@@ -12,6 +12,7 @@ dotenv.config();
 
 import {
     sequelize,
+    Op,
     Organization,
     Store,
     User,
@@ -716,6 +717,91 @@ app.put('/api/ventas/:id/cancelar', authenticateToken, async (req, res) => {
     } catch (error) {
         console.error('Error al cancelar venta:', error);
         res.status(500).json({ error: 'Error al cancelar venta' });
+    }
+});
+
+// ==========================================
+// ENDPOINTS DE DASHBOARD Y ANALÍTICAS
+// ==========================================
+
+// GET /api/dashboard/summary - Resumen en tiempo real
+app.get('/api/dashboard/summary', authenticateToken, async (req, res) => {
+    try {
+        const storeId = req.storeId;
+        const { period } = req.query; // 'day', 'week', 'month' (Currently supporting 'day')
+
+        // 1. Configurar rango de fechas para "Hoy"
+        const startOfDay = new Date();
+        startOfDay.setHours(0, 0, 0, 0);
+
+        const endOfDay = new Date();
+        endOfDay.setHours(23, 59, 59, 999);
+
+        // 2. Fetch Sales Stats (Today)
+        const salesStats = await Sale.findAll({
+            where: {
+                storeId: storeId,
+                status: 'ACTIVE',
+                createdAt: {
+                    [Op.gte]: startOfDay,
+                    [Op.lte]: endOfDay
+                }
+            },
+            attributes: [
+                [sequelize.fn('SUM', sequelize.col('total')), 'salesToday'],
+                [sequelize.fn('COUNT', sequelize.col('id')), 'ordersCount'],
+                [sequelize.fn('SUM', sequelize.col('net_profit')), 'grossProfit'] // net_profit in DB is Gross Profit per item
+            ],
+            raw: true
+        });
+
+        // 3. Fetch Inventory Investment (Total Stock Value)
+        // Sum of (costPrice * stock) for all active products
+        const inventoryStats = await Product.findAll({
+            where: {
+                storeId: storeId,
+                activo: true
+            },
+            attributes: [
+                [sequelize.literal('SUM("cost_price" * "stock")'), 'investment']
+            ],
+            raw: true
+        });
+
+        // 4. Fetch Store Configuration (Goals)
+        const config = await StoreConfig.findOne({
+            where: { storeId: storeId }
+        });
+
+        const dailyOperationalCost = parseFloat(config?.breakEvenGoal || 0); // Assuming breakEvenGoal is monthly cost
+        const dailyTarget = dailyOperationalCost / 30;
+
+        // 5. Build Response
+        const stats = salesStats[0] || {};
+        const inv = inventoryStats[0] || {};
+
+        const salesToday = parseFloat(stats.salesToday || 0);
+        const ordersCount = parseInt(stats.ordersCount || 0, 10);
+        const grossProfit = parseFloat(stats.grossProfit || 0);
+        const investment = parseFloat(inv.investment || 0);
+
+        // Calculate Net Profit: Gross Profit - Daily Fixed Cost
+        const netProfit = grossProfit - dailyTarget;
+
+        res.json({
+            salesToday,
+            ordersCount,
+            investment,
+            grossProfit,
+            netProfit,
+            dailyTarget,
+            dailyOperationalCost,
+            period: 'day'
+        });
+
+    } catch (error) {
+        console.error('Error fetching dashboard summary:', error);
+        res.status(500).json({ error: 'Error interno al obtener resumen del dashboard' });
     }
 });
 
