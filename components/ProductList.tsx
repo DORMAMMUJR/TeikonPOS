@@ -73,9 +73,8 @@ const ProductList: React.FC<ProductListProps> = ({ products: propProducts, targe
       } as Product);
     } else {
       addProduct({
-        ...productData,
-        storeId: targetStoreId || (productData as any).storeId // Use forced ID if in Drill-Down mode
-      });
+        ...productData
+      }, targetStoreId);
     }
     setIsModalOpen(false);
   };
