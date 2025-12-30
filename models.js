@@ -1,4 +1,4 @@
-import { Sequelize, DataTypes } from 'sequelize';
+import { Sequelize, DataTypes, Op } from 'sequelize';
 import dotenv from 'dotenv';
 
 // Cargar variables de entorno
@@ -699,6 +699,7 @@ StoreConfig.belongsTo(Store, { foreignKey: 'storeId', as: 'store' });
 // ==========================================
 export {
     sequelize,
+    Op,
     Organization,
     Store,
     User,
