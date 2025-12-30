@@ -12,6 +12,7 @@ dotenv.config();
 
 // Importar controladores
 import { getDashboardSummary } from './controllers/dashboardController.js';
+import { getCashCloseDetails } from './controllers/salesController.js';
 
 import {
     sequelize,
@@ -484,6 +485,9 @@ app.delete('/api/productos/:id', authenticateToken, async (req, res) => {
 
 // GET /api/dashboard/summary - Resumen financiero
 app.get('/api/dashboard/summary', authenticateToken, getDashboardSummary);
+
+// GET /api/sales/cash-close - Detalles de Corte de Caja
+app.get('/api/sales/cash-close', authenticateToken, getCashCloseDetails);
 
 // GET /api/ventas - Listar ventas
 app.get('/api/ventas', authenticateToken, async (req, res) => {
