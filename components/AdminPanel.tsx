@@ -90,13 +90,23 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
   }, [location.pathname]);
 
   useEffect(() => {
-    const loadStores = () => {
-      const saved = localStorage.getItem('teikon_all_stores');
-      if (saved) {
-        setStores(JSON.parse(saved));
-      } else {
-        localStorage.setItem('teikon_all_stores', JSON.stringify(DEFAULT_STORES));
-        setStores(DEFAULT_STORES);
+    const loadStores = async () => {
+      try {
+        const response = await fetch('http://localhost:80/api/stores', {
+          headers: { 'Authorization': `Bearer ${localStorage.getItem('authToken')}` }
+        });
+        if (response.ok) {
+          const data = await response.json();
+          // Map backend data to frontend interface if needed, or adjust interface
+          // For now assuming backend returns array of stores
+          // We might need to adjust the backend to return all stores for SUPER_ADMIN
+          // The current /api/stores/new returns the created store.
+          // But we don't have a GET /api/stores endpoint for SUPER_ADMIN yet in server.js! 
+          // We need to create it. For now let's just scaffold the fetch.
+          setStores(data);
+        }
+      } catch (err) {
+        console.error("Failed to load stores", err);
       }
     };
 
@@ -138,27 +148,54 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
 
     setIsSubmitting(true);
 
-    setTimeout(() => {
-      const newStore: StoreData = {
-        id: `ST-${Math.floor(Math.random() * 900 + 100)}`,
-        name: newStoreEmail.split('@')[0].toUpperCase(),
-        owner: 'Cliente Externo',
-        phone: 'N/A',
-        plan: 'Basic',
-        status: 'active',
-        lastActive: 'Pendiente Onboarding'
-      };
+    const createStore = async () => {
+      try {
+        const response = await fetch('http://localhost:80/api/stores/new', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+          },
+          body: JSON.stringify({
+            nombre: newStoreEmail.split('@')[0], // Simple derivation
+            usuario: newStoreEmail,
+            password: newStorePassword,
+            direccion: 'N/A', // Default
+            telefono: 'N/A'
+          })
+        });
 
-      const updated = [newStore, ...stores];
-      setStores(updated);
-      localStorage.setItem('teikon_all_stores', JSON.stringify(updated));
+        if (!response.ok) {
+          throw new Error('Error al crear tienda');
+        }
 
-      // CIERRE INMEDIATO SIN MODAL DE ÉXITO PARA EVITAR LAG
-      setIsNewStoreModalOpen(false);
-      setNewStoreEmail('');
-      setNewStorePassword('');
-      setIsSubmitting(false);
-    }, 800);
+        const newStoreData = await response.json();
+
+        // Refresh stores
+        // For now just add to list
+        const newStore: StoreData = {
+          id: newStoreData.id,
+          name: newStoreData.nombre,
+          owner: newStoreData.usuario,
+          phone: 'N/A',
+          plan: 'Basic',
+          status: 'active',
+          lastActive: 'Ahora'
+        };
+
+        setStores([newStore, ...stores]);
+        setIsNewStoreModalOpen(false);
+        setNewStoreEmail('');
+        setNewStorePassword('');
+      } catch (error) {
+        console.error(error);
+        alert('Error al crear la tienda');
+      } finally {
+        setIsSubmitting(false);
+      }
+    };
+
+    createStore();
   };
 
   const themeClasses = {
@@ -250,8 +287,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
             >
               <div className="absolute top-6 right-6">
                 <span className={`px-4 py-1.5 rounded-full text-[8px] md:text-[9px] font-black uppercase tracking-widest border ${store.status === 'active'
-                    ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
-                    : 'bg-red-500/10 text-red-500 border-red-500/20'
+                  ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
+                  : 'bg-red-500/10 text-red-500 border-red-500/20'
                   }`}>
                   {store.status === 'active' ? 'ACTIVA' : 'SUSPENDIDA'}
                 </span>
@@ -411,8 +448,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                 key={item.id}
                 onClick={() => handleNavClick(item.id)}
                 className={`flex items-center transition-all duration-150 ease-in-out active:scale-[0.97] rounded-2xl group relative overflow-hidden h-14 ${isActive
-                    ? themeClasses.navActive
-                    : `${themeClasses.navItem} hover:bg-black/5 dark:hover:bg-white/5`
+                  ? themeClasses.navActive
+                  : `${themeClasses.navItem} hover:bg-black/5 dark:hover:bg-white/5`
                   } ${isCollapsed ? 'md:justify-center' : 'px-5 gap-4'}`}
               >
                 <item.icon size={22} className="shrink-0" />

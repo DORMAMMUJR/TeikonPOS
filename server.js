@@ -59,76 +59,10 @@ const authenticateToken = (req, res, next) => {
 // ==========================================
 
 // POST /api/auth/register - Registrar nueva organization y primera store
-app.post('/api/auth/register', async (req, res) => {
-    try {
-        const { organizationName, storeName, usuario, password, email, telefono } = req.body;
-
-        // Validar campos requeridos
-        if (!organizationName || !storeName || !usuario || !password || !email) {
-            return res.status(400).json({ error: 'Faltan campos requeridos' });
-        }
-
-        // Verificar que usuario y email no existan
-        const existingStore = await Store.findOne({ where: { usuario } });
-        if (existingStore) {
-            return res.status(400).json({ error: 'El usuario ya existe' });
-        }
-
-        const existingOrg = await Organization.findOne({ where: { email } });
-        if (existingOrg) {
-            return res.status(400).json({ error: 'El email ya está registrado' });
-        }
-
-        // Encriptar password
-        const hashedPassword = await bcrypt.hash(password, 10);
-
-        // Crear organization y store en transacción
-        const result = await sequelize.transaction(async (t) => {
-            // Crear organization
-            const org = await Organization.create({
-                nombre: organizationName,
-                slug: organizationName.toLowerCase().replace(/\s+/g, '-'),
-                propietario: usuario,
-                email,
-                telefono
-            }, { transaction: t });
-
-            // Crear store
-            const store = await Store.create({
-                organizationId: org.id,
-                nombre: storeName,
-                slug: storeName.toLowerCase().replace(/\s+/g, '-'),
-                usuario,
-                password: hashedPassword,
-                telefono
-            }, { transaction: t });
-
-            return { org, store };
-        });
-
-        // Generar token JWT
-        const token = jwt.sign({
-            storeId: result.store.id,
-            organizationId: result.org.id,
-            storeName: result.store.nombre,
-            usuario: result.store.usuario
-        }, JWT_SECRET, { expiresIn: '30d' });
-
-        res.status(201).json({
-            token,
-            store: {
-                id: result.store.id,
-                nombre: result.store.nombre,
-                usuario: result.store.usuario,
-                organizationId: result.org.id,
-                organizationName: result.org.nombre
-            }
-        });
-    } catch (error) {
-        console.error('Error en registro:', error);
-        res.status(500).json({ error: 'Error al registrar' });
-    }
-});
+// POST /api/auth/register - DESHABILITADO EN MODO SAAS CERRADO
+// app.post('/api/auth/register', async (req, res) => {
+//     return res.status(403).json({ error: 'Registro público deshabilitado. Contáctanos para adquirir una licencia.' });
+// });
 
 // POST /api/auth/login - Iniciar sesión
 app.post('/api/auth/login', async (req, res) => {
@@ -245,6 +179,36 @@ app.post('/api/stores/new', authenticateToken, async (req, res) => {
     } catch (error) {
         console.error('Error al crear sucursal:', error);
         res.status(500).json({ error: 'Error al crear sucursal' });
+    }
+});
+
+// GET /api/stores - Listar todas las tiendas (SOLO SUPER_ADMIN)
+app.get('/api/stores', authenticateToken, async (req, res) => {
+    try {
+        if (req.role !== 'SUPER_ADMIN') {
+            return res.status(403).json({ error: 'Acceso denegado' });
+        }
+
+        const stores = await Store.findAll({
+            attributes: ['id', 'nombre', 'usuario', 'telefono', 'direccion', 'createdAt'],
+            order: [['createdAt', 'DESC']]
+        });
+
+        // Map to frontend expectation
+        const mappedStores = stores.map(s => ({
+            id: s.id,
+            name: s.nombre,
+            owner: s.usuario,
+            phone: s.telefono || 'N/A',
+            plan: 'Premium',
+            status: 'active',
+            lastActive: new Date(s.createdAt).toLocaleDateString()
+        }));
+
+        res.json(mappedStores);
+    } catch (error) {
+        console.error('Error al listar sucursales:', error);
+        res.status(500).json({ error: 'Error al listar sucursales' });
     }
 });
 

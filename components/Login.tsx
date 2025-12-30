@@ -11,13 +11,13 @@ import { authAPI } from '../utils/api';
 
 const Login: React.FC = () => {
   const { login } = useStore();
-  const [isRegisterMode, setIsRegisterMode] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showDevModal, setShowDevModal] = useState(false);
 
   // Navigation
   const navigate = useNavigate();
+
 
   // Form States
   const [username, setUsername] = useState('');
@@ -35,38 +35,23 @@ const Login: React.FC = () => {
     setLoading(true);
 
     try {
-      if (isRegisterMode) {
-        // REGISTER FLOW
-        await authAPI.register({
-          organizationName: orgName,
-          storeName: storeName,
-          usuario: username,
-          password: password,
-          email: email,
-          telefono: phone
-        });
+      // REGISTER FLOW REMOVED
 
-        // Auto login after register
-        const response = await authAPI.login(username, password);
-        login(response.user, response.token);
-        navigate('/dashboard'); // New stores go to dashboard
+      // LOGIN FLOW
+      const response = await authAPI.login(username, password);
+
+      // Update context
+      login(response.user, response.token);
+
+      // ---------------------------------------------------------
+      // LOGIC FOR SUPER ADMIN REDIRECTION
+      // ---------------------------------------------------------
+      if (response.user.role === 'SUPER_ADMIN') {
+        console.log("👑 Bienvenido Jefe - Redirigiendo a Panel de Tiendas");
+        navigate('/admin/dashboard');
       } else {
-        // LOGIN FLOW
-        const response = await authAPI.login(username, password);
-
-        // Update context
-        login(response.user, response.token);
-
-        // ---------------------------------------------------------
-        // LOGIC FOR SUPER ADMIN REDIRECTION
-        // ---------------------------------------------------------
-        if (response.user.role === 'SUPER_ADMIN') {
-          console.log("👑 Bienvenido Jefe - Redirigiendo a Panel de Tiendas");
-          navigate('/admin/dashboard');
-        } else {
-          console.log("💼 Bienvenido Cliente - Redirigiendo a su POS");
-          navigate('/dashboard');
-        }
+        console.log("💼 Bienvenido Cliente - Redirigiendo a su POS");
+        navigate('/dashboard');
       }
     } catch (err: any) {
       console.error(err);
@@ -94,44 +79,14 @@ const Login: React.FC = () => {
           <TeikonLogo size={80} className="mb-6" />
           <TeikonWordmark height={24} className="text-slate-900 dark:text-white" />
           <p className="text-[10px] font-black text-brand-muted uppercase tracking-[0.4em] mt-4">
-            {isRegisterMode ? 'Nueva Organización' : 'Acceso Seguro'}
+            Acceso Seguro
           </p>
         </div>
 
         <div className="bg-white dark:bg-brand-panel backdrop-blur-md p-8 border border-slate-200 dark:border-brand-border rounded-3xl shadow-2xl transition-all duration-300">
           <form onSubmit={handleSubmit} className="space-y-4">
 
-            {isRegisterMode && (
-              <>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="text-[9px] font-black text-brand-muted uppercase tracking-widest pl-1">Organización</label>
-                    <div className="relative">
-                      <Store className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-muted h-4 w-4" />
-                      <input
-                        type="text"
-                        required
-                        value={orgName}
-                        onChange={(e) => setOrgName(e.target.value)}
-                        className="w-full bg-slate-50 dark:bg-black/20 border border-slate-200 dark:border-white/10 rounded-xl pl-10 pr-4 py-3 text-sm focus:border-brand-purple transition-all outline-none font-bold text-slate-900 dark:text-white"
-                        placeholder="Mi Empresa"
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[9px] font-black text-brand-muted uppercase tracking-widest pl-1">Sucursal</label>
-                    <input
-                      type="text"
-                      required
-                      value={storeName}
-                      onChange={(e) => setStoreName(e.target.value)}
-                      className="w-full bg-slate-50 dark:bg-black/20 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm focus:border-brand-purple transition-all outline-none font-bold text-slate-900 dark:text-white"
-                      placeholder="Centro"
-                    />
-                  </div>
-                </div>
-              </>
-            )}
+
 
             <div className="space-y-1.5">
               <label className="text-[9px] font-black text-brand-muted uppercase tracking-widest pl-1">Usuario</label>
@@ -148,22 +103,7 @@ const Login: React.FC = () => {
               </div>
             </div>
 
-            {isRegisterMode && (
-              <div className="space-y-1.5">
-                <label className="text-[9px] font-black text-brand-muted uppercase tracking-widest pl-1">Email</label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-muted h-4 w-4" />
-                  <input
-                    type="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-black/20 border border-slate-200 dark:border-white/10 rounded-xl pl-10 pr-4 py-3 text-sm focus:border-brand-purple transition-all outline-none font-bold text-slate-900 dark:text-white"
-                    placeholder="contacto@empresa.com"
-                  />
-                </div>
-              </div>
-            )}
+
 
             <div className="space-y-1.5">
               <label className="text-[9px] font-black text-brand-muted uppercase tracking-widest pl-1">Contraseña</label>
@@ -194,18 +134,18 @@ const Login: React.FC = () => {
               disabled={loading}
               className="py-4 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-black border-none text-[10px] font-black tracking-widest shadow-xl mt-4 hover:scale-[1.02] active:scale-[0.98] transition-transform"
             >
-              {loading ? <Loader2 className="animate-spin" /> : (isRegisterMode ? 'CREAR ORGANIZACIÓN' : 'INICIAR SESIÓN')}
+              {loading ? <Loader2 className="animate-spin" /> : 'INICIAR SESIÓN'}
             </Button>
           </form>
 
           <div className="mt-6 pt-6 border-t border-slate-100 dark:border-white/5 text-center">
-            <button
-              onClick={() => setIsRegisterMode(!isRegisterMode)}
+            <a
+              href="mailto:ventas@teikonpos.com?subject=Interés en TeikonPOS&body=Hola, estoy interesado en adquirir una licencia."
               className="text-xs font-bold text-brand-muted hover:text-brand-purple transition-colors flex items-center gap-2 mx-auto"
             >
-              {isRegisterMode ? '¿Ya tienes una cuenta? Ingresa aquí' : '¿Nueva organización? Regístrate'}
+              ¿Quieres tu propia tienda? Contáctanos
               <ArrowRight size={14} />
-            </button>
+            </a>
           </div>
         </div>
 
