@@ -1,5 +1,5 @@
 
-import { sequelize, User, Store, Product, Sale, Expense, StockMovement, Organization } from './models.js';
+import { sequelize, User, Store, Product, Sale, Expense, StockMovement, Organization, Client } from './models.js';
 import bcrypt from 'bcrypt';
 
 const resetDatabase = async () => {
@@ -12,12 +12,6 @@ const resetDatabase = async () => {
 
         // Create Super Admin
         const hashedPassword = await bcrypt.hash('admin123', 10);
-
-        // We might not need an organization for Super Admin if they are system-wide, 
-        // but models might require loose coupling.
-        // Let's create a "System" organization just in case, or allow nulls.
-        // Checking User model... it has storeId which can be null?
-        // User model definition: storeId: { type: DataTypes.UUID, allowNull: true }
 
         await User.create({
             username: 'devalex',

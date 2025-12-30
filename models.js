@@ -210,7 +210,12 @@ const Product = sequelize.define('Product', {
     }
 }, {
     tableName: 'products',
-    timestamps: true
+    timestamps: true,
+    indexes: [
+        {
+            fields: ['storeId']
+        }
+    ]
 });
 
 // ==========================================
@@ -284,8 +289,64 @@ const Sale = sequelize.define('Sale', {
 }, {
     tableName: 'sales',
     timestamps: true,
-    createdAt: 'created_at',
-    updatedAt: false
+    updatedAt: false,
+    indexes: [
+        {
+            fields: ['storeId']
+        }
+    ]
+});
+
+// ==========================================
+// MODELO: Client (Cliente Final)
+// ==========================================
+const Client = sequelize.define('Client', {
+    id: {
+        type: DataTypes.UUID,
+        defaultValue: DataTypes.UUIDV4,
+        primaryKey: true
+    },
+    storeId: {
+        type: DataTypes.UUID,
+        allowNull: false,
+        references: {
+            model: 'stores',
+            key: 'id'
+        },
+        field: 'store_id'
+    },
+    nombre: {
+        type: DataTypes.STRING,
+        allowNull: false
+    },
+    email: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
+    telefono: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
+    direccion: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
+    rfc: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
+    activo: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: true
+    }
+}, {
+    tableName: 'clients',
+    timestamps: true,
+    indexes: [
+        {
+            fields: ['storeId']
+        }
+    ]
 });
 
 // ==========================================
@@ -338,8 +399,12 @@ const Expense = sequelize.define('Expense', {
 }, {
     tableName: 'expenses',
     timestamps: true,
-    createdAt: 'created_at',
-    updatedAt: 'updated_at'
+    updatedAt: 'updated_at',
+    indexes: [
+        {
+            fields: ['storeId']
+        }
+    ]
 });
 
 // ==========================================
@@ -404,8 +469,12 @@ const StockMovement = sequelize.define('StockMovement', {
 }, {
     tableName: 'stock_movements',
     timestamps: true,
-    createdAt: 'created_at',
-    updatedAt: false
+    updatedAt: false,
+    indexes: [
+        {
+            fields: ['storeId']
+        }
+    ]
 });
 
 // ==========================================
@@ -487,8 +556,12 @@ const CashShift = sequelize.define('CashShift', {
 }, {
     tableName: 'cash_shifts',
     timestamps: true,
-    createdAt: 'created_at',
-    updatedAt: 'updated_at'
+    updatedAt: 'updated_at',
+    indexes: [
+        {
+            fields: ['storeId']
+        }
+    ]
 });
 
 // ==========================================
@@ -500,31 +573,35 @@ Organization.hasMany(Store, { foreignKey: 'organizationId', as: 'stores' });
 Store.belongsTo(Organization, { foreignKey: 'organizationId', as: 'organization' });
 
 // Store -> Product (1:N)
-Store.hasMany(Product, { foreignKey: 'storeId', as: 'products' });
+Store.hasMany(Product, { foreignKey: 'storeId', as: 'products', onDelete: 'CASCADE' });
 Product.belongsTo(Store, { foreignKey: 'storeId', as: 'store' });
 
 // Store -> Sale (1:N)
-Store.hasMany(Sale, { foreignKey: 'storeId', as: 'sales' });
+Store.hasMany(Sale, { foreignKey: 'storeId', as: 'sales', onDelete: 'CASCADE' });
 Sale.belongsTo(Store, { foreignKey: 'storeId', as: 'store' });
 
 // Store -> Expense (1:N)
-Store.hasMany(Expense, { foreignKey: 'storeId', as: 'expenses' });
+Store.hasMany(Expense, { foreignKey: 'storeId', as: 'expenses', onDelete: 'CASCADE' });
 Expense.belongsTo(Store, { foreignKey: 'storeId', as: 'store' });
 
 // Store -> CashShift (1:N)
-Store.hasMany(CashShift, { foreignKey: 'storeId', as: 'cashShifts' });
+Store.hasMany(CashShift, { foreignKey: 'storeId', as: 'cashShifts', onDelete: 'CASCADE' });
 CashShift.belongsTo(Store, { foreignKey: 'storeId', as: 'store' });
 
 // Store -> User (1:N)
-Store.hasMany(User, { foreignKey: 'storeId', as: 'users' });
+Store.hasMany(User, { foreignKey: 'storeId', as: 'users', onDelete: 'CASCADE' });
 User.belongsTo(Store, { foreignKey: 'storeId', as: 'store' });
 
+// Store -> Client (1:N)
+Store.hasMany(Client, { foreignKey: 'storeId', as: 'clients', onDelete: 'CASCADE' });
+Client.belongsTo(Store, { foreignKey: 'storeId', as: 'store' });
+
 // Product -> StockMovement (1:N)
-Product.hasMany(StockMovement, { foreignKey: 'productId', as: 'movements' });
+Product.hasMany(StockMovement, { foreignKey: 'productId', as: 'movements', onDelete: 'CASCADE' });
 StockMovement.belongsTo(Product, { foreignKey: 'productId', as: 'product' });
 
 // Store -> StockMovement (1:N)
-Store.hasMany(StockMovement, { foreignKey: 'storeId', as: 'stockMovements' });
+Store.hasMany(StockMovement, { foreignKey: 'storeId', as: 'stockMovements', onDelete: 'CASCADE' });
 StockMovement.belongsTo(Store, { foreignKey: 'storeId', as: 'store' });
 
 // ==========================================
@@ -539,5 +616,7 @@ export {
     Sale,
     Expense,
     StockMovement,
-    CashShift
+    StockMovement,
+    CashShift,
+    Client
 };
