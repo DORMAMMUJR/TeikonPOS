@@ -1835,7 +1835,10 @@ const startServer = async () => {
             // Crear usuario SuperAdmin por defecto si no existe
             // await createSuperAdmin(); // COMMENTED: Function not defined, admin may already exist in production
         }).catch(err => {
-            console.error('❌ Error al sincronizar BD:', err);
+            console.error("❌ ERROR CRÍTICO AL SINCRONIZAR BD:");
+            console.error(err); // Imprime el objeto completo
+            if (err.parent) console.error("🔍 Detalle SQL:", err.parent); // Si es Sequelize/Postgres
+            if (err.original) console.error("🔍 Original:", err.original);
         });
 
         // Crear usuario SuperAdmin por defecto si no existe
