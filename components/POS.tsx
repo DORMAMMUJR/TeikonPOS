@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 
 const POS: React.FC = () => {
-  const { products, processSaleAndContributeToGoal, currentUser } = useStore();
+  const { products, processSaleAndContributeToGoal, currentUser, syncData } = useStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [cart, setCart] = useState<CartItemState[]>([]);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
@@ -31,6 +31,11 @@ const POS: React.FC = () => {
   const [isCashCloseOpen, setIsCashCloseOpen] = useState(false);
   const [isSupportOpen, setIsSupportOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Auto-Refresh Logic: Sync data whenever POS mounts (tab switch)
+  useEffect(() => {
+    syncData();
+  }, [syncData]);
 
   // Auto-focus Logic con detección de móvil para no abrir teclado virtual
   useEffect(() => {

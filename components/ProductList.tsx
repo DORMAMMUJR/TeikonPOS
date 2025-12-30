@@ -4,7 +4,7 @@ import { useStore } from '../context/StoreContext';
 import { Product } from '../types';
 import Button from './Button';
 import Modal from './Modal';
-import { Edit, Plus, Search, Image as ImageIcon, Upload, TrendingUp, DollarSign, PieChart, AlertTriangle } from 'lucide-react';
+import { Edit, Plus, Search, Image as ImageIcon, Upload, TrendingUp, DollarSign, PieChart, AlertTriangle, Trash2 } from 'lucide-react';
 
 interface ProductListProps {
   products?: Product[];
@@ -12,10 +12,17 @@ interface ProductListProps {
 }
 
 const ProductList: React.FC<ProductListProps> = ({ products: propProducts, targetStoreId }) => {
-  const { products: contextProducts, addProduct, updateProduct, calculateTotalInventoryValue } = useStore();
+  const { products: contextProducts, addProduct, updateProduct, deleteProduct, calculateTotalInventoryValue } = useStore();
 
   // Use props if provided (Drill-Down mode), otherwise use context (Context mode)
   const products = propProducts || contextProducts;
+
+  const handleDelete = async (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    if (confirm('¿Estás seguro de que deseas eliminar este producto?')) {
+      await deleteProduct(id);
+    }
+  };
 
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -100,7 +107,7 @@ const ProductList: React.FC<ProductListProps> = ({ products: propProducts, targe
     setIsModalOpen(true);
   };
 
-  const filtered = products.filter(p =>
+  const filtered = products.filter(p => p.isActive !== false).filter(p =>
     (p.name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
     (p.sku?.toLowerCase() || '').includes(searchTerm.toLowerCase())
   );
@@ -193,8 +200,13 @@ const ProductList: React.FC<ProductListProps> = ({ products: propProducts, targe
                 <span className="text-[10px] font-bold text-emerald-500 flex items-center gap-1">
                   <TrendingUp size={12} /> MG: {margin.toFixed(1)}%
                 </span>
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1">
-                  <Edit size={12} /> Editar
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                  <button onClick={(e) => handleDelete(e, p.id)} className="flex items-center gap-1 text-red-500 hover:text-red-600 transition-colors">
+                    <Trash2 size={12} /> Eliminar
+                  </button>
+                  <span className="flex items-center gap-1 cursor-pointer hover:text-orange-500 transition-colors" onClick={() => openEdit(p)}>
+                    <Edit size={12} /> Editar
+                  </span>
                 </span>
               </div>
             </div>
@@ -249,7 +261,10 @@ const ProductList: React.FC<ProductListProps> = ({ products: propProducts, targe
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-center">
-                      <button onClick={() => openEdit(p)} className="p-2 text-orange-500 hover:bg-orange-500/10 rounded-lg transition-all active:scale-90">
+                      <button onClick={(e) => handleDelete(e, p.id)} className="p-2 text-red-500 hover:bg-red-500/10 rounded-lg transition-all active:scale-90 mr-1" title="Eliminar">
+                        <Trash2 size={18} />
+                      </button>
+                      <button onClick={() => openEdit(p)} className="p-2 text-orange-500 hover:bg-orange-500/10 rounded-lg transition-all active:scale-90" title="Editar">
                         <Edit size={18} />
                       </button>
                     </td>

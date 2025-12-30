@@ -20,6 +20,7 @@ interface StoreContextType {
   closeSession: (endBalance: number) => Promise<void>;
   addProduct: (product: Omit<Product, 'ownerId' | 'id'>, activeStoreId?: string) => Promise<void>;
   updateProduct: (product: Product) => Promise<void>;
+  deleteProduct: (id: string) => Promise<void>;
   processSaleAndContributeToGoal: (cartItems: CartItem[], paymentMethod: 'CASH' | 'CARD' | 'TRANSFER') => Promise<SaleResult>;
   cancelSale: (saleId: string) => Promise<void>;
   updateSettings: (settings: FinancialSettings) => void;
@@ -319,6 +320,20 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     }
   };
 
+  const deleteProduct = async (id: string) => {
+    try {
+      if (isOnline) {
+        await productsAPI.delete(id);
+        setProducts(prev => prev.filter(p => p.id !== id));
+      } else {
+        alert("No se puede eliminar productos en modo offline");
+      }
+    } catch (e) {
+      console.error("Error deleting product:", e);
+      alert("Error al eliminar producto");
+    }
+  };
+
   const cancelSale = async (saleId: string) => {
     try {
       if (isOnline) {
@@ -375,7 +390,7 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   return (
     <StoreContext.Provider value={{
       products, sales, allSessions, settings, currentUser, currentUserRole: currentUser?.role, currentSession, isOnline,
-      login, logout, updateCurrentUser, openSession, closeSession, addProduct, updateProduct, processSaleAndContributeToGoal, cancelSale, updateSettings, getDashboardStats, calculateTotalInventoryValue, syncData
+      login, logout, updateCurrentUser, openSession, closeSession, addProduct, updateProduct, deleteProduct, processSaleAndContributeToGoal, cancelSale, updateSettings, getDashboardStats, calculateTotalInventoryValue, syncData
     }}>
       {children}
     </StoreContext.Provider>
