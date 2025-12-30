@@ -560,6 +560,7 @@ app.get('/api/dashboard/summary', authenticateToken, async (req, res) => {
             investment,
             netProfit,
             dailyTarget,
+            dailyOperationalCost: dailyTarget, // Map dailyTarget to dailyOperationalCost for frontend compatibility
             period
         });
 
