@@ -279,7 +279,35 @@ app.post('/api/productos', authenticateToken, async (req, res) => {
         console.log('👤 Usuario:', req.usuario, 'Role:', req.role);
         console.log('📦 Body:', JSON.stringify(req.body, null, 2));
 
-        const { sku, nombre, categoria, costPrice, salePrice, stock, minStock, taxRate, imagen } = req.body;
+        // DESESTRUCTURACIÓN CON SANITIZACIÓN ROBUSTA E INYECCIÓN DE DEFAULTS
+        let {
+            sku,
+            nombre,
+            categoria,
+            costPrice,
+            salePrice,
+            stock,
+            minStock,
+            taxRate,
+            imagen,
+            isActive,
+            activo
+        } = req.body;
+
+        // 1. INYECCIÓN DE DEFAULTS Y CONVERSIÓN DE TIPOS
+        // isActive: Si no viene, forzar a true. (Mapear isActive o activo)
+        const finalActivo = (isActive !== undefined) ? isActive : (activo !== undefined ? activo : true);
+
+        // stock: Si viene vacío o null, forzar a 0.
+        const finalStock = (stock === undefined || stock === null || stock === '') ? 0 : Number(stock);
+
+        // minStock (alertLowStock): Si viene vacío, forzar a 5.
+        const finalMinStock = (minStock === undefined || minStock === null || minStock === '') ? 5 : Number(minStock);
+
+        // Conversión de Precios: Asegurar números (Float)
+        const finalCostPrice = Number(costPrice);
+        const finalSalePrice = Number(salePrice);
+        const finalTaxRate = (taxRate === undefined || taxRate === null || taxRate === '') ? 0 : Number(taxRate);
 
         // Validar solo campos críticos (categoría es opcional)
         if (!sku || !nombre || costPrice === undefined || salePrice === undefined) {
@@ -331,26 +359,27 @@ app.post('/api/productos', authenticateToken, async (req, res) => {
             sku,
             nombre,
             categoria: finalCategoria,
-            costPrice,
-            salePrice,
-            stock: stock || 0,
-            minStock: minStock || 0,
-            taxRate: taxRate || 0,
-            imagen: imagen || null  // Asegurar que imagen sea null si no existe
+            costPrice: finalCostPrice,
+            salePrice: finalSalePrice,
+            stock: finalStock,
+            minStock: finalMinStock,
+            taxRate: finalTaxRate,
+            activo: finalActivo,
+            imagen: imagen || null
         });
 
         console.log('✅ Producto creado exitosamente:', product.id);
 
         // Crear movimiento inicial de stock si hay stock
-        if (stock > 0) {
+        if (finalStock > 0) {
             try {
                 await StockMovement.create({
                     productId: product.id,
                     storeId: targetStoreId,
                     tipo: 'PURCHASE',
-                    cantidad: stock,
+                    cantidad: finalStock,
                     stockAnterior: 0,
-                    stockNuevo: stock,
+                    stockNuevo: finalStock,
                     motivo: 'Stock inicial',
                     registradoPor: req.usuario
                 });
