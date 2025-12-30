@@ -609,6 +609,42 @@ Store.hasMany(StockMovement, { foreignKey: 'storeId', as: 'stockMovements', onDe
 StockMovement.belongsTo(Store, { foreignKey: 'storeId', as: 'store' });
 
 // ==========================================
+// MODELO: StoreConfig (Configuración de Tienda)
+// ==========================================
+const StoreConfig = sequelize.define('StoreConfig', {
+    id: {
+        type: DataTypes.UUID,
+        defaultValue: DataTypes.UUIDV4,
+        primaryKey: true
+    },
+    storeId: {
+        type: DataTypes.UUID,
+        allowNull: false,
+        unique: true,
+        references: {
+            model: 'Stores',
+            key: 'id'
+        }
+    },
+    breakEvenGoal: {
+        type: DataTypes.DECIMAL(10, 2),
+        defaultValue: 0,
+        comment: 'Meta de venta mensual o punto de equilibrio'
+    },
+    theme: {
+        type: DataTypes.STRING,
+        defaultValue: 'light'
+    }
+}, {
+    tableName: 'store_configs',
+    timestamps: true
+});
+
+// Store -> StoreConfig (1:1)
+Store.hasOne(StoreConfig, { foreignKey: 'storeId', as: 'config', onDelete: 'CASCADE' });
+StoreConfig.belongsTo(Store, { foreignKey: 'storeId', as: 'store' });
+
+// ==========================================
 // EXPORTAR
 // ==========================================
 export {
@@ -620,6 +656,8 @@ export {
     Sale,
     Expense,
     StockMovement,
+    StockMovement,
     CashShift,
-    Client
+    Client,
+    StoreConfig
 };

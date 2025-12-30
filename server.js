@@ -13,13 +13,15 @@ dotenv.config();
 import {
     sequelize,
     Organization,
-    Store,
-    User,
-    Product,
     Sale,
     Expense,
+    Organization,
+    Store,
+    User,
     StockMovement,
-    CashShift
+    CashShift,
+    Client,
+    StoreConfig
 } from './models.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -181,6 +183,13 @@ app.post('/api/stores/new', authenticateToken, async (req, res) => {
             password: hashedPassword,
             direccion,
             telefono
+        });
+
+        // INICIALIZACIÓN AUTOMÁTICA (Plug & Play)
+        await StoreConfig.create({
+            storeId: store.id,
+            breakEvenGoal: 0.00, // Inicializar meta en 0
+            theme: 'light'
         });
 
         res.status(201).json({
@@ -1763,8 +1772,15 @@ const startServer = async () => {
         console.log('✅ Conexión a PostgreSQL exitosa');
 
         // Sincronizar modelos (crear tablas)
-        await sequelize.sync({ alter: true });
-        console.log('✅ Modelos sincronizados');
+        // Sincronizar Base de Datos (ALTER para actualizar schema sin borrar data)
+        sequelize.sync({ alter: true }).then(() => {
+            console.log('✅ Base de datos sincronizada (Schema Updated)');
+
+            // Crear usuario SuperAdmin por defecto si no existe
+            createSuperAdmin();
+        }).catch(err => {
+            console.error('❌ Error al sincronizar BD:', err);
+        });
 
         // Iniciar servidor
         app.listen(PORT, '0.0.0.0', () => {
