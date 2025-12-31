@@ -16,6 +16,52 @@ export const setAuthToken = (token: string): void => {
 // Clear auth token
 export const clearAuthToken = (): void => {
     localStorage.removeItem('token');
+    // Also clear any sessionStorage to ensure complete logout
+    sessionStorage.clear();
+};
+
+// Decode JWT token (simple base64 decode - no verification needed on client)
+export const decodeToken = (token: string): any | null => {
+    try {
+        const base64Url = token.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(
+            atob(base64)
+                .split('')
+                .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+                .join('')
+        );
+        return JSON.parse(jsonPayload);
+    } catch (error) {
+        console.error('Error decoding token:', error);
+        return null;
+    }
+};
+
+// Get current user from stored token
+export const getCurrentUserFromToken = (): any | null => {
+    const token = getAuthToken();
+    if (!token) return null;
+
+    const decoded = decodeToken(token);
+    if (!decoded) return null;
+
+    // Check if token is expired
+    if (decoded.exp && decoded.exp * 1000 < Date.now()) {
+        clearAuthToken();
+        return null;
+    }
+
+    // Return user object from token payload
+    return {
+        id: decoded.userId,
+        username: decoded.username,
+        role: decoded.role,
+        storeId: decoded.storeId,
+        store_id: decoded.storeId, // Alias for compatibility
+        storeName: decoded.storeName || 'Store',
+        organizationId: decoded.organizationId
+    };
 };
 
 // Get headers with auth

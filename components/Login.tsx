@@ -34,8 +34,8 @@ const Login: React.FC = () => {
       // LOGIN FLOW
       const response = await authAPI.login(username, password);
 
-      // Update context
-      login(response.user, response.token);
+      // Update context with token only
+      login(response.token);
 
       // ---------------------------------------------------------
       // LOGIC FOR SUPER ADMIN REDIRECTION
@@ -56,8 +56,10 @@ const Login: React.FC = () => {
   };
 
   const handleDevSuccess = () => {
-    // Dev backdoor for testing - kept for compatibility
-    login({ id: 'dev-root', username: 'dev_engineer', role: 'SUPER_ADMIN', department: 'ENGINEERING' } as any, 'dev-token');
+    // Dev backdoor - create a mock JWT token for testing
+    // In production, this should be removed or properly secured
+    const mockToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJkZXYtcm9vdCIsInVzZXJuYW1lIjoiZGV2X2VuZ2luZWVyIiwicm9sZSI6IlNVUEVSX0FETUlOIiwic3RvcmVJZCI6bnVsbCwiZXhwIjo5OTk5OTk5OTk5fQ.mock';
+    login(mockToken);
     setShowDevModal(false);
     navigate('/admin/dashboard');
   };

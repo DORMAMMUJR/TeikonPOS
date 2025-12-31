@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { Product, Sale, FinancialSettings, Role, User, CashSession, CartItem, SaleResult, SaleDetail, PendingSale } from '../types';
-import { authAPI, productsAPI, salesAPI, expensesAPI, dashboardAPI, setAuthToken, clearAuthToken, getAuthToken } from '../utils/api';
+import { authAPI, productsAPI, salesAPI, expensesAPI, dashboardAPI, setAuthToken, clearAuthToken, getAuthToken, getCurrentUserFromToken } from '../utils/api';
 import { addPendingSale, getPendingSales, removePendingSale, clearPendingSales } from '../utils/offlineSync';
 
 interface StoreContextType {
@@ -13,7 +13,7 @@ interface StoreContextType {
   currentSession: CashSession | null;
   isOnline: boolean;
 
-  login: (user: User, token: string) => void;
+  login: (token: string) => void;
   logout: () => void;
   updateCurrentUser: (userData: Partial<User>) => void;
   openSession: (startBalance: number) => Promise<void>;
@@ -32,10 +32,9 @@ interface StoreContextType {
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
 
 export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [currentUser, setCurrentUser] = useState<User | null>(() => {
-    const session = sessionStorage.getItem('user_session');
-    return session ? JSON.parse(session) : null;
-  });
+  // Derive currentUser from JWT token instead of storing in state
+  // This ensures each tab has its own isolated session
+  const [currentUser, setCurrentUser] = useState<User | null>(() => getCurrentUserFromToken());
 
   const [products, setProducts] = useState<Product[]>([]);
   const [sales, setSales] = useState<Sale[]>([]);
@@ -54,6 +53,16 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       window.removeEventListener('online', handleStatusChange);
       window.removeEventListener('offline', handleStatusChange);
     };
+  }, []);
+
+  // Refresh currentUser from token periodically to detect token changes/expiration
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const user = getCurrentUserFromToken();
+      setCurrentUser(user);
+    }, 1000); // Check every second
+
+    return () => clearInterval(interval);
   }, []);
 
   // Initial Data Fetch
@@ -98,25 +107,27 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     syncData();
   }, [syncData]);
 
-  const login = (user: User, token: string) => {
-    setCurrentUser(user);
+  const login = (token: string) => {
     setAuthToken(token);
-    sessionStorage.setItem('user_session', JSON.stringify(user));
+    const user = getCurrentUserFromToken();
+    setCurrentUser(user);
   };
 
   const logout = () => {
+    clearAuthToken(); // This now also clears sessionStorage
     setCurrentUser(null);
-    clearAuthToken();
-    sessionStorage.removeItem('user_session');
     setProducts([]);
     setSales([]);
   };
 
   const updateCurrentUser = (userData: Partial<User>) => {
+    // Note: This function is now limited since we derive user from token
+    // If you need to update user data, you should update it on the server
+    // and get a new token, or store additional data separately
+    console.warn('updateCurrentUser is deprecated - user data should come from token only');
     if (!currentUser) return;
     const updatedUser = { ...currentUser, ...userData };
     setCurrentUser(updatedUser);
-    sessionStorage.setItem('user_session', JSON.stringify(updatedUser));
   };
 
   const openSession = async (startBalance: number) => {
