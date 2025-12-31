@@ -63,6 +63,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
   const [storeToReset, setStoreToReset] = useState<StoreData | null>(null);
   const [resetPasswordValue, setResetPasswordValue] = useState('');
 
+  // Delete Store State
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [storeToDelete, setStoreToDelete] = useState<StoreData | null>(null);
+  const [deletePasswordValue, setDeletePasswordValue] = useState('');
+
   // Theme (Placeholder)
   const isDarkMode = false;
 
@@ -313,16 +318,14 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
             <tr>
               <th className="px-6 py-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-500">Tienda</th>
               <th className="px-6 py-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-500">Propietario</th>
-              <th className="px-6 py-4 text-center text-[10px] font-black uppercase tracking-widest text-slate-500">Plan</th>
-              <th className="px-6 py-4 text-center text-[10px] font-black uppercase tracking-widest text-slate-500">Estado</th>
               <th className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest text-slate-500">Acciones</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
             {isLoading ? (
-              <tr><td colSpan={5} className="p-8 text-center text-slate-400 text-xs font-bold">Cargando datos del ecosistema...</td></tr>
+              <tr><td colSpan={3} className="p-8 text-center text-slate-400 text-xs font-bold">Cargando datos del ecosistema...</td></tr>
             ) : filteredStores.length === 0 ? (
-              <tr><td colSpan={5} className="p-8 text-center text-slate-400 text-xs font-bold">No se encontraron tiendas registradas.</td></tr>
+              <tr><td colSpan={3} className="p-8 text-center text-slate-400 text-xs font-bold">No se encontraron tiendas registradas.</td></tr>
             ) : (
               filteredStores.map(store => (
                 <tr key={store.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors group cursor-pointer" onClick={() => setSelectedStore(store)}>
@@ -345,22 +348,12 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                       <span className="text-xs font-bold text-slate-600 dark:text-slate-300">{store.owner}</span>
                     </div>
                   </td>
-                  <td className="px-6 py-4 text-center">
-                    <span className="px-3 py-1 rounded-full bg-purple-100 text-purple-600 text-[10px] font-black uppercase tracking-wider border border-purple-200">
-                      {store.plan}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border ${store.status === 'active' ? 'bg-emerald-100 text-emerald-600 border-emerald-200' : 'bg-red-100 text-red-600 border-red-200'}`}>
-                      {store.status === 'active' ? 'OPERATIVO' : 'SUSPENDIDO'}
-                    </span>
-                  </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex items-center justify-end gap-2" onClick={e => e.stopPropagation()}>
                       <Button
                         variant="secondary"
                         size="sm"
-                        className="bg-red-50 text-red-500 hover:bg-red-100 border-red-100"
+                        className="bg-amber-50 text-amber-600 hover:bg-amber-100 border-amber-100"
                         onClick={(e) => {
                           e.stopPropagation();
                           setStoreToReset(store);
@@ -368,6 +361,18 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                         }}
                       >
                         <Zap size={14} className="mr-1" /> RESET
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        className="bg-red-50 text-red-600 hover:bg-red-100 border-red-100"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setStoreToDelete(store);
+                          setIsDeleteModalOpen(true);
+                        }}
+                      >
+                        <X size={14} className="mr-1" /> ELIMINAR
                       </Button>
                       <Button variant="secondary" size="sm" className="group-hover:bg-white group-hover:shadow-sm" onClick={() => setSelectedStore(store)}>
                         GESTIONAR <ChevronLeft className="rotate-180 ml-1" size={12} />
@@ -505,16 +510,16 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                     </td>
                     <td className="px-6 py-4 text-center">
                       <span className={`px-2 py-1 rounded-full text-[10px] font-black uppercase ${sale.paymentMethod === 'CASH' ? 'bg-green-100 text-green-600' :
-                          sale.paymentMethod === 'CARD' ? 'bg-blue-100 text-blue-600' :
-                            'bg-purple-100 text-purple-600'
+                        sale.paymentMethod === 'CARD' ? 'bg-blue-100 text-blue-600' :
+                          'bg-purple-100 text-purple-600'
                         }`}>
                         {sale.paymentMethod}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-center">
                       <span className={`px-2 py-1 rounded-full text-[10px] font-black uppercase border ${sale.status === 'ACTIVE' ? 'bg-emerald-100 text-emerald-600 border-emerald-200' :
-                          sale.status === 'CANCELLED' ? 'bg-red-100 text-red-600 border-red-200' :
-                            'bg-amber-100 text-amber-600 border-amber-200'
+                        sale.status === 'CANCELLED' ? 'bg-red-100 text-red-600 border-red-200' :
+                          'bg-amber-100 text-amber-600 border-amber-200'
                         }`}>
                         {sale.status}
                       </span>
@@ -815,6 +820,66 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                   }}
                 >
                   CONFIRMAR CAMBIO
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* DELETE STORE MODAL */}
+      {isDeleteModalOpen && storeToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-sm p-8 shadow-2xl scale-100 animate-in zoom-in-95 duration-200 border-2 border-red-500">
+            <div className="text-center mb-6">
+              <div className="w-12 h-12 bg-red-100 dark:bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-4 text-red-500">
+                <AlertCircle size={28} />
+              </div>
+              <h3 className="text-xl font-black text-slate-900 dark:text-white">Eliminar Tienda</h3>
+              <p className="text-sm font-bold text-slate-500 mt-1 px-4">
+                Estás a punto de eliminar <span className="text-red-600">{storeToDelete.name}</span>
+              </p>
+              <p className="text-xs font-bold text-red-500 mt-2">
+                ⚠️ Esta acción NO se puede deshacer
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <div className="space-y-1">
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Tu Contraseña</label>
+                <input
+                  type="password"
+                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-red-500 outline-none transition-all"
+                  placeholder="Ingrese contraseña"
+                  value={deletePasswordValue}
+                  onChange={(e) => setDeletePasswordValue(e.target.value)}
+                />
+              </div>
+
+              <div className="flex gap-2">
+                <Button variant="secondary" fullWidth onClick={() => { setIsDeleteModalOpen(false); setDeletePasswordValue(''); setStoreToDelete(null); }} className="h-12">
+                  CANCELAR
+                </Button>
+                <Button
+                  type="button"
+                  variant="primary"
+                  fullWidth
+                  className="bg-red-500 hover:bg-red-600 text-white h-12 shadow-lg shadow-red-500/20"
+                  onClick={async () => {
+                    if (!deletePasswordValue) return alert('Ingrese una contraseña');
+                    try {
+                      await storesAPI.delete(storeToDelete.id, deletePasswordValue);
+                      alert('✅ Tienda eliminada con éxito');
+                      setIsDeleteModalOpen(false);
+                      setDeletePasswordValue('');
+                      setStoreToDelete(null);
+                      fetchStores();
+                    } catch (e: any) {
+                      alert('❌ Error: ' + e.message);
+                    }
+                  }}
+                >
+                  CONFIRMAR ELIMINACIÓN
                 </Button>
               </div>
             </div>
