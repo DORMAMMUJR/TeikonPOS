@@ -8,9 +8,12 @@ import {
     Settings,
     LogOut,
     Target,
-    DollarSign
+    DollarSign,
+    Sun,
+    Moon
 } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
+import { useTheme } from '../context/ThemeContext';
 
 interface SidebarProps {
     activeTab: string;
@@ -28,6 +31,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     onOpenSupport
 }) => {
     const { logout, currentUser } = useStore();
+    const { theme, toggleTheme } = useTheme();
     const [showConfigMenu, setShowConfigMenu] = useState(false);
 
     const isActive = (tab: string) =>
@@ -85,8 +89,8 @@ const Sidebar: React.FC<SidebarProps> = ({
                     <button
                         onClick={() => setShowConfigMenu(!showConfigMenu)}
                         className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl transition-all ${showConfigMenu
-                                ? 'bg-gray-800 text-white'
-                                : 'text-gray-400 hover:bg-gray-800 hover:text-white'
+                            ? 'bg-gray-800 text-white'
+                            : 'text-gray-400 hover:bg-gray-800 hover:text-white'
                             }`}
                     >
                         <Settings className="text-xl" size={20} />
@@ -98,6 +102,16 @@ const Sidebar: React.FC<SidebarProps> = ({
                         <div className="absolute bottom-full left-0 w-full mb-2 bg-gray-800 rounded-xl shadow-2xl border border-gray-700 overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-200 z-50">
                             <button
                                 onClick={() => {
+                                    onOpenCashClose();
+                                    setShowConfigMenu(false);
+                                }}
+                                className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:bg-gray-700 hover:text-white text-left transition-colors"
+                            >
+                                <DollarSign className="text-green-400" size={16} />
+                                <span>Corte de Caja</span>
+                            </button>
+                            <button
+                                onClick={() => {
                                     onOpenGoalModal();
                                     setShowConfigMenu(false);
                                 }}
@@ -106,28 +120,30 @@ const Sidebar: React.FC<SidebarProps> = ({
                                 <Target className="text-blue-400" size={16} />
                                 <span>Ajustar Meta</span>
                             </button>
+
+                            {/* Theme Toggle */}
                             <button
                                 onClick={() => {
-                                    onOpenCashClose();
-                                    setShowConfigMenu(false);
+                                    toggleTheme();
+                                    // Don't close menu to allow seeing the change
                                 }}
-                                className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:bg-gray-700 hover:text-white text-left border-t border-gray-700 transition-colors"
+                                className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:bg-gray-700 hover:text-white text-left transition-colors"
                             >
-                                <DollarSign className="text-green-400" size={16} />
-                                <span>Corte de Caja</span>
+                                {theme === 'dark' ? <Sun className="text-yellow-400" size={16} /> : <Moon className="text-purple-400" size={16} />}
+                                <span>Tema: {theme === 'dark' ? 'Claro' : 'Oscuro'}</span>
+                            </button>
+
+                            {/* Logout */}
+                            <button
+                                onClick={logout}
+                                className="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-400 hover:bg-red-500/10 hover:text-red-300 text-left border-t border-gray-700 transition-colors"
+                            >
+                                <LogOut size={16} />
+                                <span>Cerrar Sesión</span>
                             </button>
                         </div>
                     )}
                 </div>
-
-                {/* Botón Salir */}
-                <button
-                    onClick={logout}
-                    className="w-full flex items-center gap-4 px-4 py-3 rounded-xl text-red-500 hover:bg-red-500/10 transition-all mt-4"
-                >
-                    <LogOut className="text-xl" size={20} />
-                    <span className="font-medium">Salir</span>
-                </button>
             </div>
 
         </div>

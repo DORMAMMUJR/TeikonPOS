@@ -11,11 +11,22 @@ import TeikonWordmark from './TeikonWordmark';
 const SalesHistory: React.FC = () => {
   const { sales, cancelSale, currentUserRole, currentUser } = useStore();
   const [searchTerm, setSearchTerm] = useState('');
+  const [showTodayOnly, setShowTodayOnly] = useState(true);
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
   const [copied, setCopied] = useState(false);
 
   const filteredSales = sales
-    .filter(s => s.id.toLowerCase().includes(searchTerm.toLowerCase()) || s.date.includes(searchTerm))
+    .filter(s => {
+      const matchesSearch = s.id.toLowerCase().includes(searchTerm.toLowerCase()) || s.date.includes(searchTerm);
+      if (!matchesSearch) return false;
+
+      if (showTodayOnly) {
+        const saleDate = new Date(s.date).toLocaleDateString();
+        const today = new Date().toLocaleDateString();
+        return saleDate === today;
+      }
+      return true;
+    })
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   const handleCancel = (saleId: string) => {
@@ -71,18 +82,31 @@ const SalesHistory: React.FC = () => {
           </div>
           <div>
             <h3 className="text-xl font-bold text-slate-900 dark:text-white">Bitácora Global</h3>
-            <p className="text-[10px] text-brand-muted uppercase tracking-widest font-black">Registro cronológico de transacciones</p>
+            <p className="text-[10px] text-brand-muted uppercase tracking-widest font-black">
+              {showTodayOnly ? 'Transacciones de HOY' : 'Historial Completo'}
+            </p>
           </div>
         </div>
-        <div className="relative w-full sm:w-80">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-pink h-4 w-4" />
-          <input
-            type="text"
-            placeholder="Buscar por ID o Fecha..."
-            className="w-full pl-12 pr-6 py-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl text-slate-900 dark:text-white focus:border-brand-pink focus:outline-none text-sm font-bold shadow-sm"
-            value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
-          />
+
+        <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto items-center">
+          <Button
+            variant={showTodayOnly ? "primary" : "secondary"}
+            onClick={() => setShowTodayOnly(!showTodayOnly)}
+            className="text-xs h-12 whitespace-nowrap px-6"
+          >
+            {showTodayOnly ? 'VER TODO EL HISTORIAL' : 'VER SOLO HOY'}
+          </Button>
+
+          <div className="relative w-full sm:w-80">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-pink h-4 w-4" />
+            <input
+              type="text"
+              placeholder="Buscar por ID o Fecha..."
+              className="w-full pl-12 pr-6 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl text-slate-900 dark:text-white focus:border-brand-pink focus:outline-none text-sm font-bold shadow-sm"
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+            />
+          </div>
         </div>
       </div>
 
@@ -148,6 +172,11 @@ const SalesHistory: React.FC = () => {
               ))}
             </tbody>
           </table>
+          {filteredSales.length === 0 && (
+            <div className="p-8 text-center text-brand-muted font-bold text-sm">
+              No hay transacciones {showTodayOnly ? 'para el día de hoy' : 'que coincidan con la búsqueda'}.
+            </div>
+          )}
         </div>
       </div>
 
