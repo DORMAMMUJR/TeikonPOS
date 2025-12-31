@@ -23,6 +23,13 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => 
   const [isCashCloseOpen, setIsCashCloseOpen] = useState(false);
   const [stats, setStats] = useState<any>({ totalProfit: 0 });
 
+  // Update document title dynamically
+  useEffect(() => {
+    const storeName = currentUser?.storeName || 'TeikonPOS';
+    const pageTitle = getPageTitle();
+    document.title = `${storeName} - ${pageTitle}`;
+  }, [currentUser, activeTab]);
+
   useEffect(() => {
     const fetchStats = async () => {
       try {
@@ -71,9 +78,13 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => 
           >
             {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
-          <div className="flex items-center gap-2">
-            <TeikonLogo size={24} />
-            <h1 className="text-sm font-black uppercase tracking-tight text-slate-900 dark:text-white">Teikon POS</h1>
+          <div className="flex flex-col">
+            <h1 className="text-lg font-black text-slate-900 dark:text-white">
+              {currentUser?.storeName || 'TeikonPOS'}
+            </h1>
+            <span className="text-[10px] font-bold text-brand-muted">
+              Hola, {currentUser?.fullName || currentUser?.username}
+            </span>
           </div>
         </div>
       </div>
@@ -111,8 +122,11 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => 
               {getPageTitle()}
             </h2>
             <div className="flex items-center gap-3 mt-0.5">
-              <span className="text-[8px] font-black text-brand-muted uppercase tracking-[0.2em] truncate">
+              <span className="text-base md:text-2xl font-black text-blue-600 dark:text-blue-400 truncate">
                 {currentUser?.storeName || 'SISTEMA'}
+              </span>
+              <span className="hidden md:inline text-xs font-bold text-brand-muted">
+                • Hola, {currentUser?.fullName || currentUser?.username}
               </span>
             </div>
           </div>
