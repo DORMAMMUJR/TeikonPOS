@@ -175,6 +175,15 @@ const Sidebar: React.FC<SidebarProps> = ({
             {/* SECCIÓN INFERIOR: Herramientas y Configuración */}
             <div className="px-4 pb-6 space-y-2">
 
+                <SettingsDropdown
+                    onOpenGoalModal={onOpenGoalModal}
+                    onOpenCashClose={onOpenCashClose}
+                    onToggleTheme={toggleTheme}
+                    isDarkMode={theme === 'dark'}
+                    onLogout={handleLogout}
+                    onOpenProfile={onOpenProfile}
+                />
+
                 {/* Botón de Soporte */}
                 <button
                     onClick={onOpenSupport}
