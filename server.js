@@ -162,39 +162,50 @@ app.post('/api/auth/login', async (req, res) => {
     }
 });
 
-// POST /api/stores/new - Crear nueva sucursal
+// POST /api/stores/new - Crear nueva sucursal + Usuario Admin
 app.post('/api/stores/new', authenticateToken, async (req, res) => {
     try {
-        const { nombre, usuario, password, direccion, telefono } = req.body;
+        const { nombre, usuario, password, direccion, telefono, ownerName } = req.body;
 
         if (!nombre || !usuario || !password) {
             return res.status(400).json({ error: 'Faltan campos requeridos' });
         }
 
-        // Verificar que usuario no exista
-        const existing = await Store.findOne({ where: { usuario } });
-        if (existing) {
-            return res.status(400).json({ error: 'El usuario ya existe' });
+        // Verificar que usuario no exista (en Users o Stores)
+        const existingStore = await Store.findOne({ where: { usuario } });
+        const existingUser = await User.findOne({ where: { username: usuario } });
+
+        if (existingStore || existingUser) {
+            return res.status(400).json({ error: 'El usuario/email ya existe' });
         }
 
         // Encriptar password
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        // Crear store bajo la misma organization
+        // 1. Crear Store (Legacy + New fields)
         const store = await Store.create({
-            organizationId: req.organizationId,
+            organizationId: req.organizationId || '6b0859cc-0720-4c31-92e1-4876b323c914', // Default Org ID from seeds if missing
             nombre,
             slug: `${nombre.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}`,
-            usuario,
-            password: hashedPassword,
-            direccion,
+            usuario, // Legacy field, keeping for compatibility
+            password: hashedPassword, // Legacy field
+            direccion: direccion || 'N/A',
             telefono
         });
 
-        // INICIALIZACIÓN AUTOMÁTICA (Plug & Play)
+        // 2. Crear User Admin para esta Store
+        const user = await User.create({
+            username: usuario,
+            password: hashedPassword,
+            role: 'ADMIN',
+            storeId: store.id,
+            fullName: ownerName || nombre // Use ownerName if provided, else store name
+        });
+
+        // 3. Inicializar Configuración
         await StoreConfig.create({
             storeId: store.id,
-            breakEvenGoal: 0.00, // Inicializar meta en 0
+            breakEvenGoal: 0.00,
             theme: 'light'
         });
 
@@ -202,11 +213,12 @@ app.post('/api/stores/new', authenticateToken, async (req, res) => {
             id: store.id,
             nombre: store.nombre,
             usuario: store.usuario,
+            owner: user.fullName,
             organizationId: store.organizationId
         });
     } catch (error) {
         console.error('Error al crear sucursal:', error);
-        res.status(500).json({ error: 'Error al crear sucursal' });
+        res.status(500).json({ error: 'Error al crear sucursal: ' + error.message });
     }
 });
 

@@ -48,7 +48,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
 
   // Modals
   const [isStoreModalOpen, setIsStoreModalOpen] = useState(false);
-  const [newStoreData, setNewStoreData] = useState({ name: '', email: '', password: '', phone: '' });
+  const [newStoreData, setNewStoreData] = useState({ name: '', email: '', password: '', phone: '', ownerName: '' });
 
   // Theme (Placeholder)
   const isDarkMode = false;
@@ -84,20 +84,26 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
   const handleCreateStore = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      if (!newStoreData.name || !newStoreData.email || !newStoreData.password) {
+        alert('Por favor complete todos los campos obligatorios');
+        return;
+      }
+
       await storesAPI.create({
         nombre: newStoreData.name,
         usuario: newStoreData.email,
         password: newStoreData.password,
         telefono: newStoreData.phone,
+        ownerName: newStoreData.ownerName, // Send owner name to backend
         direccion: 'N/A'
       });
 
-      alert('Tienda creada exitosamente');
+      alert('✅ Tienda y Usuario Admin creados exitosamente');
       setIsStoreModalOpen(false);
-      setNewStoreData({ name: '', email: '', password: '', phone: '' });
+      setNewStoreData({ name: '', email: '', password: '', phone: '', ownerName: '' });
       fetchStores();
     } catch (error: any) {
-      alert('Error al crear tienda: ' + error.message);
+      alert('❌ Error al crear tienda: ' + error.message);
     }
   };
 
@@ -456,44 +462,65 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
             </div>
 
             <form onSubmit={handleCreateStore} className="space-y-4">
+
+              {/* Store Name */}
               <div className="space-y-1">
-                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Nombre Comercial</label>
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Nombre de la Tienda</label>
                 <input
                   required
                   type="text"
-                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-brand-blue outline-none"
-                  placeholder="Ej. Sucursal Norte"
+                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-brand-blue outline-none transition-all placeholder:font-normal"
+                  placeholder="Ej. Sucursal Centro"
                   value={newStoreData.name}
                   onChange={e => setNewStoreData({ ...newStoreData, name: e.target.value })}
                 />
               </div>
+
+              {/* Owner Name */}
               <div className="space-y-1">
-                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Usuario / Email</label>
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Nombre del Dueño/Contacto</label>
                 <input
                   required
                   type="text"
-                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-brand-blue outline-none"
-                  placeholder="admin_norte"
+                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-brand-blue outline-none transition-all placeholder:font-normal"
+                  placeholder="Ej. Juan Pérez"
+                  value={newStoreData.ownerName}
+                  onChange={e => setNewStoreData({ ...newStoreData, ownerName: e.target.value })}
+                />
+              </div>
+
+              {/* Admin Email */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Email Administrador (Usuario)</label>
+                <input
+                  required
+                  type="email"
+                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-brand-blue outline-none transition-all placeholder:font-normal"
+                  placeholder="admin@tienda.com"
                   value={newStoreData.email}
                   onChange={e => setNewStoreData({ ...newStoreData, email: e.target.value })}
                 />
               </div>
+
+              {/* Password */}
               <div className="space-y-1">
                 <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Contraseña Inicial</label>
                 <input
                   required
                   type="password"
-                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-brand-blue outline-none"
+                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-brand-blue outline-none transition-all placeholder:font-normal"
                   placeholder="••••••••"
                   value={newStoreData.password}
                   onChange={e => setNewStoreData({ ...newStoreData, password: e.target.value })}
                 />
               </div>
+
+              {/* Phone (Optional) */}
               <div className="space-y-1">
-                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Teléfono (Opcional)</label>
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Teléfono <span className="text-slate-300 font-normal normal-case">(Opcional)</span></label>
                 <input
                   type="tel"
-                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-brand-blue outline-none"
+                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-brand-blue outline-none transition-all placeholder:font-normal"
                   placeholder="55..."
                   value={newStoreData.phone}
                   onChange={e => setNewStoreData({ ...newStoreData, phone: e.target.value })}
@@ -506,6 +533,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                   variant="secondary"
                   fullWidth
                   onClick={() => setIsStoreModalOpen(false)}
+                  className="h-12"
                 >
                   CANCELAR
                 </Button>
@@ -513,7 +541,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                   type="submit"
                   variant="primary"
                   fullWidth
-                  className="shadow-lg shadow-brand-blue/20"
+                  className="h-12 shadow-lg shadow-brand-blue/20 bg-brand-blue hover:bg-blue-600 text-white"
                 >
                   CREAR NODO
                 </Button>
