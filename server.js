@@ -252,22 +252,48 @@ app.get('/api/stores', authenticateToken, async (req, res) => {
     }
 });
 
-// DELETE /api/stores/:id - Eliminar tienda (SOLO SUPER_ADMIN)
+// DELETE /api/stores/:id - Eliminar tienda (SOLO SUPER_ADMIN con confirmación de contraseña)
 app.delete('/api/stores/:id', authenticateToken, async (req, res) => {
     try {
         if (req.role !== 'SUPER_ADMIN') {
             return res.status(403).json({ error: 'Acceso denegado' });
         }
 
+        const { password } = req.body;
+
+        // Validar que se proporcionó la contraseña
+        if (!password) {
+            return res.status(400).json({ error: 'Se requiere confirmación de contraseña' });
+        }
+
+        // Buscar el usuario Super Admin actual
+        const currentUser = await User.findOne({ where: { username: req.usuario } });
+        if (!currentUser) {
+            return res.status(404).json({ error: 'Usuario no encontrado' });
+        }
+
+        // Verificar contraseña con bcrypt
+        const isPasswordValid = await bcrypt.compare(password, currentUser.password);
+        if (!isPasswordValid) {
+            return res.status(403).json({ error: 'Contraseña incorrecta' });
+        }
+
+        // Buscar la tienda a eliminar
         const store = await Store.findByPk(req.params.id);
         if (!store) {
             return res.status(404).json({ error: 'Tienda no encontrada' });
         }
 
+        // Log de seguridad
+        console.log(`🔴 ELIMINACIÓN DE TIENDA: ${store.nombre} (ID: ${store.id}) por ${req.usuario}`);
+
         // Cascade delete is handled by Database definition (onDelete: CASCADE)
         await store.destroy();
 
-        res.json({ message: 'Tienda eliminada correctamente' });
+        res.json({
+            message: 'Tienda eliminada correctamente',
+            deletedStore: store.nombre
+        });
     } catch (error) {
         console.error('Error al eliminar tienda:', error);
         res.status(500).json({ error: 'Error al eliminar tienda' });
@@ -310,6 +336,89 @@ app.post('/api/admin/reset-password', authenticateToken, async (req, res) => {
     } catch (error) {
         console.error('Error al resetear contraseña:', error);
         res.status(500).json({ error: 'Error interno al resetear contraseña' });
+    }
+});
+
+// GET /api/admin/global-sales - Global Sales Activity (SOLO SUPER_ADMIN)
+app.get('/api/admin/global-sales', authenticateToken, async (req, res) => {
+    try {
+        if (req.role !== 'SUPER_ADMIN') {
+            return res.status(403).json({ error: 'Acceso denegado' });
+        }
+
+        const { limit = 20 } = req.query;
+
+        // Fetch recent sales with store information
+        const sales = await Sale.findAll({
+            where: { status: 'ACTIVE' },
+            include: [{
+                model: Store,
+                as: 'store',
+                attributes: ['nombre', 'id']
+            }],
+            order: [['createdAt', 'DESC']],
+            limit: parseInt(limit),
+            attributes: ['id', 'total', 'vendedor', 'paymentMethod', 'createdAt', 'storeId']
+        });
+
+        // Map to frontend format
+        const formattedSales = sales.map(sale => ({
+            id: sale.id,
+            storeName: sale.store?.nombre || 'Tienda Desconocida',
+            storeId: sale.storeId,
+            total: parseFloat(sale.total),
+            seller: sale.vendedor,
+            paymentMethod: sale.paymentMethod,
+            timestamp: sale.createdAt
+        }));
+
+        res.json(formattedSales);
+    } catch (error) {
+        console.error('Error al obtener ventas globales:', error);
+        res.status(500).json({ error: 'Error al obtener ventas globales' });
+    }
+});
+
+// GET /api/admin/all-sales - Monitor de Ventas Globales (SOLO SUPER_ADMIN)
+app.get('/api/admin/all-sales', authenticateToken, async (req, res) => {
+    try {
+        if (req.role !== 'SUPER_ADMIN') {
+            return res.status(403).json({ error: 'Acceso denegado' });
+        }
+
+        const { limit = 100 } = req.query;
+
+        // Fetch all sales from all stores with store information
+        const sales = await Sale.findAll({
+            include: [{
+                model: Store,
+                as: 'store',
+                attributes: ['nombre', 'id']
+            }],
+            order: [['createdAt', 'DESC']],
+            limit: parseInt(limit),
+            attributes: ['id', 'total', 'vendedor', 'paymentMethod', 'status', 'createdAt', 'storeId', 'netProfit']
+        });
+
+        // Map to frontend format
+        const formattedSales = sales.map(sale => ({
+            id: sale.id,
+            storeName: sale.store?.nombre || 'Tienda Desconocida',
+            storeId: sale.storeId,
+            total: parseFloat(sale.total),
+            netProfit: parseFloat(sale.netProfit || 0),
+            seller: sale.vendedor,
+            paymentMethod: sale.paymentMethod,
+            status: sale.status,
+            timestamp: sale.createdAt,
+            date: new Date(sale.createdAt).toLocaleDateString('es-MX'),
+            time: new Date(sale.createdAt).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
+        }));
+
+        res.json(formattedSales);
+    } catch (error) {
+        console.error('Error al obtener ventas globales:', error);
+        res.status(500).json({ error: 'Error al obtener ventas globales' });
     }
 });
 

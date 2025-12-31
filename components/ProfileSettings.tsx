@@ -4,6 +4,7 @@ import { useStore } from '../context/StoreContext';
 import { authAPI } from '../utils/api';
 import Button from './Button';
 import { X, User, Lock, Store as StoreIcon, CheckCircle, AlertTriangle } from 'lucide-react';
+import DangerZone from './DangerZone';
 
 interface ProfileSettingsProps {
     onClose: () => void;
@@ -59,6 +60,11 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ onClose }) => {
         } finally {
             setIsLoading(false);
         }
+    };
+
+    const handleStoreDeleted = () => {
+        // Redirect to login after store deletion
+        window.location.href = '/login';
     };
 
     return (
@@ -169,6 +175,11 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ onClose }) => {
                     </div>
 
                 </form>
+
+                {/* DANGER ZONE */}
+                <div className="mt-6 pt-6 border-t border-slate-200 dark:border-slate-800">
+                    <DangerZone onStoreDeleted={handleStoreDeleted} />
+                </div>
             </div>
         </div>
     );

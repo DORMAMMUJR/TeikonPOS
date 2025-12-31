@@ -113,7 +113,7 @@ const handleApiResponse = async (response: Response): Promise<Response> => {
 };
 
 // Get headers with auth
-const getHeaders = (): HeadersInit => {
+export const getHeaders = (): HeadersInit => {
     const token = getAuthToken();
     return {
         'Content-Type': 'application/json',
@@ -244,10 +244,11 @@ export const storesAPI = {
         await handleApiResponse(response);
         return response.json();
     },
-    delete: async (id: string) => {
+    delete: async (id: string, password: string) => {
         const response = await fetch(`${API_URL}/api/stores/${id}`, {
             method: 'DELETE',
-            headers: getHeaders()
+            headers: getHeaders(),
+            body: JSON.stringify({ password })
         });
         await handleApiResponse(response);
         return response.json();

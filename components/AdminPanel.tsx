@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Store, TrendingUp, ShieldCheck, Search, Plus, User,
   ChevronLeft, AlertCircle, CheckCircle, Zap, X, Lock, Eye, EyeOff, Building,
-  LayoutDashboard, Package, LogOut, Ticket
+  LayoutDashboard, Package, LogOut, Ticket, DollarSign
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import TeikonLogo from './TeikonLogo';
@@ -12,7 +12,7 @@ import Dashboard from './Dashboard';
 import SalesHistory from './SalesHistory';
 import StoreOperations from './StoreOperations';
 // import SettingsMenu from './SettingsMenu'; // Ensure this exists or comment out if not. Assuming it exists based on previous code.
-import { storesAPI, ticketsAPI, clearAuthToken, authAPI } from '../utils/api';
+import { storesAPI, ticketsAPI, clearAuthToken, authAPI, API_URL, getHeaders } from '../utils/api';
 import { useStore } from '../context/StoreContext';
 
 interface StoreData {
@@ -46,6 +46,14 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
   // Tickets Data
   const [tickets, setTickets] = useState<any[]>([]);
 
+  // Global Sales Data
+  const [globalSales, setGlobalSales] = useState<any[]>([]);
+  const [isLoadingSales, setIsLoadingSales] = useState(false);
+
+  // All Sales Monitor Data
+  const [allSales, setAllSales] = useState<any[]>([]);
+  const [isLoadingAllSales, setIsLoadingAllSales] = useState(false);
+
   // Modals
   const [isStoreModalOpen, setIsStoreModalOpen] = useState(false);
   const [newStoreData, setNewStoreData] = useState({ name: '', email: '', password: '', phone: '', ownerName: '' });
@@ -62,7 +70,17 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
   useEffect(() => {
     fetchStores();
     fetchTickets();
-  }, [activeView]);
+    if (activeView === 'stores' && !selectedStore) {
+      fetchGlobalSales();
+      fetchAllSales();
+      // Auto-refresh every 30 seconds
+      const interval = setInterval(() => {
+        fetchGlobalSales();
+        fetchAllSales();
+      }, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [activeView, selectedStore]);
 
   // --- API CALLS ---
   const fetchStores = async () => {
@@ -83,6 +101,38 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
       setTickets(data);
     } catch (err) {
       console.error("Error loading tickets", err);
+    }
+  };
+
+  const fetchGlobalSales = async () => {
+    setIsLoadingSales(true);
+    try {
+      const response = await fetch(`${API_URL}/api/admin/global-sales?limit=15`, {
+        headers: getHeaders()
+      });
+      if (!response.ok) throw new Error('Error fetching sales');
+      const data = await response.json();
+      setGlobalSales(data);
+    } catch (error) {
+      console.error('Error fetching global sales:', error);
+    } finally {
+      setIsLoadingSales(false);
+    }
+  };
+
+  const fetchAllSales = async () => {
+    setIsLoadingAllSales(true);
+    try {
+      const response = await fetch(`${API_URL}/api/admin/all-sales?limit=50`, {
+        headers: getHeaders()
+      });
+      if (!response.ok) throw new Error('Error fetching all sales');
+      const data = await response.json();
+      setAllSales(data);
+    } catch (error) {
+      console.error('Error fetching all sales:', error);
+    } finally {
+      setIsLoadingAllSales(false);
     }
   };
 
@@ -329,6 +379,152 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
             )}
           </tbody>
         </table>
+      </div>
+
+      {/* GLOBAL SALES ACTIVITY */}
+      <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+        <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center">
+          <div>
+            <h3 className="text-lg font-black text-slate-900 dark:text-white">Actividad Global en Tiempo Real</h3>
+            <p className="text-xs font-bold text-slate-400 mt-0.5">Últimas transacciones del ecosistema</p>
+          </div>
+          <button
+            onClick={fetchGlobalSales}
+            disabled={isLoadingSales}
+            className="px-3 py-1.5 bg-brand-blue/10 text-brand-blue rounded-lg text-xs font-black hover:bg-brand-blue/20 transition-colors disabled:opacity-50"
+          >
+            {isLoadingSales ? 'ACTUALIZANDO...' : 'ACTUALIZAR'}
+          </button>
+        </div>
+        <div className="divide-y divide-slate-100 dark:divide-slate-700 max-h-96 overflow-y-auto">
+          {isLoadingSales && globalSales.length === 0 ? (
+            <div className="p-8 text-center text-slate-400 text-xs font-bold">Cargando actividad...</div>
+          ) : globalSales.length === 0 ? (
+            <div className="p-8 text-center text-slate-400 text-xs font-bold">No hay ventas recientes</div>
+          ) : (
+            globalSales.map((sale, idx) => (
+              <div key={sale.id} className="px-6 py-4 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3 flex-1">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center text-white font-black text-xs">
+                      {idx + 1}
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-bold text-slate-900 dark:text-white">
+                        <span className="text-brand-blue">{sale.storeName}</span> vendió{' '}
+                        <span className="text-emerald-600 dark:text-emerald-400">${sale.total.toLocaleString()}</span>
+                      </p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="text-[10px] font-bold text-slate-400">
+                          Vendedor: {sale.seller}
+                        </span>
+                        <span className="text-slate-300">•</span>
+                        <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded ${sale.paymentMethod === 'CASH' ? 'bg-green-100 text-green-600' :
+                          sale.paymentMethod === 'CARD' ? 'bg-blue-100 text-blue-600' :
+                            'bg-purple-100 text-purple-600'
+                          }`}>
+                          {sale.paymentMethod}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs font-bold text-slate-400">
+                      {new Date(sale.timestamp).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}
+                    </p>
+                    <p className="text-[10px] text-slate-300">
+                      {new Date(sale.timestamp).toLocaleDateString('es-MX', { month: 'short', day: 'numeric' })}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* MONITOR DE VENTAS GLOBALES */}
+      <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+        <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center">
+          <div>
+            <h3 className="text-lg font-black text-slate-900 dark:text-white">Monitor de Ventas Globales</h3>
+            <p className="text-xs font-bold text-slate-400 mt-0.5">Últimas 50 transacciones de todas las tiendas</p>
+          </div>
+          <button
+            onClick={fetchAllSales}
+            disabled={isLoadingAllSales}
+            className="px-3 py-1.5 bg-emerald-500/10 text-emerald-600 rounded-lg text-xs font-black hover:bg-emerald-500/20 transition-colors disabled:opacity-50"
+          >
+            {isLoadingAllSales ? 'ACTUALIZANDO...' : 'ACTUALIZAR'}
+          </button>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-700">
+              <tr>
+                <th className="px-6 py-3 text-left text-[10px] font-black uppercase tracking-widest text-slate-500">Fecha/Hora</th>
+                <th className="px-6 py-3 text-left text-[10px] font-black uppercase tracking-widest text-slate-500">Tienda</th>
+                <th className="px-6 py-3 text-right text-[10px] font-black uppercase tracking-widest text-slate-500">Total</th>
+                <th className="px-6 py-3 text-right text-[10px] font-black uppercase tracking-widest text-slate-500">Ganancia</th>
+                <th className="px-6 py-3 text-center text-[10px] font-black uppercase tracking-widest text-slate-500">Método</th>
+                <th className="px-6 py-3 text-center text-[10px] font-black uppercase tracking-widest text-slate-500">Estatus</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+              {isLoadingAllSales && allSales.length === 0 ? (
+                <tr><td colSpan={6} className="p-8 text-center text-slate-400 text-xs font-bold">Cargando ventas...</td></tr>
+              ) : allSales.length === 0 ? (
+                <tr><td colSpan={6} className="p-8 text-center text-slate-400 text-xs font-bold">No hay ventas registradas</td></tr>
+              ) : (
+                allSales.map((sale) => (
+                  <tr key={sale.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+                    <td className="px-6 py-4">
+                      <p className="text-xs font-bold text-slate-900 dark:text-white">{sale.date}</p>
+                      <p className="text-[10px] text-slate-400">{sale.time}</p>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-blue to-cyan-500 flex items-center justify-center text-white font-black text-xs">
+                          {sale.storeName.substring(0, 2).toUpperCase()}
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-slate-900 dark:text-white">{sale.storeName}</p>
+                          <p className="text-[10px] text-slate-400">Vendedor: {sale.seller}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <p className="text-base font-black text-emerald-600 dark:text-emerald-400">
+                        ${sale.total.toLocaleString()}
+                      </p>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <p className="text-sm font-bold text-blue-600 dark:text-blue-400">
+                        ${sale.netProfit.toLocaleString()}
+                      </p>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <span className={`px-2 py-1 rounded-full text-[10px] font-black uppercase ${sale.paymentMethod === 'CASH' ? 'bg-green-100 text-green-600' :
+                          sale.paymentMethod === 'CARD' ? 'bg-blue-100 text-blue-600' :
+                            'bg-purple-100 text-purple-600'
+                        }`}>
+                        {sale.paymentMethod}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <span className={`px-2 py-1 rounded-full text-[10px] font-black uppercase border ${sale.status === 'ACTIVE' ? 'bg-emerald-100 text-emerald-600 border-emerald-200' :
+                          sale.status === 'CANCELLED' ? 'bg-red-100 text-red-600 border-red-200' :
+                            'bg-amber-100 text-amber-600 border-amber-200'
+                        }`}>
+                        {sale.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
