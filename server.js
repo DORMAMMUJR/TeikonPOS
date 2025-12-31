@@ -182,9 +182,28 @@ app.post('/api/stores/new', authenticateToken, async (req, res) => {
         // Encriptar password
         const hashedPassword = await bcrypt.hash(password, 10);
 
+        // --- NEW: Robust Organization ID Handling ---
+        let targetOrganizationId = req.organizationId;
+
+        // If no organizationId in request/token, look for one or create default
+        if (!targetOrganizationId) {
+            const firstOrg = await Organization.findOne();
+            if (firstOrg) {
+                targetOrganizationId = firstOrg.id;
+            } else {
+                console.log('⚠️ No organization found. Creating Default Organization...');
+                const newOrg = await Organization.create({
+                    name: 'Default Organization',
+                    slug: `default-org-${Date.now()}`,
+                    plan: 'ENTERPRISE'
+                });
+                targetOrganizationId = newOrg.id;
+            }
+        }
+
         // 1. Crear Store (Legacy + New fields)
         const store = await Store.create({
-            organizationId: req.organizationId || '6b0859cc-0720-4c31-92e1-4876b323c914', // Default Org ID from seeds if missing
+            organizationId: targetOrganizationId,
             nombre,
             slug: `${nombre.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}`,
             usuario, // Legacy field, keeping for compatibility
