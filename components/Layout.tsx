@@ -16,12 +16,12 @@ interface LayoutProps {
 }
 
 const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => {
-  const { currentUser, getDashboardStats, settings } = useStore();
+  const { currentUser, getDashboardStats, settings, sales } = useStore();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
   const [isGoalModalOpen, setIsGoalModalOpen] = useState(false);
   const [isCashCloseOpen, setIsCashCloseOpen] = useState(false);
-  const [stats, setStats] = useState<any>({ totalProfit: 0 });
+  const [stats, setStats] = useState<any>({ salesToday: 0, totalProfit: 0 });
 
   // Update document title dynamically
   useEffect(() => {
@@ -30,11 +30,12 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => 
     document.title = `${storeName} - ${pageTitle}`;
   }, [currentUser, activeTab]);
 
+  // Fetch dashboard stats - updates when sales change or settings change
   useEffect(() => {
     const fetchStats = async () => {
       try {
         const data = await getDashboardStats('day');
-        setStats(data || { totalProfit: 0 });
+        setStats(data || { salesToday: 0, totalProfit: 0 });
       } catch (error) {
         console.error("Error fetching layout stats", error);
       }
@@ -42,11 +43,18 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => 
     fetchStats();
     const interval = setInterval(fetchStats, 60000);
     return () => clearInterval(interval);
-  }, [getDashboardStats]);
+  }, [getDashboardStats, sales, settings]); // Added sales and settings as dependencies
 
-  const dailyTarget = settings.monthlyFixedCosts / 30;
-  const currentProfit = stats.totalProfit || 0;
-  const progressPercent = dailyTarget > 0 ? Math.min(Math.max((currentProfit / dailyTarget) * 100, 0), 100) : 0;
+  // Calculate daily target from store config (break-even goal / 30)
+  const dailyTarget = (settings.monthlyFixedCosts || 0) / 30;
+
+  // Use salesToday for progress calculation (not totalProfit)
+  const currentSales = stats.salesToday || 0;
+
+  // Calculate progress percentage with bounds checking
+  const progressPercent = dailyTarget > 0
+    ? Math.min(Math.max((currentSales / dailyTarget) * 100, 0), 100)
+    : 0;
 
   const getPageTitle = () => {
     switch (activeTab) {
@@ -135,7 +143,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => 
           <div className="flex flex-col items-end gap-1.5 max-w-[150px] md:max-w-[300px] w-full hidden sm:flex">
             <div className="flex justify-between w-full text-[8px] font-black uppercase tracking-widest text-brand-muted">
               <span>Meta Diaria</span>
-              <span className="text-slate-900 dark:text-white">${currentProfit.toFixed(0)} / ${dailyTarget.toFixed(0)}</span>
+              <span className="text-slate-900 dark:text-white">${currentSales.toFixed(0)} / ${dailyTarget.toFixed(0)}</span>
             </div>
             <div className="h-2 w-full bg-slate-100 dark:bg-slate-900 rounded-full relative overflow-hidden shadow-inner border border-black/5 dark:border-white/5">
               <div
