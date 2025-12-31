@@ -11,8 +11,8 @@ interface ProfileSettingsProps {
 }
 
 const ProfileSettings: React.FC<ProfileSettingsProps> = ({ onClose }) => {
-    const { currentUser } = useStore();
-    const [storeName, setStoreName] = useState(currentUser?.storeName || '');
+    const { updateCurrentUser, currentUser } = useStore();
+    const [storeName, setStoreName] = useState(currentUser?.fullName || '');
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -32,12 +32,15 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ onClose }) => {
         setIsLoading(true);
 
         try {
-            const result = await authAPI.updateProfile({
+            await authAPI.updateProfile({
                 storeName,
                 newPassword: newPassword || undefined
             });
 
-            setSuccessMessage(result.message || 'Perfil actualizado correctamente');
+            // Update context immediately
+            updateCurrentUser({ fullName: storeName });
+
+            alert('✅ Perfil actualizado correctamente');
             setNewPassword('');
             setConfirmPassword('');
 

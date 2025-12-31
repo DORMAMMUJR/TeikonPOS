@@ -67,13 +67,25 @@ export const getDashboardSummary = async (req, res) => {
 
         const investment = parseFloat(inventoryStats[0].investment || 0);
 
-        // 3. Obtener Configuración para Metas y Gastos Fijos
+        // 3. Obtener Configuración para Metas y Gastos Fijos (STRICT MODE - NO FALLBACKS)
         let dailyTarget = 0;
+        let monthlyExpenses = 0;
+
         if (targetStoreId) {
             const config = await StoreConfig.findOne({ where: { storeId: targetStoreId } });
-            if (config && config.breakEvenGoal) {
-                // Asumimos que la meta es mensual, dividimos por 30 para diario
-                dailyTarget = parseFloat(config.breakEvenGoal) / 30;
+
+            if (config) {
+                // Use strict values from DB, default to 0 if null
+                // Note: database field might be 'breakEvenGoal' or 'monthly_expenses' depending on schema version
+                // We use breakEvenGoal as the field for monthly fixed costs based on previous context
+                monthlyExpenses = parseFloat(config.breakEvenGoal || 0);
+
+                // If period is 'day', divide by 30. If 'month', use full value.
+                if (period === 'day') {
+                    dailyTarget = monthlyExpenses / 30;
+                } else {
+                    dailyTarget = monthlyExpenses;
+                }
             }
         }
 

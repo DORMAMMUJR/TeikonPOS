@@ -140,10 +140,27 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     syncData();
   }, [syncData]);
 
+  // Function to update current user profile locally
+  const updateCurrentUser = (userData: Partial<User>) => {
+    if (currentUser) {
+      const updatedUser = { ...currentUser, ...userData };
+
+      // Update state
+      setCurrentUser(updatedUser);
+
+      // Also update token in localStorage if possible, or just user details if we are using a different storage mechanism
+      // Since token is JWT, we can't easily modify it client-side without re-issuing.
+      // However, we can update a separate 'userDetails' in localStorage if we used that.
+      // For now, updating the state is enough for the current session UI.
+    }
+  };
+
   const login = (token: string) => {
     setAuthToken(token);
     const user = getCurrentUserFromToken();
     setCurrentUser(user);
+    // Force reload to clear any stale state
+    window.location.href = user?.role === 'SUPER_ADMIN' ? '/admin/stores' : '/dashboard';
   };
 
   const logout = () => {
@@ -155,16 +172,6 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     // Clear cash session from localStorage
     localStorage.removeItem('cashSession');
     console.log('🚪 Logout: Cash session cleared from localStorage');
-  };
-
-  const updateCurrentUser = (userData: Partial<User>) => {
-    // Note: This function is now limited since we derive user from token
-    // If you need to update user data, you should update it on the server
-    // and get a new token, or store additional data separately
-    console.warn('updateCurrentUser is deprecated - user data should come from token only');
-    if (!currentUser) return;
-    const updatedUser = { ...currentUser, ...userData };
-    setCurrentUser(updatedUser);
   };
 
   const openSession = async (startBalance: number) => {
