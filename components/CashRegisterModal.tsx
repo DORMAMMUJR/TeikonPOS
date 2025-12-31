@@ -3,6 +3,8 @@ import Modal from './Modal';
 import Button from './Button';
 import { DollarSign, TrendingUp, ShoppingCart, Percent } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
+import { useNavigate } from 'react-router-dom';
+import { API_URL, getHeaders, clearAuthToken } from '../utils/api';
 
 interface CashRegisterModalProps {
     isOpen: boolean;
@@ -10,6 +12,7 @@ interface CashRegisterModalProps {
 }
 
 const CashRegisterModal: React.FC<CashRegisterModalProps> = ({ isOpen, onClose }) => {
+    const navigate = useNavigate();
     const { getDashboardStats } = useStore();
     const [stats, setStats] = useState<any>({
         totalRevenue: 0,
@@ -21,7 +24,7 @@ const CashRegisterModal: React.FC<CashRegisterModalProps> = ({ isOpen, onClose }
 
     useEffect(() => {
         if (isOpen) {
-            fetchDayStats();
+            fetchShiftStats();
         }
     }, [isOpen]);
 
@@ -42,15 +45,65 @@ const CashRegisterModal: React.FC<CashRegisterModalProps> = ({ isOpen, onClose }
         }
     };
 
+    const fetchShiftStats = async () => {
+        setIsLoading(true);
+        try {
+            // Get shift start time from localStorage
+            const shiftStartTime = localStorage.getItem('cashRegisterOpenedAt');
+
+            if (!shiftStartTime) {
+                console.error('No shift start time found');
+                setStats({
+                    totalRevenue: 0,
+                    totalProfit: 0,
+                    totalSales: 0,
+                    profitMargin: 0
+                });
+                return;
+            }
+
+            const response = await fetch(`${API_URL}/api/sales/cash-close?shiftStartTime=${shiftStartTime}`, {
+                headers: getHeaders()
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to fetch shift stats');
+            }
+
+            const data = await response.json();
+            setStats(data);
+        } catch (error) {
+            console.error("Error fetching shift stats", error);
+            setStats({
+                totalRevenue: 0,
+                totalProfit: 0,
+                totalSales: 0,
+                profitMargin: 0
+            });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     const handleCloseShift = () => {
         const confirmed = confirm(
-            `¿Confirmar cierre de turno?\n\nVentas: $${(stats.totalRevenue || 0).toLocaleString()}\nGanancia: $${(stats.totalProfit || 0).toLocaleString()}\n\nEsta acción registrará el corte de caja.`
+            `¿Confirmar cierre de turno?\n\nVentas: $${(stats.totalRevenue || 0).toLocaleString()}\nGanancia: $${(stats.totalProfit || 0).toLocaleString()}\n\nEsta acción cerrará tu sesión.`
         );
 
         if (confirmed) {
-            // TODO: Implement shift close logic (save to database, generate report, etc.)
-            alert('✅ Turno cerrado exitosamente. Resumen guardado.');
-            onClose();
+            // Clear all session data
+            localStorage.removeItem('cashRegisterOpenedAt');
+            localStorage.removeItem('cashRegisterSession');
+            localStorage.removeItem('cart');
+            sessionStorage.clear();
+
+            // Clear auth token and redirect to login
+            clearAuthToken();
+
+            alert('✅ Turno cerrado exitosamente. Sesión finalizada.');
+
+            // Force redirect to login
+            navigate('/login');
         }
     };
 
