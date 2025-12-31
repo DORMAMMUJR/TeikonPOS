@@ -91,7 +91,9 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         ...p,
         name: p.nombre || p.name || 'Sin Nombre',
         category: p.categoria || p.category || 'General',
-        image: p.imagen || p.image
+        image: p.imagen || p.image,
+        // Bidirectional mapping: backend 'activo' <-> frontend 'isActive'
+        isActive: p.activo !== undefined ? p.activo : (p.isActive !== undefined ? p.isActive : true)
       })) : [];
 
       setProducts(mappedProducts as Product[]);
@@ -289,6 +291,8 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
           minStock: productData.minStock || 0,
           taxRate: productData.taxRate || 0,
           imagen: productData.image,
+          // Bidirectional mapping: frontend 'isActive' -> backend 'activo'
+          activo: productData.isActive !== undefined ? productData.isActive : true,
           storeId: activeStoreId || (currentUser.role === 'SUPER_ADMIN'
             ? (productData as any).storeId
             : currentUser.storeId)
@@ -323,7 +327,16 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const updateProduct = async (updated: Product) => {
     try {
       if (isOnline) {
-        await productsAPI.update(updated.id, updated);
+        // Map frontend field names to backend field names
+        const updatePayload: any = {
+          ...updated,
+          nombre: updated.name,
+          categoria: updated.category,
+          imagen: updated.image,
+          activo: updated.isActive
+        };
+
+        await productsAPI.update(updated.id, updatePayload);
         setProducts(prev => prev.map(p => p.id === updated.id ? updated : p));
       }
     } catch (e) {
