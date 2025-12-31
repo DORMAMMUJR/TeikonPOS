@@ -100,6 +100,7 @@ const DangerZone: React.FC<DangerZoneProps> = ({ onStoreDeleted }) => {
                                     setError('');
                                 }}
                                 className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full text-slate-400 transition-colors"
+                                aria-label="Cerrar modal"
                             >
                                 <X size={20} />
                             </button>

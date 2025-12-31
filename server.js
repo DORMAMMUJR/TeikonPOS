@@ -562,11 +562,24 @@ app.get('/api/productos', authenticateToken, async (req, res) => {
             where.storeId = req.storeId;
         }
 
-        const products = await Product.findAll({
+        // Pagination parameters
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 50; // Default limit 50 to prevent OOM
+        const offset = (page - 1) * limit;
+
+        const { count, rows } = await Product.findAndCountAll({
             where,
-            order: [['nombre', 'ASC']]
+            order: [['nombre', 'ASC']],
+            limit,
+            offset
         });
-        res.json(products);
+
+        res.json({
+            data: rows,
+            total: count,
+            page,
+            totalPages: Math.ceil(count / limit)
+        });
     } catch (error) {
         console.error('Error al obtener productos:', error);
         res.status(500).json({ error: 'Error al obtener productos' });

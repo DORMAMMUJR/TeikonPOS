@@ -190,11 +190,50 @@ export const authAPI = {
 
 export const productsAPI = {
     getAll: async () => {
-        const response = await fetch(`${API_URL}/api/productos`, {
-            headers: getHeaders()
-        });
-        await handleApiResponse(response);
-        return response.json();
+        const LIMIT = 50;
+        let allProducts: any[] = [];
+        let page = 1;
+        let totalPages = 1;
+
+        // Fetch first page to get total pages value
+        try {
+            // Initial Request
+            const response1 = await fetch(`${API_URL}/api/productos?page=${page}&limit=${LIMIT}`, {
+                headers: getHeaders()
+            });
+            await handleApiResponse(response1);
+            const data1 = await response1.json();
+
+            // Handle response format (Paginated vs Legacy/Flat)
+            if (data1.data && Array.isArray(data1.data)) {
+                allProducts = [...data1.data];
+                totalPages = data1.totalPages || 1;
+                page++;
+
+                // If more pages exist, fetch them sequentially (to be kind to server) or parallel
+                while (page <= totalPages) {
+                    const res = await fetch(`${API_URL}/api/productos?page=${page}&limit=${LIMIT}`, {
+                        headers: getHeaders()
+                    });
+                    await handleApiResponse(res);
+                    const pageData = await res.json();
+                    if (pageData.data) {
+                        allProducts = [...allProducts, ...pageData.data];
+                    }
+                    page++;
+                }
+
+                return allProducts;
+            } else if (Array.isArray(data1)) {
+                // Fallback if backend hasn't updated or returns flat array
+                return data1;
+            }
+
+            return [];
+        } catch (error) {
+            console.error('Error fetching products chunked:', error);
+            throw error;
+        }
     },
 
     create: async (product: any) => {
