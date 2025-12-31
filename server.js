@@ -569,7 +569,11 @@ app.post('/api/productos', authenticateToken, async (req, res) => {
             }
         }
 
-        res.status(201).json(product);
+        // 🔧 FIX: Map activo -> isActive for frontend compatibility
+        const productResponse = product.toJSON();
+        productResponse.isActive = productResponse.activo;
+
+        res.status(201).json(productResponse);
     } catch (error) {
         console.error('❌ Error al crear producto:', error);
         console.error('Stack trace:', error.stack);
@@ -602,7 +606,12 @@ app.put('/api/productos/:id', authenticateToken, async (req, res) => {
         }
 
         await product.update(req.body);
-        res.json(product);
+
+        // 🔧 FIX: Map activo -> isActive for frontend compatibility
+        const productResponse = product.toJSON();
+        productResponse.isActive = productResponse.activo;
+
+        res.json(productResponse);
     } catch (error) {
         console.error('Error al actualizar producto:', error);
         res.status(500).json({ error: 'Error al actualizar producto' });

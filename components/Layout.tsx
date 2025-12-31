@@ -6,6 +6,7 @@ import TeikonLogo from './TeikonLogo';
 import SupportTicketModal from './SupportTicketModal';
 import SalesGoalModal from './SalesGoalModal';
 import CashRegisterModal from './CashRegisterModal';
+import ProfileSettings from './ProfileSettings';
 import ConnectionStatus from './ConnectionStatus';
 import Sidebar from './Sidebar';
 
@@ -21,6 +22,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => 
   const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
   const [isGoalModalOpen, setIsGoalModalOpen] = useState(false);
   const [isCashCloseOpen, setIsCashCloseOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [stats, setStats] = useState<any>({ salesToday: 0, totalProfit: 0 });
 
   // Update document title dynamically
@@ -109,6 +111,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => 
           onOpenGoalModal={() => setIsGoalModalOpen(true)}
           onOpenCashClose={() => setIsCashCloseOpen(true)}
           onOpenSupport={() => setIsSupportModalOpen(true)}
+          onOpenProfile={() => setIsProfileOpen(true)}
         />
       </div>
 
@@ -170,6 +173,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => 
       <SupportTicketModal isOpen={isSupportModalOpen} onClose={() => setIsSupportModalOpen(false)} />
       <SalesGoalModal isOpen={isGoalModalOpen} onClose={() => setIsGoalModalOpen(false)} />
       <CashRegisterModal isOpen={isCashCloseOpen} onClose={() => setIsCashCloseOpen(false)} />
+      {isProfileOpen && <ProfileSettings onClose={() => setIsProfileOpen(false)} />}
     </div>
   );
 };

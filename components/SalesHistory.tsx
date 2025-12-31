@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useStore } from '../context/StoreContext';
 import { Sale } from '../types';
@@ -7,6 +6,7 @@ import Button from './Button';
 import SaleTicket from './SaleTicket';
 import { Search, FileText, History as HistoryIcon, Printer, Share2, Check } from 'lucide-react';
 import TeikonWordmark from './TeikonWordmark';
+import { isTokenValid } from '../utils/api';
 
 const SalesHistory: React.FC = () => {
   const { sales, cancelSale, currentUserRole, currentUser } = useStore();
@@ -61,6 +61,19 @@ const SalesHistory: React.FC = () => {
     } else {
       copyToClipboard(shareText);
     }
+  };
+
+  const handlePrint = (sale: Sale) => {
+    // Validate session before printing to prevent blank tickets
+    if (!isTokenValid()) {
+      alert('⚠️ Tu sesión ha expirado. Por favor, inicia sesión nuevamente para imprimir tickets.');
+      window.location.href = '/login';
+      return;
+    }
+
+    // Session is valid, proceed with printing
+    setSelectedSale(sale);
+    setTimeout(() => window.print(), 500);
   };
 
   const copyToClipboard = async (text: string) => {
@@ -160,7 +173,7 @@ const SalesHistory: React.FC = () => {
                       <Button
                         variant="primary"
                         size="sm"
-                        onClick={() => { setSelectedSale(sale); setTimeout(() => window.print(), 500); }}
+                        onClick={() => handlePrint(sale)}
                         className="h-8 text-[10px] bg-slate-900 text-white hover:bg-slate-800"
                       >
                         <Printer size={14} className="mr-1" />

@@ -107,8 +107,8 @@ const Dashboard: React.FC<DashboardProps> = ({ storeId }) => {
           onClick={handleManualRefresh}
           disabled={isRefreshing}
           className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm transition-all ${isRefreshing
-              ? 'bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-not-allowed'
-              : 'bg-brand-purple text-white hover:bg-brand-purple/90 active:scale-95'
+            ? 'bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-not-allowed'
+            : 'bg-brand-purple text-white hover:bg-brand-purple/90 active:scale-95'
             }`}
         >
           <RefreshCw size={16} className={isRefreshing ? 'animate-spin' : ''} />
@@ -159,7 +159,7 @@ const Dashboard: React.FC<DashboardProps> = ({ storeId }) => {
       </div>
 
       {/* KPI GRID */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {kpis.map((kpi, i) => (
           <div key={i} className="card-premium p-6 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 shadow-sm hover:translate-y-[-4px] transition-all">
             <div className={`p-2.5 w-fit rounded-xl mb-4 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 ${kpi.color}`}>

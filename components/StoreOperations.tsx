@@ -67,7 +67,7 @@ const StoreOperations: React.FC<StoreOperationsProps> = ({ storeId }) => {
 
     const handleCloseShift = () => {
         if (!summary) return;
-        const confirmMsg = `¿Confirmar Cierre de Caja?\n\nTotal Recaudado: $${summary.total?.toLocaleString()}\nTransacciones: ${summary.count}\n\nEsta acción generará el reporte final del día.`;
+        const confirmMsg = `¿Confirmar Cierre de Caja?\n\nTotal Recaudado: $${(summary.total || 0).toLocaleString()}\nTransacciones: ${summary.count || 0}\n\nEsta acción generará el reporte final del día.`;
         if (confirm(confirmMsg)) {
             alert('✅ Turno Cerrado Exitosamente.\nEl reporte ha sido enviado al administrador.');
             // Future: Call POST /api/shift/close
@@ -139,15 +139,15 @@ const StoreOperations: React.FC<StoreOperationsProps> = ({ storeId }) => {
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
                             <div className="p-6 rounded-3xl bg-slate-50 dark:bg-black/20 border border-slate-100 dark:border-slate-800">
                                 <p className="text-[10px] uppercase font-black tracking-widest text-slate-400 mb-2">Total Efectivo</p>
-                                <p className="text-2xl font-black text-slate-800 dark:text-white">${summary?.methods?.CASH?.toLocaleString() || '0'}</p>
+                                <p className="text-2xl font-black text-slate-800 dark:text-white">${(summary?.methods?.CASH || 0).toLocaleString()}</p>
                             </div>
                             <div className="p-6 rounded-3xl bg-slate-50 dark:bg-black/20 border border-slate-100 dark:border-slate-800">
                                 <p className="text-[10px] uppercase font-black tracking-widest text-slate-400 mb-2">Total Tarjeta</p>
-                                <p className="text-2xl font-black text-slate-800 dark:text-white">${summary?.methods?.CARD?.toLocaleString() || '0'}</p>
+                                <p className="text-2xl font-black text-slate-800 dark:text-white">${(summary?.methods?.CARD || 0).toLocaleString()}</p>
                             </div>
                             <div className="p-6 rounded-3xl bg-emerald-500 text-white shadow-lg shadow-emerald-500/20">
                                 <p className="text-[10px] uppercase font-black tracking-widest text-emerald-100 mb-2">Venta Total</p>
-                                <p className="text-3xl font-black">${summary?.total?.toLocaleString() || '0'}</p>
+                                <p className="text-3xl font-black">${(summary?.total || 0).toLocaleString()}</p>
                             </div>
                         </div>
 

@@ -64,6 +64,54 @@ export const getCurrentUserFromToken = (): any | null => {
     };
 };
 
+// Validate if token is still valid (not expired)
+export const isTokenValid = (): boolean => {
+    const token = getAuthToken();
+    if (!token) return false;
+
+    const decoded = decodeToken(token);
+    if (!decoded) return false;
+
+    // Check if token is expired (with 30 second buffer)
+    if (decoded.exp && decoded.exp * 1000 < Date.now() + 30000) {
+        return false;
+    }
+
+    return true;
+};
+
+// Handle session expiration centrally
+const handleSessionExpired = () => {
+    clearAuthToken();
+
+    // Clear cash session from localStorage on 401
+    localStorage.removeItem('cashSession');
+
+    // Show user-friendly alert
+    alert('⚠️ Tu sesión ha expirado. Por favor, inicia sesión nuevamente.');
+
+    // Redirect to login
+    window.location.href = '/login';
+};
+
+// Global API response handler - intercepts 401 errors
+const handleApiResponse = async (response: Response): Promise<Response> => {
+    // Detect 401 Unauthorized
+    if (response.status === 401) {
+        console.error('🔒 401 Unauthorized - Session expired or invalid credentials');
+        handleSessionExpired();
+        throw new Error('SESIÓN_EXPIRADA');
+    }
+
+    // For other errors, let the caller handle them
+    if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || `HTTP Error ${response.status}`);
+    }
+
+    return response;
+};
+
 // Get headers with auth
 const getHeaders = (): HeadersInit => {
     const token = getAuthToken();
@@ -91,7 +139,7 @@ export const authAPI = {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
         });
-        if (!response.ok) throw new Error(await response.text());
+        await handleApiResponse(response);
         return response.json();
     },
 
@@ -101,7 +149,7 @@ export const authAPI = {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ usuario, password })
         });
-        if (!response.ok) throw new Error(await response.text());
+        await handleApiResponse(response);
         return response.json();
     },
 
@@ -111,7 +159,7 @@ export const authAPI = {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email, phone })
         });
-        if (!response.ok) throw new Error(await response.text());
+        await handleApiResponse(response);
         return response.json();
     },
 
@@ -121,7 +169,7 @@ export const authAPI = {
             headers: getHeaders(),
             body: JSON.stringify(data)
         });
-        if (!response.ok) throw new Error(await response.text());
+        await handleApiResponse(response);
         return response.json();
     },
 
@@ -131,7 +179,7 @@ export const authAPI = {
             headers: getHeaders(),
             body: JSON.stringify({ targetStoreId, newPassword })
         });
-        if (!response.ok) throw new Error(await response.text());
+        await handleApiResponse(response);
         return response.json();
     }
 };
@@ -145,7 +193,7 @@ export const productsAPI = {
         const response = await fetch(`${API_URL}/api/productos`, {
             headers: getHeaders()
         });
-        if (!response.ok) throw new Error(await response.text());
+        await handleApiResponse(response);
         return response.json();
     },
 
@@ -155,7 +203,7 @@ export const productsAPI = {
             headers: getHeaders(),
             body: JSON.stringify(product)
         });
-        if (!response.ok) throw new Error(await response.text());
+        await handleApiResponse(response);
         return response.json();
     },
 
@@ -165,7 +213,7 @@ export const productsAPI = {
             headers: getHeaders(),
             body: JSON.stringify(product)
         });
-        if (!response.ok) throw new Error(await response.text());
+        await handleApiResponse(response);
         return response.json();
     },
 
@@ -174,7 +222,7 @@ export const productsAPI = {
             method: 'DELETE',
             headers: getHeaders()
         });
-        if (!response.ok) throw new Error(await response.text());
+        await handleApiResponse(response);
         return response.json();
     }
 };
@@ -184,7 +232,7 @@ export const storesAPI = {
         const response = await fetch(`${API_URL}/api/stores`, {
             headers: getHeaders()
         });
-        if (!response.ok) throw new Error(await response.text());
+        await handleApiResponse(response);
         return response.json();
     },
     create: async (data: any) => {
@@ -193,7 +241,7 @@ export const storesAPI = {
             headers: getHeaders(),
             body: JSON.stringify(data)
         });
-        if (!response.ok) throw new Error(await response.text());
+        await handleApiResponse(response);
         return response.json();
     },
     delete: async (id: string) => {
@@ -201,7 +249,7 @@ export const storesAPI = {
             method: 'DELETE',
             headers: getHeaders()
         });
-        if (!response.ok) throw new Error(await response.text());
+        await handleApiResponse(response);
         return response.json();
     }
 };
@@ -215,7 +263,7 @@ export const salesAPI = {
         const response = await fetch(`${API_URL}/api/ventas`, {
             headers: getHeaders()
         });
-        if (!response.ok) throw new Error(await response.text());
+        await handleApiResponse(response);
         const data = await response.json();
         // Map backend createdAt to frontend date property
         return data.map((sale: any) => ({
@@ -230,7 +278,7 @@ export const salesAPI = {
             headers: getHeaders(),
             body: JSON.stringify(sale)
         });
-        if (!response.ok) throw new Error(await response.text());
+        await handleApiResponse(response);
         return response.json();
     },
 
@@ -240,7 +288,7 @@ export const salesAPI = {
             headers: getHeaders(),
             body: JSON.stringify({ sales: pendingSales })
         });
-        if (!response.ok) throw new Error(await response.text());
+        await handleApiResponse(response);
         return response.json();
     }
 };
@@ -254,7 +302,7 @@ export const expensesAPI = {
         const response = await fetch(`${API_URL}/api/expenses`, {
             headers: getHeaders()
         });
-        if (!response.ok) throw new Error(await response.text());
+        await handleApiResponse(response);
         return response.json();
     },
 
@@ -264,7 +312,7 @@ export const expensesAPI = {
             headers: getHeaders(),
             body: JSON.stringify(expense)
         });
-        if (!response.ok) throw new Error(await response.text());
+        await handleApiResponse(response);
         return response.json();
     }
 };
@@ -282,7 +330,7 @@ export const dashboardAPI = {
         const response = await fetch(url, {
             headers: getHeaders()
         });
-        if (!response.ok) throw new Error(await response.text());
+        await handleApiResponse(response);
         return response.json();
     }
 };
@@ -296,7 +344,7 @@ export const ticketsAPI = {
         const response = await fetch(`${API_URL}/api/tickets`, {
             headers: getHeaders()
         });
-        if (!response.ok) throw new Error(await response.text());
+        await handleApiResponse(response);
         return response.json();
     },
 
@@ -306,7 +354,7 @@ export const ticketsAPI = {
             headers: getHeaders(),
             body: JSON.stringify(ticket)
         });
-        if (!response.ok) throw new Error(await response.text());
+        await handleApiResponse(response);
         return response.json();
     },
 
@@ -316,7 +364,7 @@ export const ticketsAPI = {
             headers: getHeaders(),
             body: JSON.stringify(updates)
         });
-        if (!response.ok) throw new Error(await response.text());
+        await handleApiResponse(response);
         return response.json();
     }
 };

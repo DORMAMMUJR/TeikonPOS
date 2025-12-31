@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { Product, Sale, FinancialSettings, Role, User, CashSession, CartItem, SaleResult, SaleDetail, PendingSale } from '../types';
-import { authAPI, productsAPI, salesAPI, expensesAPI, dashboardAPI, setAuthToken, clearAuthToken, getAuthToken, getCurrentUserFromToken } from '../utils/api';
+import { authAPI, productsAPI, salesAPI, expensesAPI, dashboardAPI, setAuthToken, clearAuthToken, getAuthToken, getCurrentUserFromToken, isTokenValid } from '../utils/api';
 import { addPendingSale, getPendingSales, removePendingSale, clearPendingSales } from '../utils/offlineSync';
 
 interface StoreContextType {
@@ -65,6 +65,31 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     return () => clearInterval(interval);
   }, []);
 
+  // Restore cash session from localStorage on mount
+  useEffect(() => {
+    if (!currentUser) return;
+
+    const savedSession = localStorage.getItem('cashSession');
+    if (savedSession) {
+      try {
+        const session: CashSession = JSON.parse(savedSession);
+
+        // Validate session belongs to current user and is still open
+        if (session.ownerId === currentUser.id && session.status === 'OPEN') {
+          console.log('✅ Restored cash session from localStorage:', session.id);
+          setAllSessions([session]);
+        } else {
+          // Invalid session, clear it
+          console.warn('⚠️ Invalid session in localStorage, clearing...');
+          localStorage.removeItem('cashSession');
+        }
+      } catch (e) {
+        console.error('❌ Error parsing saved session:', e);
+        localStorage.removeItem('cashSession');
+      }
+    }
+  }, [currentUser]);
+
   // Initial Data Fetch
   const syncData = useCallback(async () => {
     if (!currentUser || !isOnline) return;
@@ -100,8 +125,14 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       setSales(fetchedSales);
 
       // Expenses and Sessions could be fetched here too if needed
-    } catch (error) {
+    } catch (error: any) {
       console.error('Data Sync Error:', error);
+
+      // Handle session expiration - the global interceptor will have already
+      // shown the alert and redirected, but we clean up local state too
+      if (error.message === 'SESIÓN_EXPIRADA') {
+        logout();
+      }
     }
   }, [currentUser, isOnline]);
 
@@ -120,6 +151,10 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     setCurrentUser(null);
     setProducts([]);
     setSales([]);
+
+    // Clear cash session from localStorage
+    localStorage.removeItem('cashSession');
+    console.log('🚪 Logout: Cash session cleared from localStorage');
   };
 
   const updateCurrentUser = (userData: Partial<User>) => {
@@ -148,6 +183,10 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       ownerId: currentUser?.id || 'unknown'
     };
     setAllSessions(prev => [...prev, newSession]);
+
+    // Save to localStorage for persistence across reloads
+    localStorage.setItem('cashSession', JSON.stringify(newSession));
+    console.log('💾 Cash session saved to localStorage:', newSession.id);
   };
 
   const closeSession = async (endBalanceReal: number) => {
@@ -161,6 +200,10 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       expectedBalance: expected,
       endBalanceReal
     } : s));
+
+    // Clear from localStorage
+    localStorage.removeItem('cashSession');
+    console.log('🗑️ Cash session cleared from localStorage');
   };
 
   const calculateTotalInventoryValue = () => {
@@ -257,11 +300,18 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
       // Update Session if CASH
       if (paymentMethod === 'CASH' && currentSession) {
-        setAllSessions(prev => prev.map(s =>
+        const updatedSessions = allSessions.map(s =>
           s.id === currentSession.id
             ? { ...s, cashSales: Math.round((s.cashSales + totalTransactionRevenue) * 100) / 100 }
             : s
-        ));
+        );
+        setAllSessions(updatedSessions);
+
+        // Sync updated session to localStorage
+        const updatedSession = updatedSessions.find(s => s.id === currentSession.id);
+        if (updatedSession) {
+          localStorage.setItem('cashSession', JSON.stringify(updatedSession));
+        }
       }
 
       return {

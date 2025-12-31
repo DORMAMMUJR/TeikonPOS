@@ -44,7 +44,7 @@ const CashRegisterModal: React.FC<CashRegisterModalProps> = ({ isOpen, onClose }
 
     const handleCloseShift = () => {
         const confirmed = confirm(
-            `¿Confirmar cierre de turno?\n\nVentas: $${stats.totalRevenue.toLocaleString()}\nGanancia: $${stats.totalProfit.toLocaleString()}\n\nEsta acción registrará el corte de caja.`
+            `¿Confirmar cierre de turno?\n\nVentas: $${(stats.totalRevenue || 0).toLocaleString()}\nGanancia: $${(stats.totalProfit || 0).toLocaleString()}\n\nEsta acción registrará el corte de caja.`
         );
 
         if (confirmed) {
@@ -73,7 +73,7 @@ const CashRegisterModal: React.FC<CashRegisterModalProps> = ({ isOpen, onClose }
                                     </span>
                                 </div>
                                 <p className="text-2xl font-black text-emerald-600">
-                                    ${stats.totalRevenue.toLocaleString()}
+                                    ${(stats.totalRevenue || 0).toLocaleString()}
                                 </p>
                             </div>
 
@@ -85,7 +85,7 @@ const CashRegisterModal: React.FC<CashRegisterModalProps> = ({ isOpen, onClose }
                                     </span>
                                 </div>
                                 <p className="text-2xl font-black text-purple-600">
-                                    ${stats.totalProfit.toLocaleString()}
+                                    ${(stats.totalProfit || 0).toLocaleString()}
                                 </p>
                             </div>
 
@@ -97,7 +97,7 @@ const CashRegisterModal: React.FC<CashRegisterModalProps> = ({ isOpen, onClose }
                                     </span>
                                 </div>
                                 <p className="text-2xl font-black text-blue-600">
-                                    {stats.totalSales}
+                                    {stats.totalSales || 0}
                                 </p>
                             </div>
 
@@ -109,7 +109,7 @@ const CashRegisterModal: React.FC<CashRegisterModalProps> = ({ isOpen, onClose }
                                     </span>
                                 </div>
                                 <p className="text-2xl font-black text-amber-600">
-                                    {stats.profitMargin.toFixed(1)}%
+                                    {(stats.profitMargin || 0).toFixed(1)}%
                                 </p>
                             </div>
                         </div>

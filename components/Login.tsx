@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ShieldAlert, Terminal, User, Lock, Loader2, Mail, Phone, X } from 'lucide-react';
+import { ShieldAlert, Terminal, User, Lock, Loader2, Mail, Phone, X, Eye, EyeOff } from 'lucide-react';
 import Button from './Button';
 import { useStore } from '../context/StoreContext';
 import TeikonLogo from './TeikonLogo';
@@ -22,6 +22,7 @@ const Login: React.FC = () => {
   // Form States
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   // Recovery State
   const [isRecoveryOpen, setIsRecoveryOpen] = useState(false);
@@ -129,13 +130,21 @@ const Login: React.FC = () => {
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-muted h-4 w-4" />
                   <input
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-black/20 border border-slate-200 dark:border-white/10 rounded-xl pl-10 pr-4 py-3 text-sm focus:border-brand-purple transition-all outline-none font-bold text-slate-900 dark:text-white"
+                    className="w-full bg-slate-50 dark:bg-black/20 border border-slate-200 dark:border-white/10 rounded-xl pl-10 pr-12 py-3 text-sm focus:border-brand-purple transition-all outline-none font-bold text-slate-900 dark:text-white"
                     placeholder="••••••••"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-brand-muted hover:text-brand-purple transition-colors p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-white/5 active:scale-95"
+                    aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
                 </div>
               </div>
 
