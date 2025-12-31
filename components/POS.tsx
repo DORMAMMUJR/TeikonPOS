@@ -158,14 +158,16 @@ const POS: React.FC = () => {
 
       <div className="flex flex-col lg:flex-row gap-6 flex-1 min-h-0">
         {/* SECCIÓN IZQUIERDA: PRODUCT GRID */}
-        <div className="lg:w-2/3 flex flex-col card-premium overflow-hidden border-t-4 border-t-brand-emerald bg-white dark:bg-slate-900 shadow-xl flex-1 min-h-0">
+        {/* Mobile: Full height with bottom padding for sticky bar */}
+        {/* Desktop: 2/3 width with normal height */}
+        <div className="lg:w-2/3 flex flex-col card-premium overflow-hidden border-t-4 border-t-brand-emerald bg-white dark:bg-slate-900 shadow-xl flex-1 min-h-0 pb-[140px] lg:pb-0">
 
           <div className="flex-1 overflow-y-auto p-4 grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4 content-start">
             {filteredProducts.map((p, idx) => (
               <div
                 key={p.id}
                 onClick={() => addToCart(p)}
-                className={`group relative p-2 md:p-2.5 bg-white dark:bg-slate-800 border-2 rounded-2xl cursor-pointer transition-all duration-150 ease-in-out active:scale-95 hover:shadow-lg ${lastAddedId === p.id
+                className={`group relative p-2 md:p-2.5 bg-white dark:bg-slate-800 border-2 rounded-2xl cursor-pointer transition-all duration-150 ease-in-out active:scale-95 hover:shadow-lg min-h-[120px] ${lastAddedId === p.id
                   ? 'border-brand-emerald ring-4 ring-brand-emerald/10'
                   : 'border-slate-100 dark:border-slate-700 hover:border-brand-emerald/40'
                   }`}
@@ -203,8 +205,8 @@ const POS: React.FC = () => {
           </div>
         </div>
 
-        {/* SECCIÓN DERECHA (Desktop) / BOTTOM SHEET (Mobile): CART */}
-        <div className="lg:w-1/3 flex flex-col card-premium overflow-hidden border-t-4 border-t-brand-emerald shadow-2xl bg-white dark:bg-slate-900 h-[25vh] lg:h-auto shrink-0">
+        {/* DESKTOP CART - Hidden on mobile */}
+        <div className="hidden lg:flex lg:w-1/3 flex-col card-premium overflow-hidden border-t-4 border-t-brand-emerald shadow-2xl bg-white dark:bg-slate-900">
           <div className="px-4 py-3 border-b border-brand-border flex justify-between items-center bg-slate-50 dark:bg-slate-950 shrink-0">
             <div className={`flex items-center gap-2 transition-transform duration-300 ${animateCart ? 'scale-125 text-brand-emerald' : 'scale-100'}`}>
               <ShoppingCart size={16} className={animateCart ? 'animate-bounce' : 'text-brand-emerald'} />
@@ -220,14 +222,31 @@ const POS: React.FC = () => {
               <div key={item.productId} className="p-3 rounded-[1.2rem] border-2 border-slate-50 dark:border-slate-800 bg-white dark:bg-black/20 animate-fade-in-up">
                 <div className="flex justify-between items-start mb-2">
                   <p className="text-[10px] font-black uppercase truncate max-w-[150px]">{item.name}</p>
-                  <button onClick={() => setCart(c => c.filter(i => i.productId !== item.productId))} className="text-slate-300 hover:text-red-500 active:scale-90 transition-transform"><Trash2 size={16} /></button>
+                  {/* Touch-optimized delete button: 44x44px */}
+                  <button
+                    onClick={() => setCart(c => c.filter(i => i.productId !== item.productId))}
+                    className="min-w-[44px] min-h-[44px] flex items-center justify-center text-slate-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-lg active:scale-90 transition-all"
+                  >
+                    <Trash2 size={18} />
+                  </button>
                 </div>
                 <div className="flex justify-between items-center">
                   <div className="flex flex-col">
                     <div className="flex items-center gap-2">
-                      <button onClick={() => updateQuantity(item.productId, -1)} className="p-1 bg-slate-100 dark:bg-slate-800 rounded-lg active:scale-90 transition-transform"><Minus size={12} /></button>
-                      <span className="text-sm font-black w-6 text-center">{item.quantity}</span>
-                      <button onClick={() => updateQuantity(item.productId, 1)} className="p-1 bg-slate-100 dark:bg-slate-800 rounded-lg active:scale-90 transition-transform"><Plus size={12} /></button>
+                      {/* Touch-optimized quantity buttons: 44x44px */}
+                      <button
+                        onClick={() => updateQuantity(item.productId, -1)}
+                        className="min-w-[44px] min-h-[44px] flex items-center justify-center bg-slate-100 dark:bg-slate-800 rounded-lg active:scale-90 transition-transform"
+                      >
+                        <Minus size={16} />
+                      </button>
+                      <span className="text-sm font-black w-8 text-center">{item.quantity}</span>
+                      <button
+                        onClick={() => updateQuantity(item.productId, 1)}
+                        className="min-w-[44px] min-h-[44px] flex items-center justify-center bg-slate-100 dark:bg-slate-800 rounded-lg active:scale-90 transition-transform"
+                      >
+                        <Plus size={16} />
+                      </button>
                     </div>
                     <span className="text-[8px] font-bold text-slate-400 uppercase mt-1">u. ${(item.sellingPrice || 0).toLocaleString()}</span>
                   </div>
@@ -248,8 +267,46 @@ const POS: React.FC = () => {
               <span className="text-[9px] font-black uppercase tracking-widest">Total Final</span>
               <p className="text-3xl font-black text-brand-emerald tracking-tighter">${(total || 0).toLocaleString()}</p>
             </div>
-            <Button fullWidth variant="sales" disabled={cart.length === 0} onClick={() => setIsCheckoutOpen(true)} className="py-4 text-xs">CONFIRMAR VENTA</Button>
+            {/* Touch-optimized checkout button: 48px height */}
+            <Button
+              fullWidth
+              variant="sales"
+              disabled={cart.length === 0}
+              onClick={() => setIsCheckoutOpen(true)}
+              className="h-[48px] text-sm font-black"
+            >
+              CONFIRMAR VENTA
+            </Button>
           </div>
+        </div>
+      </div>
+
+      {/* MOBILE STICKY CHECKOUT BAR - Hidden on desktop */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-slate-900 border-t-4 border-t-brand-emerald shadow-2xl">
+        <div className="p-4 space-y-3">
+          {/* Cart Summary */}
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-2">
+              <ShoppingCart size={20} className={`text-brand-emerald ${animateCart ? 'animate-bounce' : ''}`} />
+              <span className="text-sm font-black text-slate-900 dark:text-white">
+                {cart.length} {cart.length === 1 ? 'item' : 'items'}
+              </span>
+            </div>
+            <p className="text-2xl md:text-3xl font-black text-brand-emerald tracking-tighter">
+              ${total.toLocaleString()}
+            </p>
+          </div>
+
+          {/* Touch-optimized checkout button: 52px height for mobile */}
+          <Button
+            fullWidth
+            variant="sales"
+            disabled={cart.length === 0}
+            onClick={() => setIsCheckoutOpen(true)}
+            className="h-[52px] text-sm font-black shadow-lg"
+          >
+            CONFIRMAR VENTA
+          </Button>
         </div>
       </div>
 
@@ -278,8 +335,9 @@ const POS: React.FC = () => {
           </div>
 
           <div className="flex flex-col sm:flex-row gap-4 pt-2">
-            <Button variant="secondary" fullWidth onClick={() => setIsCheckoutOpen(false)}>MODIFICAR</Button>
-            <Button variant="sales" fullWidth disabled={change < 0} onClick={finalize}>FINALIZAR VENTA</Button>
+            {/* Touch-optimized modal buttons: 48px height */}
+            <Button variant="secondary" fullWidth onClick={() => setIsCheckoutOpen(false)} className="h-[48px]">MODIFICAR</Button>
+            <Button variant="sales" fullWidth disabled={change < 0} onClick={finalize} className="h-[48px]">FINALIZAR VENTA</Button>
           </div>
         </div>
       </Modal>
