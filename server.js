@@ -274,6 +274,152 @@ app.delete('/api/stores/:id', authenticateToken, async (req, res) => {
     }
 });
 
+// POST /api/admin/reset-password - Super Admin Reset Password
+app.post('/api/admin/reset-password', authenticateToken, async (req, res) => {
+    try {
+        if (req.role !== 'SUPER_ADMIN') {
+            return res.status(403).json({ error: 'Acceso denegado' });
+        }
+
+        const { targetStoreId, newPassword } = req.body;
+        if (!targetStoreId || !newPassword) {
+            return res.status(400).json({ error: 'Faltan datos (ID Tienda o Contraseña)' });
+        }
+
+        const store = await Store.findByPk(targetStoreId);
+        if (!store) {
+            return res.status(404).json({ error: 'Tienda no encontrada' });
+        }
+
+        // Hash new password
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+        // 1. Update Store Password (Legacy)
+        store.password = hashedPassword;
+        await store.save();
+
+        // 2. Update Admin User Password
+        // Find the admin user linked to this store (role ADMIN)
+        const adminUser = await User.findOne({ where: { storeId: targetStoreId, role: 'ADMIN' } });
+        if (adminUser) {
+            adminUser.password = hashedPassword;
+            await adminUser.save();
+        }
+
+        res.json({ message: 'Contraseña reseteada exitosamente' });
+    } catch (error) {
+        console.error('Error al resetear contraseña:', error);
+        res.status(500).json({ error: 'Error interno al resetear contraseña' });
+    }
+});
+
+// ==========================================
+// ENDPOINTS DE PERFIL (CLIENTE)
+// ==========================================
+
+// PUT /api/me/profile - Update Own Profile (Name, Password)
+app.put('/api/me/profile', authenticateToken, async (req, res) => {
+    try {
+        const { storeName, newPassword } = req.body;
+        const storeId = req.storeId;
+
+        const store = await Store.findByPk(storeId);
+        if (!store) {
+            return res.status(404).json({ error: 'Tienda no encontrada' });
+        }
+
+        // Update Store Name if provided
+        if (storeName && storeName !== store.nombre) {
+            store.nombre = storeName;
+            await store.save();
+        }
+
+        // Update Password if provided
+        if (newPassword) {
+            const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+            // 1. Update Store Password
+            store.password = hashedPassword;
+            await store.save();
+
+            // 2. Update Linked Admin User Password (if exists - usually current user)
+            const adminUser = await User.findOne({ where: { storeId, role: 'ADMIN' } });
+            if (adminUser) {
+                adminUser.password = hashedPassword;
+                await adminUser.save();
+            }
+        }
+
+        res.json({ message: 'Perfil actualizado correctamente', storeName: store.nombre });
+    } catch (error) {
+        console.error('Error al actualizar perfil:', error);
+        res.status(500).json({ error: 'Error al actualizar perfil' });
+    }
+});
+
+// ==========================================
+// ENDPOINTS DE RECUPERACIÓN (PÚBLICO)
+// ==========================================
+
+// POST /api/auth/request-password-reset - Solicitar recuperación (Crea Ticket)
+app.post('/api/auth/request-password-reset', async (req, res) => {
+    try {
+        const { email, phone } = req.body;
+
+        if (!email) {
+            return res.status(400).json({ error: 'El email es requerido' });
+        }
+
+        // Try to identify the store/user to link the ticket (optional, best effort)
+        let storeId = null;
+        let organizationId = null;
+
+        // Search in Users
+        const user = await User.findOne({ where: { username: email } });
+        if (user) {
+            storeId = user.storeId;
+            // Get Organization from store if possible
+            if (storeId) {
+                const store = await Store.findByPk(storeId);
+                if (store) organizationId = store.organizationId;
+            }
+        } else {
+            // Search in Stores (Legacy)
+            const store = await Store.findOne({ where: { usuario: email } });
+            if (store) {
+                storeId = store.id;
+                organizationId = store.organizationId;
+            }
+        }
+
+        // Ensure we have an Org ID for the Ticket (Required by model usually, or nullable)
+        // If not found, use a fallback 'Support' organization or null if Allowed. 
+        // Based on Seed, we have a default Org. We will use the first one found or null.
+        if (!organizationId) {
+            const anyOrg = await Organization.findOne();
+            if (anyOrg) organizationId = anyOrg.id;
+        }
+
+        // Create SUPPORT TICKET
+        await Ticket.create({
+            storeId: storeId, // Can be null if unknown user
+            organizationId: organizationId,
+            titulo: `🆘 Solicitud Recuperación: ${email}`,
+            descripcion: `El usuario solicita resetear su contraseña.\nEmail: ${email}\nTeléfono de contacto: ${phone || 'No proporcionado'}\n\nAcción requerida: Verificar identidad y resetear password manualmente.`,
+            prioridad: 'URGENT',
+            status: 'OPEN',
+            categoria: 'ACCESS' // Assuming we might have categories, otherwise ignore
+        });
+
+        // Always return success even if user not found (Security best practice)
+        res.json({ message: 'Solicitud recibida. El equipo de soporte te contactará en breve.' });
+
+    } catch (error) {
+        console.error('Error al solicitar recuperación:', error);
+        res.status(500).json({ error: 'Error al procesar la solicitud' });
+    }
+});
+
 // ==========================================
 // ENDPOINTS DE PRODUCTOS
 // ==========================================

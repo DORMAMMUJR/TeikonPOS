@@ -103,6 +103,36 @@ export const authAPI = {
         });
         if (!response.ok) throw new Error(await response.text());
         return response.json();
+    },
+
+    requestPasswordReset: async (email: string, phone: string) => {
+        const response = await fetch(`${API_URL}/api/auth/request-password-reset`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, phone })
+        });
+        if (!response.ok) throw new Error(await response.text());
+        return response.json();
+    },
+
+    updateProfile: async (data: { storeName: string, newPassword?: string }) => {
+        const response = await fetch(`${API_URL}/api/me/profile`, {
+            method: 'PUT',
+            headers: getHeaders(),
+            body: JSON.stringify(data)
+        });
+        if (!response.ok) throw new Error(await response.text());
+        return response.json();
+    },
+
+    adminResetPassword: async (targetStoreId: string, newPassword: string) => {
+        const response = await fetch(`${API_URL}/api/admin/reset-password`, {
+            method: 'POST',
+            headers: getHeaders(),
+            body: JSON.stringify({ targetStoreId, newPassword })
+        });
+        if (!response.ok) throw new Error(await response.text());
+        return response.json();
     }
 };
 

@@ -1,8 +1,8 @@
-
 import React, { useState, useEffect } from 'react';
 import {
-  LayoutDashboard, Store, Ticket, LogOut, ShieldCheck, TrendingUp,
-  Search, Plus, User, ChevronLeft, Package, Zap, X, Eye
+  Store, TrendingUp, ShieldCheck, Search, Plus, User,
+  ChevronLeft, AlertCircle, CheckCircle, Zap, X, Lock, Eye, EyeOff, Building,
+  LayoutDashboard, Package, LogOut, Ticket
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import TeikonLogo from './TeikonLogo';
@@ -12,7 +12,7 @@ import Dashboard from './Dashboard';
 import SalesHistory from './SalesHistory';
 import StoreOperations from './StoreOperations';
 // import SettingsMenu from './SettingsMenu'; // Ensure this exists or comment out if not. Assuming it exists based on previous code.
-import { storesAPI, ticketsAPI, clearAuthToken } from '../utils/api';
+import { storesAPI, ticketsAPI, clearAuthToken, authAPI } from '../utils/api';
 import { useStore } from '../context/StoreContext';
 
 interface StoreData {
@@ -49,6 +49,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
   // Modals
   const [isStoreModalOpen, setIsStoreModalOpen] = useState(false);
   const [newStoreData, setNewStoreData] = useState({ name: '', email: '', password: '', phone: '', ownerName: '' });
+
+  // Reset Password State
+  const [isResetModalOpen, setIsResetModalOpen] = useState(false);
+  const [storeToReset, setStoreToReset] = useState<StoreData | null>(null);
+  const [resetPasswordValue, setResetPasswordValue] = useState('');
 
   // Theme (Placeholder)
   const isDarkMode = false;
@@ -301,9 +306,23 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                     </span>
                   </td>
                   <td className="px-6 py-4 text-right">
-                    <Button variant="secondary" size="sm" className="group-hover:bg-white group-hover:shadow-sm">
-                      GESTIONAR <ChevronLeft className="rotate-180 ml-1" size={12} />
-                    </Button>
+                    <div className="flex items-center justify-end gap-2" onClick={e => e.stopPropagation()}>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        className="bg-red-50 text-red-500 hover:bg-red-100 border-red-100"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setStoreToReset(store);
+                          setIsResetModalOpen(true);
+                        }}
+                      >
+                        <Zap size={14} className="mr-1" /> RESET
+                      </Button>
+                      <Button variant="secondary" size="sm" className="group-hover:bg-white group-hover:shadow-sm" onClick={() => setSelectedStore(store)}>
+                        GESTIONAR <ChevronLeft className="rotate-180 ml-1" size={12} />
+                      </Button>
+                    </div>
                   </td>
                 </tr>
               ))
@@ -551,6 +570,61 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
         </div>
       )}
 
+      {/* PASSWORD RESET MODAL */}
+      {isResetModalOpen && storeToReset && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-sm p-8 shadow-2xl scale-100 animate-in zoom-in-95 duration-200 border border-slate-200 dark:border-slate-800">
+            <div className="text-center mb-6">
+              <div className="w-12 h-12 bg-red-100 dark:bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-4 text-red-500">
+                <ShieldCheck size={28} />
+              </div>
+              <h3 className="text-xl font-black text-slate-900 dark:text-white">Resetear Contraseña</h3>
+              <p className="text-sm font-bold text-slate-500 mt-1 px-4">
+                Estás cambiando la contraseña maestra de <span className="text-slate-900 dark:text-white">{storeToReset.name}</span>
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <div className="space-y-1">
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Nueva Contraseña</label>
+                <input
+                  type="password"
+                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-red-500 outline-none transition-all"
+                  placeholder="Ingrese nueva contraseña"
+                  value={resetPasswordValue}
+                  onChange={(e) => setResetPasswordValue(e.target.value)}
+                />
+              </div>
+
+              <div className="flex gap-2">
+                <Button variant="secondary" fullWidth onClick={() => { setIsResetModalOpen(false); setResetPasswordValue(''); setStoreToReset(null); }} className="h-12">
+                  CANCELAR
+                </Button>
+                <Button
+                  type="button"
+                  variant="primary"
+                  fullWidth
+                  className="bg-red-500 hover:bg-red-600 text-white h-12 shadow-lg shadow-red-500/20"
+                  onClick={async () => {
+                    if (!resetPasswordValue) return alert('Ingrese una contraseña');
+                    try {
+                      await authAPI.adminResetPassword(storeToReset.id, resetPasswordValue);
+                      alert('✅ Contraseña actualizada con éxito');
+                      setIsResetModalOpen(false);
+                      setResetPasswordValue('');
+                      setStoreToReset(null);
+                    } catch (e: any) {
+                      alert('Error: ' + e.message);
+                    }
+                  }}
+                >
+                  CONFIRMAR CAMBIO
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

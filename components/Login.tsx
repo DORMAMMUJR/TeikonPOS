@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ShieldAlert, Terminal, User, Lock, Loader2 } from 'lucide-react';
+import { ShieldAlert, Terminal, User, Lock, Loader2, Mail, Phone, X } from 'lucide-react';
 import Button from './Button';
 import { useStore } from '../context/StoreContext';
 import TeikonLogo from './TeikonLogo';
@@ -22,6 +22,28 @@ const Login: React.FC = () => {
   // Form States
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+
+  // Recovery State
+  const [isRecoveryOpen, setIsRecoveryOpen] = useState(false);
+  const [recoveryEmail, setRecoveryEmail] = useState('');
+  const [recoveryPhone, setRecoveryPhone] = useState('');
+  const [isLoadingRecovery, setIsLoadingRecovery] = useState(false);
+
+  const handleRecoveryRequest = async () => {
+    if (!recoveryEmail) return;
+    setIsLoadingRecovery(true);
+    try {
+      await authAPI.requestPasswordReset(recoveryEmail, recoveryPhone);
+      alert('Solicitud enviada. Soporte te contactará pronto.');
+      setIsRecoveryOpen(false);
+      setRecoveryEmail('');
+      setRecoveryPhone('');
+    } catch (err: any) {
+      alert('Error: ' + err.message);
+    } finally {
+      setIsLoadingRecovery(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
