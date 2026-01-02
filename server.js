@@ -1402,8 +1402,42 @@ app.post('/api/movimientos', authenticateToken, async (req, res) => {
 });
 
 // ==========================================
+// ==========================================
 // ENDPOINTS DE TURNOS DE CAJA
 // ==========================================
+
+// POST /api/shifts/start - Iniciar Turno (Alias / Compatibility)
+app.post('/api/shifts/start', authenticateToken, async (req, res) => {
+    try {
+        const { montoInicial } = req.body; // El frontend envía 'montoInicial'
+
+        // Validar que no exista ya un turno abierto
+        const existingShift = await CashShift.findOne({
+            where: {
+                storeId: req.storeId,
+                status: 'OPEN'
+            }
+        });
+
+        if (existingShift) {
+            return res.status(400).json({ error: 'Ya existe un turno abierto para esta tienda.' });
+        }
+
+        // Crear el nuevo turno
+        const newShift = await CashShift.create({
+            storeId: req.storeId,
+            cajero: req.usuario,
+            apertura: new Date(),
+            montoInicial: montoInicial || 0,
+            status: 'OPEN'
+        });
+
+        res.status(201).json(newShift);
+    } catch (error) {
+        console.error('Error al iniciar turno:', error);
+        res.status(500).json({ error: 'Error interno al iniciar turno' });
+    }
+});
 
 // GET /api/turnos - Listar turnos
 app.get('/api/turnos', authenticateToken, async (req, res) => {
