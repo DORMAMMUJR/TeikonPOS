@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Menu, X } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import { useTheme } from '../context/ThemeContext';
-import TeikonLogo from './TeikonLogo';
+import { TeikonLogo } from '../src/components/ui';
 import SupportTicketModal from './SupportTicketModal';
 import SalesGoalModal from './SalesGoalModal';
 import CashRegisterModal from './CashRegisterModal';

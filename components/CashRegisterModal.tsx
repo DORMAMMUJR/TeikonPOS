@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import Modal from './Modal';
-import Button from './Button';
+import { Modal, Button } from '../src/components/ui';
 import { DollarSign, TrendingUp, ShoppingCart, Percent } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import { useNavigate } from 'react-router-dom';

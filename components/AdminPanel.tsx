@@ -2,18 +2,16 @@ import React, { useState, useEffect } from 'react';
 import {
   Store, TrendingUp, ShieldCheck, Search, Plus, User,
   ChevronLeft, AlertCircle, CheckCircle, Zap, X, Lock, Eye, EyeOff, Building,
-  LayoutDashboard, Package, LogOut, Ticket, DollarSign
+  LayoutDashboard, Package, LogOut, Ticket, DollarSign, Trash2, RefreshCw
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import TeikonLogo from './TeikonLogo';
+import { useStore } from '../context/StoreContext';
+import { storesAPI, ticketsAPI, clearAuthToken, authAPI, API_URL, getHeaders } from '../utils/api';
+import { Button, TeikonLogo } from '../src/components/ui';
 import ProductList from './ProductList';
-import Button from './Button';
 import Dashboard from './Dashboard';
 import SalesHistory from './SalesHistory';
 import StoreOperations from './StoreOperations';
-// import SettingsMenu from './SettingsMenu'; // Ensure this exists or comment out if not. Assuming it exists based on previous code.
-import { storesAPI, ticketsAPI, clearAuthToken, authAPI, API_URL, getHeaders } from '../utils/api';
-import { useStore } from '../context/StoreContext';
 
 interface StoreData {
   id: string;
@@ -112,7 +110,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
   const fetchGlobalSales = async () => {
     setIsLoadingSales(true);
     try {
-      const response = await fetch(`${API_URL}/api/admin/global-sales?limit=15`, {
+      const response = await fetch(`${API_URL} /api/admin / global - sales ? limit = 15`, {
         headers: getHeaders()
       });
       if (!response.ok) throw new Error('Error fetching sales');
@@ -128,7 +126,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
   const fetchAllSales = async () => {
     setIsLoadingAllSales(true);
     try {
-      const response = await fetch(`${API_URL}/api/admin/all-sales?limit=50`, {
+      const response = await fetch(`${API_URL} /api/admin / all - sales ? limit = 50`, {
         headers: getHeaders()
       });
       if (!response.ok) throw new Error('Error fetching all sales');
@@ -209,10 +207,10 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
               <button
                 key={tab.id}
                 onClick={() => setDetailTab(tab.id as any)}
-                className={`px-4 py-2 rounded-lg text-xs font-black transition-all flex items-center gap-2 ${detailTab === tab.id
+                className={`px - 4 py - 2 rounded - lg text - xs font - black transition - all flex items - center gap - 2 ${detailTab === tab.id
                   ? 'bg-slate-900 text-white shadow-lg'
                   : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
-                  }`}
+                  } `}
               >
                 <tab.icon size={14} />
                 {tab.label}
@@ -353,7 +351,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                     <div className="flex items-center justify-end gap-2" onClick={e => e.stopPropagation()}>
                       <Button
                         variant="secondary"
-                        size="sm"
                         className="bg-amber-50 text-amber-600 hover:bg-amber-100 border-amber-100"
                         onClick={(e) => {
                           e.stopPropagation();
@@ -365,7 +362,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                       </Button>
                       <Button
                         variant="secondary"
-                        size="sm"
                         className="bg-red-50 text-red-600 hover:bg-red-100 border-red-100"
                         onClick={(e) => {
                           e.stopPropagation();
@@ -375,7 +371,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                       >
                         <X size={14} className="mr-1" /> ELIMINAR
                       </Button>
-                      <Button variant="secondary" size="sm" className="group-hover:bg-white group-hover:shadow-sm" onClick={() => setSelectedStore(store)}>
+                      <Button variant="secondary" className="group-hover:bg-white group-hover:shadow-sm" onClick={() => setSelectedStore(store)}>
                         GESTIONAR <ChevronLeft className="rotate-180 ml-1" size={12} />
                       </Button>
                     </div>
@@ -424,16 +420,16 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                     <p className="text-xs text-slate-500 truncate max-w-[200px]">{t.descripcion}</p>
                   </td>
                   <td className="px-6 py-4 text-center">
-                    <span className={`px-2 py-1 rounded text-[10px] font-black uppercase ${t.prioridad === 'URGENT' ? 'bg-red-100 text-red-600' :
+                    <span className={`px - 2 py - 1 rounded text - [10px] font - black uppercase ${t.prioridad === 'URGENT' ? 'bg-red-100 text-red-600' :
                       t.prioridad === 'HIGH' ? 'bg-orange-100 text-orange-600' :
                         'bg-blue-100 text-blue-600'
-                      }`}>
+                      } `}>
                       {t.prioridad}
                     </span>
                   </td>
                   <td className="px-6 py-4 text-center">
-                    <span className={`px-2 py-1 rounded-full text-[10px] font-black uppercase border ${t.status === 'OPEN' ? 'bg-green-100 text-green-600 border-green-200' : 'bg-slate-100 text-slate-500 border-slate-200'
-                      }`}>
+                    <span className={`px - 2 py - 1 rounded - full text - [10px] font - black uppercase border ${t.status === 'OPEN' ? 'bg-green-100 text-green-600 border-green-200' : 'bg-slate-100 text-slate-500 border-slate-200'
+                      } `}>
                       {t.status}
                     </span>
                   </td>
@@ -450,7 +446,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
   );
 
   return (
-    <div className={`min-h-screen flex ${isDarkMode ? 'dark bg-slate-900' : 'bg-slate-50'}`}>
+    <div className={`min - h - screen flex ${isDarkMode ? 'dark bg-slate-900' : 'bg-slate-50'} `}>
 
       {/* SIDEBAR */}
       <aside className="w-64 bg-slate-900 text-white flex flex-col fixed h-full z-20">
@@ -467,7 +463,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
 
           <button
             onClick={() => { setActiveView('stores'); setSelectedStore(null); }}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-all ${activeView === 'stores' && !selectedStore ? 'bg-brand-blue text-white shadow-lg shadow-brand-blue/20' : 'text-slate-400 hover:bg-white/5 hover:text-white'}`}
+            className={`w - full flex items - center gap - 3 px - 4 py - 3 rounded - xl text - xs font - bold transition - all ${activeView === 'stores' && !selectedStore ? 'bg-brand-blue text-white shadow-lg shadow-brand-blue/20' : 'text-slate-400 hover:bg-white/5 hover:text-white'} `}
           >
             <Store size={18} />
             TIENDAS ACTIVAS
@@ -475,7 +471,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
 
           <button
             onClick={() => { setActiveView('tickets'); setSelectedStore(null); }}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-all ${activeView === 'tickets' ? 'bg-brand-blue text-white shadow-lg shadow-brand-blue/20' : 'text-slate-400 hover:bg-white/5 hover:text-white'}`}
+            className={`w - full flex items - center gap - 3 px - 4 py - 3 rounded - xl text - xs font - bold transition - all ${activeView === 'tickets' ? 'bg-brand-blue text-white shadow-lg shadow-brand-blue/20' : 'text-slate-400 hover:bg-white/5 hover:text-white'} `}
           >
             <Ticket size={18} />
             TICKETS SOPORTE
@@ -497,7 +493,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
         <header className="flex justify-between items-center mb-8">
           <div>
             <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
-              {selectedStore ? `Gestionando: ${selectedStore.name}` : (activeView === 'stores' ? 'Panel de Control Principal' : 'Centro de Soporte')}
+              {selectedStore ? `Gestionando: ${selectedStore.name} ` : (activeView === 'stores' ? 'Panel de Control Principal' : 'Centro de Soporte')}
             </h2>
             <p className="text-xs font-bold text-slate-400 mt-1">
               Bienvenido, <span className="text-brand-blue">Dragn</span>. Sistema operando al 100%.

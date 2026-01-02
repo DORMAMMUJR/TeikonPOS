@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { X, Send, LifeBuoy, User, Store, MessageSquare } from 'lucide-react';
+import { X, Send, LifeBuoy, User as UserIcon, Store as StoreIcon, MessageSquare } from 'lucide-react';
 import Button from './Button';
 
 interface SupportTicketModalProps {
@@ -51,7 +51,7 @@ const SupportTicketModal: React.FC<SupportTicketModalProps> = ({ isOpen, onClose
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={onClose}></div>
-      
+
       <div className="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden animate-in zoom-in duration-300">
         <div className="p-8">
           <div className="flex justify-between items-start mb-8 border-b border-slate-100 dark:border-slate-800 pb-4">
@@ -64,7 +64,7 @@ const SupportTicketModal: React.FC<SupportTicketModalProps> = ({ isOpen, onClose
                 <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Asistencia Técnica Directa</p>
               </div>
             </div>
-            <button onClick={onClose} className="text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors">
+            <button onClick={onClose} aria-label="Cerrar" className="text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors">
               <X size={20} />
             </button>
           </div>
@@ -85,26 +85,26 @@ const SupportTicketModal: React.FC<SupportTicketModalProps> = ({ isOpen, onClose
                 <div className="space-y-1.5">
                   <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Solicitante</label>
                   <div className="relative group">
-                    <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500" size={16} />
-                    <input 
+                    <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500" size={16} />
+                    <input
                       required
                       placeholder="Nombre Completo"
                       className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold text-slate-900 dark:text-white outline-none focus:border-indigo-500 transition-all"
                       value={formData.requesterName}
-                      onChange={e => setFormData({...formData, requesterName: e.target.value})}
+                      onChange={e => setFormData({ ...formData, requesterName: e.target.value })}
                     />
                   </div>
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Tienda / Nodo</label>
                   <div className="relative group">
-                    <Store className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500" size={16} />
-                    <input 
+                    <StoreIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500" size={16} />
+                    <input
                       required
                       placeholder="Sucursal"
                       className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold text-slate-900 dark:text-white outline-none focus:border-indigo-500 transition-all"
                       value={formData.storeName}
-                      onChange={e => setFormData({...formData, storeName: e.target.value})}
+                      onChange={e => setFormData({ ...formData, storeName: e.target.value })}
                     />
                   </div>
                 </div>
@@ -114,18 +114,18 @@ const SupportTicketModal: React.FC<SupportTicketModalProps> = ({ isOpen, onClose
                 <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Descripción del Problema</label>
                 <div className="relative group">
                   <MessageSquare className="absolute left-4 top-4 text-slate-400 group-focus-within:text-indigo-500" size={16} />
-                  <textarea 
+                  <textarea
                     required
                     placeholder="Describe detalladamente el error o consulta..."
                     rows={4}
                     className="w-full pl-11 pr-4 py-4 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold text-slate-900 dark:text-white outline-none focus:border-indigo-500 transition-all resize-none"
                     value={formData.description}
-                    onChange={e => setFormData({...formData, description: e.target.value})}
+                    onChange={e => setFormData({ ...formData, description: e.target.value })}
                   />
                 </div>
               </div>
 
-              <button 
+              <button
                 type="submit"
                 disabled={isSubmitting}
                 className="w-full bg-slate-900 dark:bg-indigo-600 hover:bg-slate-800 dark:hover:bg-indigo-500 text-white py-4 rounded-xl text-[10px] font-black uppercase tracking-[0.3em] shadow-xl transition-all active:scale-[0.98] flex items-center justify-center gap-2"

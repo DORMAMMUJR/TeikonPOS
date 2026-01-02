@@ -1,15 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useStore } from '../context/StoreContext';
+import { Search, Printer, X, Calendar, FileText, History as HistoryIcon } from 'lucide-react';
+import { Modal, Button, TeikonWordmark } from '../src/components/ui';
+import { SaleTicket } from './SaleTicket';
 import { Sale } from '../types';
-import Modal from './Modal';
-import Button from './Button';
-import SaleTicket from './SaleTicket';
-import { Search, FileText, History as HistoryIcon, Printer, Share2, Check } from 'lucide-react';
-import TeikonWordmark from './TeikonWordmark';
-import { isTokenValid } from '../utils/api';
+import { isTokenValid } from '../utils/auth';
 
 const SalesHistory: React.FC = () => {
-  const { sales, cancelSale, currentUserRole, currentUser } = useStore();
+  const { sales, cancelSale, currentUser } = useStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [showTodayOnly, setShowTodayOnly] = useState(true);
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
@@ -163,7 +161,7 @@ const SalesHistory: React.FC = () => {
                     <div className="flex justify-center gap-2">
                       <Button
                         variant="secondary"
-                        size="sm"
+
                         onClick={() => setSelectedSale(sale)}
                         className="h-8 text-[10px]"
                       >
@@ -172,7 +170,7 @@ const SalesHistory: React.FC = () => {
                       </Button>
                       <Button
                         variant="primary"
-                        size="sm"
+
                         onClick={() => handlePrint(sale)}
                         className="h-8 text-[10px] bg-slate-900 text-white hover:bg-slate-800"
                       >

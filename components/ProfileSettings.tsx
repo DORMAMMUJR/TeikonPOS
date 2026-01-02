@@ -1,9 +1,8 @@
-
 import React, { useState } from 'react';
 import { useStore } from '../context/StoreContext';
+import { User, Phone, Mail, Lock, X, Eye, EyeOff, Store, AlertTriangle, CheckCircle } from 'lucide-react';
 import { authAPI } from '../utils/api';
-import Button from './Button';
-import { X, User, Lock, Store as StoreIcon, CheckCircle, AlertTriangle } from 'lucide-react';
+import { Button } from '../src/components/ui';
 import DangerZone from './DangerZone';
 
 interface ProfileSettingsProps {
@@ -104,7 +103,7 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ onClose }) => {
                     <div className="space-y-1">
                         <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Nombre de la Tienda</label>
                         <div className="relative">
-                            <StoreIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                            <Store className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                             <input
                                 type="text"
                                 className="w-full pl-12 pr-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold focus:ring-2 focus:ring-brand-blue outline-none transition-all"

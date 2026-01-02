@@ -4,7 +4,7 @@ import { DollarSign, Target, Save, Calculator, AlertTriangle, CheckCircle2 } fro
 import Button from './Button';
 import { getAuthToken, API_URL } from '../utils/api';
 
-interface StoreOperationsProps {
+export interface StoreOperationsProps {
     storeId: string;
 }
 
