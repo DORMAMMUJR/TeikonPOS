@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useStore } from '../context/StoreContext';
 import { useTheme } from '../context/ThemeContext';
-<<<<<<< HEAD
-import Modal from './Modal';
 import {
   Calculator,
   Sun,
@@ -11,29 +9,16 @@ import {
   LogOut,
   ChevronRight,
   ShieldCheck
-=======
-import {
-  Moon, Sun, DollarSign, TrendingUp, Package, Percent,
-  Save, RotateCcw, AlertTriangle, CheckCircle, Settings as SettingsIcon,
-  Bell, Lock, Globe, Smartphone, Monitor, Palette, Zap, Shield,
-  Calculator, ShieldCheck, LifeBuoy, ChevronRight, LogOut
->>>>>>> bf8c5a6c68ba90d674e30bc90174141a3a0b2683
+
 } from 'lucide-react';
 import { Modal, Button } from '../src/components/ui';
 import DangerZone from './DangerZone';
 import SupportTicketModal from './SupportTicketModal';
 
 const Settings: React.FC = () => {
-<<<<<<< HEAD
   const { settings, updateSettings, currentSession, closeSession, currentUser, logout } = useStore();
   const { theme, toggleTheme } = useTheme();
-=======
-  const { settings, updateSettings, currentUser, calculateTotalInventoryValue, currentSession, closeSession, logout } = useStore();
-  const { isDarkMode, toggleDarkMode } = useTheme();
 
-
-
->>>>>>> bf8c5a6c68ba90d674e30bc90174141a3a0b2683
 
   const [fixedCosts, setFixedCosts] = useState(settings.monthlyFixedCosts);
   const [isCloseModalOpen, setIsCloseModalOpen] = useState(false);
@@ -86,7 +71,6 @@ const Settings: React.FC = () => {
           </div>
 
           <button
-<<<<<<< HEAD
             onClick={toggleTheme}
             aria-label="Cambiar modo de tema"
             title="Cambiar entre modo claro y oscuro"
@@ -94,15 +78,6 @@ const Settings: React.FC = () => {
               }`}
           >
             <div className={`w-6 h-6 bg-white rounded-full shadow-md transform transition-transform duration-300 ${theme === 'dark' ? 'translate-x-8' : 'translate-x-0'
-=======
-            onClick={toggleDarkMode}
-            title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
-            aria-label={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
-            className={`w-16 h-8 rounded-full transition-all duration-300 relative px-1 flex items-center shrink-0 min-h-[44px] ${isDarkMode ? 'bg-indigo-600' : 'bg-slate-300 dark:bg-slate-800'
-              }`}
-          >
-            <div className={`w-6 h-6 bg-white rounded-full shadow-md transform transition-transform duration-300 ${isDarkMode ? 'translate-x-8' : 'translate-x-0'
->>>>>>> bf8c5a6c68ba90d674e30bc90174141a3a0b2683
               }`} />
           </button>
         </div>

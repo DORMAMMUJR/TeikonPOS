@@ -34,7 +34,6 @@ export interface User {
   department: string;
   storeName?: string;
   phone?: string;
-  fullName?: string; // Nombre completo del usuario
   // Nuevos campos para backend
   storeId?: string;
   organizationId?: string;

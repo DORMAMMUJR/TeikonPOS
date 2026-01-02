@@ -13,14 +13,8 @@ interface ProductListProps {
   products?: Product[];
 }
 
-<<<<<<< HEAD
 const ProductList: React.FC<ProductListProps> = ({ products: propProducts, targetStoreId }) => {
   const { products: contextProducts, addProduct, updateProduct, deleteProduct, calculateTotalInventoryValue, currentUser } = useStore();
-=======
-export const ProductList: React.FC<ProductListProps> = ({ targetStoreId, products: propProducts }) => {
-  // 1. Extraemos todo lo necesario del Store
-  const { products: contextProducts, addProduct, updateProduct, deleteProduct } = useStore();
->>>>>>> bf8c5a6c68ba90d674e30bc90174141a3a0b2683
 
   // 2. Lógica de selección de productos (Props o Contexto)
   const products = propProducts || contextProducts || [];

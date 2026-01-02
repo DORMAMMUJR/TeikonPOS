@@ -4,16 +4,8 @@ import { Search, Printer, X, Calendar, FileText, History as HistoryIcon } from '
 import { Modal, Button, TeikonWordmark } from '../src/components/ui';
 import { SaleTicket } from './SaleTicket';
 import { Sale } from '../types';
-<<<<<<< HEAD
-import Modal from './Modal';
-import { Button } from '../src/components/ui';
-import SaleTicket from './SaleTicket';
-import { Search, FileText, History as HistoryIcon, Printer, Share2, Check } from 'lucide-react';
-import TeikonWordmark from './TeikonWordmark';
 import { isTokenValid } from '../utils/api';
-=======
-import { isTokenValid } from '../utils/auth';
->>>>>>> bf8c5a6c68ba90d674e30bc90174141a3a0b2683
+import { Share2, Check } from 'lucide-react'; // Adding missing icons
 
 const SalesHistory: React.FC = () => {
   const { sales, cancelSale, currentUser } = useStore();

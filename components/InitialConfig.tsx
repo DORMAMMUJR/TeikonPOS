@@ -1,9 +1,5 @@
 import React, { useState } from 'react';
 import { useStore } from '../context/StoreContext';
-<<<<<<< HEAD
-import { Button } from '../src/components/ui';
-=======
->>>>>>> bf8c5a6c68ba90d674e30bc90174141a3a0b2683
 import { Store, Phone, ShieldCheck, Rocket } from 'lucide-react';
 import { Button, TeikonLogo } from '../src/components/ui';
 
@@ -64,7 +60,6 @@ const InitialConfig: React.FC = () => {
         minStock: 3,
         taxRate: 0,
         isActive: true,
-        storeId: ''
       });
 
       // 3. REDIRECCIÓN POST-ONBOARDING
