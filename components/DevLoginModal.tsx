@@ -50,7 +50,6 @@ const DevLoginModal: React.FC<DevLoginModalProps> = ({ onSuccess, onClose }) => 
             <button
               onClick={onClose}
               className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors text-slate-400 hover:text-slate-900 dark:hover:text-white"
-              aria-label="Cerrar modal de desarrollador"
             >
               <X size={20} />
             </button>

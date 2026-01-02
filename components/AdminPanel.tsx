@@ -183,7 +183,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
             <button
               onClick={() => setSelectedStore(null)}
               className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition-colors"
-              aria-label="Volver a lista de tiendas"
             >
               <ChevronLeft size={24} className="text-slate-600 dark:text-slate-300" />
             </button>
@@ -527,7 +526,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                 onClick={() => setIsStoreModalOpen(false)}
                 className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full text-slate-400 transition-colors"
                 type="button"
-                aria-label="Cerrar modal"
               >
                 <X size={20} />
               </button>

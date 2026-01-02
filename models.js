@@ -741,48 +741,6 @@ Store.hasOne(StoreConfig, { foreignKey: 'storeId', as: 'config', onDelete: 'CASC
 StoreConfig.belongsTo(Store, { foreignKey: 'storeId', as: 'store' });
 
 // ==========================================
-// MODELO: InventorySnapshot (Respaldo de Inventario)
-// ==========================================
-const InventorySnapshot = sequelize.define('InventorySnapshot', {
-    id: {
-        type: DataTypes.UUID,
-        defaultValue: DataTypes.UUIDV4,
-        primaryKey: true
-    },
-    snapshotDate: {
-        type: DataTypes.DATE,
-        defaultValue: DataTypes.NOW,
-        field: 'snapshot_date'
-    },
-    data: {
-        type: DataTypes.JSONB, // Postgres optimized JSON
-        allowNull: false,
-        comment: 'Estado completo del inventario (sin imágenes)'
-    },
-    description: {
-        type: DataTypes.STRING,
-        allowNull: true
-    },
-    storeId: {
-        type: DataTypes.UUID,
-        allowNull: true, // Null = Global Backup
-        field: 'store_id'
-    },
-    createdBy: {
-        type: DataTypes.STRING,
-        allowNull: true,
-        field: 'created_by'
-    }
-}, {
-    tableName: 'inventory_snapshots',
-    timestamps: true
-});
-
-// Organization/Store -> InventorySnapshot
-Store.hasMany(InventorySnapshot, { foreignKey: 'storeId', as: 'snapshots' });
-InventorySnapshot.belongsTo(Store, { foreignKey: 'storeId', as: 'store' });
-
-// ==========================================
 // EXPORTAR
 // ==========================================
 export {
@@ -799,6 +757,5 @@ export {
     CashShift,
     Client,
     Ticket,
-    StoreConfig,
-    InventorySnapshot
+    StoreConfig
 };

@@ -74,9 +74,6 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => 
     setIsMobileMenuOpen(false);
   };
 
-  // Extracted style for progress bar to satisfy Webhint linter
-  const progressBarStyle = { width: `${progressPercent}%` };
-
   return (
     <div className="flex h-[100dvh] bg-brand-bg text-brand-text overflow-hidden transition-colors duration-500">
 
@@ -152,10 +149,9 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => 
               <span className="text-slate-900 dark:text-white">${currentSales.toFixed(0)} / ${dailyTarget.toFixed(0)}</span>
             </div>
             <div className="h-2 w-full bg-slate-100 dark:bg-slate-900 rounded-full relative overflow-hidden shadow-inner border border-black/5 dark:border-white/5">
-              {/* eslint-disable-next-line webhint/no-inline-styles */}
               <div
                 className="h-full bg-brand-purple transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(139,92,246,0.4)]"
-                style={progressBarStyle}
+                style={{ width: `${progressPercent}%` }}
               />
             </div>
           </div>
