@@ -409,3 +409,38 @@ export const ticketsAPI = {
     }
 };
 
+// ==========================================
+// SHIFTS API (TURNO DE CAJA)
+// ==========================================
+
+export const shiftsAPI = {
+    start: async (startBalance: number) => {
+        const response = await fetch(`${API_URL}/api/shifts/start`, {
+            method: 'POST',
+            headers: getHeaders(),
+            body: JSON.stringify({ startBalance })
+        });
+        await handleApiResponse(response);
+        return response.json();
+    },
+
+    getCurrent: async () => {
+        const response = await fetch(`${API_URL}/api/shifts/current`, {
+            headers: getHeaders()
+        });
+        await handleApiResponse(response);
+        // Backend returns null if no active shift, 200 OK
+        return response.json();
+    },
+
+    end: async (shiftId: string, data: any) => {
+        const response = await fetch(`${API_URL}/api/shifts/end`, {
+            method: 'POST',
+            headers: getHeaders(),
+            body: JSON.stringify({ shiftId, ...data })
+        });
+        await handleApiResponse(response);
+        return response.json();
+    }
+};
+

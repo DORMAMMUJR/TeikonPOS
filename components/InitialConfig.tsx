@@ -1,14 +1,14 @@
-
 import React, { useState } from 'react';
 import { useStore } from '../context/StoreContext';
-import Button from './Button';
 import { Store, Phone, ShieldCheck, Rocket } from 'lucide-react';
-import TeikonLogo from './TeikonLogo';
+import { Button, TeikonLogo } from '../src/components/ui';
 
 const InitialConfig: React.FC = () => {
   const { updateCurrentUser, addProduct, currentUser } = useStore();
   const [storeName, setStoreName] = useState('');
   const [phone, setPhone] = useState('');
+  const [step, setStep] = useState(1);
+  const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   /**
@@ -25,14 +25,14 @@ const InitialConfig: React.FC = () => {
       // 1. ACTUALIZACIÓN DE PERFIL Y SINCRONIZACIÓN CON SUPER ADMIN
       // Simulamos la latencia de red de una actualización en base de datos
       await new Promise(resolve => setTimeout(resolve, 1000));
-      
+
       // Actualizamos el estado local del usuario (esto gatilla la redirección en App.tsx)
       updateCurrentUser({ storeName, phone });
 
       // Persistencia para que el 'Panel de Super Admin' vea la nueva tienda inmediatamente
       const savedStoresRaw = localStorage.getItem('teikon_all_stores');
       const allStores = savedStoresRaw ? JSON.parse(savedStoresRaw) : [];
-      
+
       const newStoreEntry = {
         id: `ST-${Math.floor(Math.random() * 900 + 100)}`,
         name: storeName,
@@ -58,7 +58,8 @@ const InitialConfig: React.FC = () => {
         stock: 12,
         minStock: 3,
         taxRate: 0,
-        isActive: true
+        isActive: true,
+        storeId: ''
       });
 
       // 3. REDIRECCIÓN POST-ONBOARDING

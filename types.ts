@@ -27,6 +27,7 @@ export interface Store {
 }
 
 export interface User {
+  fullName: string;
   id: string;
   username: string;
   role: Role;

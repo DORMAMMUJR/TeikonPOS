@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { useStore } from '../context/StoreContext';
-import { Product } from '../types';
+import { Product } from '../types'; // Added this import
 import { Button } from '../src/components/ui';
 
 interface RestockFormProps {
-  inventory: Product[];
+  inventory: Product[]; // Added this property
   onUpdate: (sku: string, amountToAdd: number) => void;
   onCancel: () => void;
 }
+// ...
 
 const RestockForm = ({ inventory, onUpdate, onCancel }: RestockFormProps) => {
   const [selectedSku, setSelectedSku] = useState('');

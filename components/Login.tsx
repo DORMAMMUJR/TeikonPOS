@@ -54,6 +54,11 @@ const Login: React.FC = () => {
       // Update context with token only
       login(response.token);
 
+      // Save storeId for critical components like DangerZone
+      if (response.user && response.user.storeId) {
+        localStorage.setItem('currentStoreId', response.user.storeId);
+      }
+
       // ---------------------------------------------------------
       // LOGIC FOR SUPER ADMIN REDIRECTION
       // ---------------------------------------------------------

@@ -27,7 +27,7 @@ const StoreOperations: React.FC<StoreOperationsProps> = ({ storeId }) => {
 
     const loadConfig = async () => {
         try {
-            const res = await fetch('http://localhost:80/api/config', { headers: getHeaders() });
+            const res = await fetch(`${API_URL}/api/config`, { headers: getHeaders() });
             if (res.ok) {
                 const data = await res.json();
                 setGoal(data.breakEvenGoal || '');
@@ -55,7 +55,7 @@ const StoreOperations: React.FC<StoreOperationsProps> = ({ storeId }) => {
     const savedGoal = async () => {
         setIsSaving(true);
         try {
-            await fetch('http://localhost:80/api/config', {
+            await fetch(`${API_URL}/api/config`, {
                 method: 'PUT',
                 headers: getHeaders(),
                 body: JSON.stringify({ breakEvenGoal: parseFloat(goal) || 0 })

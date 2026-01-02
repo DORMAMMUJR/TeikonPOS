@@ -15,10 +15,7 @@ const Settings: React.FC = () => {
   const { settings, updateSettings, currentUser, calculateTotalInventoryValue, currentSession, closeSession, logout } = useStore();
   const { isDarkMode, toggleDarkMode } = useTheme();
 
-  const [monthlyFixedCosts, setMonthlyFixedCosts] = useState(settings.monthlyFixedCosts);
-  const [hasChanges, setHasChanges] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
-  const [activeTab, setActiveTab] = useState<'general' | 'appearance' | 'danger'>('general');
+
 
 
   const [fixedCosts, setFixedCosts] = useState(settings.monthlyFixedCosts);
