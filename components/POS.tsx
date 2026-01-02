@@ -351,6 +351,12 @@ const POS: React.FC = () => {
           paymentMethod="CASH"
           sellerId={currentUser?.username || "SISTEMA"}
           folio={saleSummary.folio}
+          date={new Date().toLocaleString()}
+          storeInfo={{
+            name: currentUser?.storeName || "TEIKON OS TERMINAL",
+            address: "NODO OPERATIVO ACTIVO",
+            phone: currentUser?.phone || "N/A"
+          }}
           onClose={() => setShowTicket(false)}
         />
       )}

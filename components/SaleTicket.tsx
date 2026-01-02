@@ -16,8 +16,10 @@ interface SaleTicketProps {
   };
   footerMessage?: string;
   ticketId?: string;
+  folio?: string;
   paymentMethod?: string;
   sellerId?: string;
+  onClose?: () => void;
 }
 
 export const SaleTicket: React.FC<SaleTicketProps> = ({
@@ -28,7 +30,8 @@ export const SaleTicket: React.FC<SaleTicketProps> = ({
   date,
   storeInfo,
   footerMessage = "¡Gracias por su compra!",
-  ticketId
+  ticketId,
+  folio
 }) => {
 
   // Auto-imprimir al cargar
@@ -48,7 +51,7 @@ export const SaleTicket: React.FC<SaleTicketProps> = ({
         {storeInfo.phone && <p className="text-xs">Tel: {storeInfo.phone}</p>}
         <div className="border-b-2 border-dashed border-black my-2"></div>
         <p className="text-xs text-left">Fecha: {date}</p>
-        {ticketId && <p className="text-xs text-left">Ticket #: {ticketId}</p>}
+        {(ticketId || folio) && <p className="text-xs text-left">Ticket #: {ticketId || folio}</p>}
       </div>
 
       {/* Lista de Items */}
