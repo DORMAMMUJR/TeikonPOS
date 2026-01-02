@@ -42,7 +42,7 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const [settings, setSettings] = useState<FinancialSettings>({ monthlyFixedCosts: 10000 });
   const [isOnline, setIsOnline] = useState(navigator.onLine);
 
-  const currentSession = allSessions.find(s => s.status === 'OPEN') || null;
+  const [currentSession, setCurrentSession] = useState<CashSession | null>(null);
 
   // Monitor online status
   useEffect(() => {

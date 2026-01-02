@@ -18,6 +18,7 @@ import SupportTicketModal from './SupportTicketModal';
 const Settings: React.FC = () => {
   const { settings, updateSettings, currentSession, closeSession, currentUser, logout } = useStore();
   const { theme, toggleTheme } = useTheme();
+  const isDarkMode = theme === 'dark';
 
 
   const [fixedCosts, setFixedCosts] = useState(settings.monthlyFixedCosts);
