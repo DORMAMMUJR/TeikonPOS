@@ -27,7 +27,8 @@ import {
     CashShift,
     Client,
     Ticket,
-    StoreConfig
+    StoreConfig,
+    InventorySnapshot
 } from './models.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -2350,8 +2351,171 @@ const startServer = async () => {
 
                 res.json(ticket);
             } catch (error) {
-                console.error('Error al actualizar ticket:', error);
                 res.status(500).json({ error: 'Error al actualizar ticket' });
+            }
+        });
+
+        // ==========================================
+        // ENDPOINTS DE SEGURIDAD (RESPALDO DE INVENTARIO)
+        // ==========================================
+
+        // POST /api/inventory/snapshot - Crear Punto de Restauración
+        app.post('/api/inventory/snapshot', authenticateToken, async (req, res) => {
+            try {
+                if (req.role !== 'SUPER_ADMIN') {
+                    return res.status(403).json({ error: 'Requiere permisos de Super Admin' });
+                }
+
+                const { description, storeId } = req.body; // storeId optional for filtering
+
+                console.log(`💾 Iniciando respaldo de inventario...`);
+
+                const where = { activo: true };
+                if (storeId) where.storeId = storeId;
+
+                // CRITICAL: Exclude 'imagen' to prevent OOM (Memory exhaustion)
+                const products = await Product.findAll({
+                    where,
+                    attributes: { exclude: ['imagen'] }, // <-- MEMORY SAFETY
+                    raw: true
+                });
+
+                if (!products || products.length === 0) {
+                    console.warn('⚠️ Intento de respaldo con inventario vacío.');
+                    return res.status(400).json({ error: 'El inventario está vacío. No se creó el respaldo.' });
+                }
+
+                const snapshot = await InventorySnapshot.create({
+                    description: description || 'Respaldo Manual',
+                    data: products,
+                    storeId: storeId || null,
+                    createdBy: req.usuario
+                });
+
+                console.log(`✅ Respaldo creado: ${snapshot.id} (${products.length} productos)`);
+
+                res.status(201).json({
+                    message: 'Respaldo creado exitosamente',
+                    snapshotId: snapshot.id,
+                    totalProducts: products.length,
+                    date: snapshot.snapshotDate
+                });
+
+            } catch (error) {
+                console.error('❌ Error fatal al crear respaldo:', error);
+                res.status(500).json({ error: 'Error al crear punto de restauración' });
+            }
+        });
+
+        // POST /api/inventory/restore/:id - Restaurar (Rollback)
+        app.post('/api/inventory/restore/:id', authenticateToken, async (req, res) => {
+            const t = await sequelize.transaction(); // <-- DB TRANSACTION
+            try {
+                if (req.role !== 'SUPER_ADMIN') {
+                    await t.rollback();
+                    return res.status(403).json({ error: 'Requiere permisos de Super Admin' });
+                }
+
+                const snapshotId = req.params.id;
+                console.log(`⏮️ Iniciando restauración desde Snapshot: ${snapshotId}`);
+
+                const snapshot = await InventorySnapshot.findByPk(snapshotId);
+                if (!snapshot) {
+                    await t.rollback();
+                    return res.status(404).json({ error: 'Snapshot no encontrado' });
+                }
+
+                const backupData = snapshot.data; // Array of products
+                if (!Array.isArray(backupData)) {
+                    await t.rollback();
+                    return res.status(500).json({ error: 'Datos de respaldo corruptos' });
+                }
+
+                let updatedCount = 0;
+
+                // Restore logic: Iterate and Upsert/Update
+                for (const item of backupData) {
+                    // Update only critical fields (Price, Cost, Stock, Active)
+                    // We do NOT restore ID (it's the key) or Organization structure
+                    await Product.update({
+                        stock: item.stock,
+                        costPrice: item.costPrice,
+                        salePrice: item.salePrice,
+                        nombre: item.nombre,
+                        categoria: item.categoria,
+                        activo: item.activo,
+                        // Not restoring 'imagen' as it's not in snapshot to save space
+                    }, {
+                        where: { id: item.id },
+                        transaction: t
+                    });
+                    updatedCount++;
+                }
+
+                await t.commit(); // <-- COMMIT CHANGES
+                console.log(`✅ Restauración completada. ${updatedCount} productos actualizados.`);
+
+                res.json({
+                    message: 'Inventario restaurado exitosamente',
+                    restoredCount: updatedCount,
+                    snapshotDate: snapshot.snapshotDate
+                });
+
+            } catch (error) {
+                await t.rollback(); // <-- ROLLBACK ON ERROR
+                console.error('❌ Error fatal en restauración (Rollback ejecutado):', error);
+                res.status(500).json({ error: 'Error crítico al restaurar inventario. Los cambios se han revertido.' });
+            }
+        });
+
+        // GET /api/inventory/export - Exportar CSV (Stream)
+        app.get('/api/inventory/export', authenticateToken, async (req, res) => {
+            try {
+                if (req.role !== 'SUPER_ADMIN') {
+                    return res.status(403).json({ error: 'Requiere permisos de Super Admin' });
+                }
+
+                console.log('📤 Iniciando exportación de inventario...');
+
+                // Headers for download
+                res.setHeader('Content-Type', 'text/csv');
+                res.setHeader('Content-Disposition', 'attachment; filename="inventory_export.csv"');
+
+                // Write CSV Header
+                res.write('ID,SKU,Nombre,Categoria,Costo,Precio,Stock,TiendaID,Activo\n');
+
+                const BATCH_SIZE = 100;
+                let offset = 0;
+
+                while (true) {
+                    // Fetch in batches to enable Streaming and avoid OOM
+                    const products = await Product.findAll({
+                        attributes: ['id', 'sku', 'nombre', 'categoria', 'costPrice', 'salePrice', 'stock', 'storeId', 'activo'],
+                        limit: BATCH_SIZE,
+                        offset: offset,
+                        raw: true
+                    });
+
+                    if (products.length === 0) break;
+
+                    // Convert and write chunk
+                    const csvChunk = products.map(p =>
+                        `"${p.id}","${p.sku}","${p.nombre.replace(/"/g, '""')}","${p.categoria}","${p.costPrice}","${p.salePrice}","${p.stock}","${p.storeId}","${p.activo ? 'Yes' : 'No'}"`
+                    ).join('\n');
+
+                    res.write(csvChunk + '\n');
+
+                    offset += BATCH_SIZE;
+                    // Small delay to allow buffer flush if needed (optional, node handles it usually)
+                }
+
+                res.end();
+                console.log(`✅ Exportación completada: ${offset} registros.`);
+
+            } catch (error) {
+                console.error('Error al exportar:', error);
+                if (!res.headersSent) res.status(500).json({ error: 'Error al exportar inventario' });
+                else res.end(); // Terminate stream if already started
             }
         });
 

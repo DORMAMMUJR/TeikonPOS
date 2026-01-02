@@ -226,6 +226,7 @@ const POS: React.FC = () => {
                   <button
                     onClick={() => setCart(c => c.filter(i => i.productId !== item.productId))}
                     className="min-w-[44px] min-h-[44px] flex items-center justify-center text-slate-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-lg active:scale-90 transition-all"
+                    aria-label="Eliminar producto del carrito"
                   >
                     <Trash2 size={18} />
                   </button>
@@ -237,6 +238,7 @@ const POS: React.FC = () => {
                       <button
                         onClick={() => updateQuantity(item.productId, -1)}
                         className="min-w-[44px] min-h-[44px] flex items-center justify-center bg-slate-100 dark:bg-slate-800 rounded-lg active:scale-90 transition-transform"
+                        aria-label="Disminuir cantidad"
                       >
                         <Minus size={16} />
                       </button>
@@ -244,6 +246,7 @@ const POS: React.FC = () => {
                       <button
                         onClick={() => updateQuantity(item.productId, 1)}
                         className="min-w-[44px] min-h-[44px] flex items-center justify-center bg-slate-100 dark:bg-slate-800 rounded-lg active:scale-90 transition-transform"
+                        aria-label="Aumentar cantidad"
                       >
                         <Plus size={16} />
                       </button>

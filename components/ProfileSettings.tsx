@@ -81,6 +81,7 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ onClose }) => {
                     <button
                         onClick={onClose}
                         className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full text-slate-400 transition-colors"
+                        aria-label="Cerrar configuración de perfil"
                     >
                         <X size={20} />
                     </button>
