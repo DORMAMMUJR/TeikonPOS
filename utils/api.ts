@@ -1,4 +1,6 @@
 // API Base URL - automatically uses current domain in production
+// Re-export verified
+
 // API Base URL - Environment aware
 // API Base URL - Environment aware
 export const API_URL = (import.meta as any).env?.VITE_API_URL || ((import.meta as any).env?.PROD ? '' : 'http://localhost:80');
@@ -443,4 +445,3 @@ export const shiftsAPI = {
         return response.json();
     }
 };
-

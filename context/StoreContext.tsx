@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { Product, Sale, FinancialSettings, Role, User, CashSession, CartItem, SaleResult, SaleDetail, PendingSale } from '../types';
-import { authAPI, productsAPI, salesAPI, expensesAPI, dashboardAPI, setAuthToken, clearAuthToken, getAuthToken, getCurrentUserFromToken, isTokenValid } from '../utils/api';
-import { addPendingSale, getPendingSales, removePendingSale, clearPendingSales } from '../utils/offlineSync';
+import { productsAPI, salesAPI, dashboardAPI, authAPI, setAuthToken, clearAuthToken, getCurrentUserFromToken } from '../utils/api';
+import { addPendingSale, getPendingSales, clearPendingSales } from '../utils/offlineSync';
 
 interface StoreContextType {
   products: Product[];
@@ -12,6 +12,8 @@ interface StoreContextType {
   currentUserRole: Role | undefined;
   currentSession: CashSession | null;
   isOnline: boolean;
+  isLoading: boolean;
+  error: string | null;
 
   login: (token: string) => void;
   logout: () => void;
@@ -24,7 +26,7 @@ interface StoreContextType {
   processSaleAndContributeToGoal: (cartItems: CartItem[], paymentMethod: 'CASH' | 'CARD' | 'TRANSFER') => Promise<SaleResult>;
   cancelSale: (saleId: string) => Promise<void>;
   updateSettings: (settings: FinancialSettings) => void;
-  getDashboardStats: (period: 'day' | 'month') => Promise<any>;
+  getDashboardStats: (period: 'day' | 'month', storeId?: string) => Promise<any>;
   calculateTotalInventoryValue: () => number;
   syncData: () => Promise<void>;
 }
@@ -41,6 +43,8 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const [allSessions, setAllSessions] = useState<CashSession[]>([]);
   const [settings, setSettings] = useState<FinancialSettings>({ monthlyFixedCosts: 10000 });
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const currentSession = allSessions.find(s => s.status === 'OPEN') || null;
 
@@ -481,7 +485,7 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
   return (
     <StoreContext.Provider value={{
-      products, sales, allSessions, settings, currentUser, currentUserRole: currentUser?.role, currentSession, isOnline,
+      products, sales, allSessions, settings, currentUser, currentUserRole: currentUser?.role, currentSession, isOnline, isLoading, error,
       login, logout, updateCurrentUser, openSession, closeSession, addProduct, updateProduct, deleteProduct, processSaleAndContributeToGoal, cancelSale, updateSettings, getDashboardStats, calculateTotalInventoryValue, syncData
     }}>
       {children}

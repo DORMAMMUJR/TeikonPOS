@@ -28,7 +28,7 @@ const Dashboard: React.FC<DashboardProps> = ({ storeId }) => {
   const fetchStats = async (showLoading = true) => {
     if (showLoading) setLoading(true);
     try {
-      const data = await getDashboardStats('day');
+      const data = await getDashboardStats('day', storeId);
       setStats(data);
       setLastUpdate(new Date());
     } catch (e) {
