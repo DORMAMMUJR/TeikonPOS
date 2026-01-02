@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import Modal from './Modal';
-import Button from './Button';
-import { Target } from 'lucide-react';
+import { Modal, Button } from '../src/components/ui';
+import { Target, TrendingUp } from 'lucide-react';
 
 interface SalesGoalModalProps {
     isOpen: boolean;

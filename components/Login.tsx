@@ -1,23 +1,17 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ShieldAlert, Terminal, User, Lock, Loader2, Mail, Phone, X, Eye, EyeOff } from 'lucide-react';
-import Button from './Button';
 import { useStore } from '../context/StoreContext';
-import TeikonLogo from './TeikonLogo';
-import TeikonWordmark from './TeikonWordmark';
-import DevLoginModal from './DevLoginModal';
 import { authAPI } from '../utils/api';
-
+import { Button, TeikonLogo, TeikonWordmark } from '../src/components/ui';
+import DevLoginModal from './DevLoginModal';
 
 const Login: React.FC = () => {
+  const navigate = useNavigate();
   const { login } = useStore();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showDevModal, setShowDevModal] = useState(false);
-
-  // Navigation
-  const navigate = useNavigate();
-
 
   // Form States
   const [username, setUsername] = useState('');
@@ -59,6 +53,11 @@ const Login: React.FC = () => {
 
       // Update context with token only
       login(response.token);
+
+      // Save storeId for critical components like DangerZone
+      if (response.user && response.user.storeId) {
+        localStorage.setItem('currentStoreId', response.user.storeId);
+      }
 
       // ---------------------------------------------------------
       // LOGIC FOR SUPER ADMIN REDIRECTION

@@ -1,7 +1,7 @@
-
 import React, { useState, useEffect } from 'react';
+import { useStore } from '../context/StoreContext';
 import { Product } from '../types';
-import Button from './Button';
+import { Button } from '../src/components/ui';
 
 interface NewProductFormProps {
   inventory: Product[];
@@ -34,17 +34,17 @@ const NewProductForm: React.FC<NewProductFormProps> = ({ inventory, onSave, onCa
     e.preventDefault();
     if (error) return;
     if (!sku.trim() || !name.trim()) {
-        setError("Todos los campos son obligatorios.");
-        return;
+      setError("Todos los campos son obligatorios.");
+      return;
     }
-    
+
     // Fix: the passed object now matches Pick<Product, 'sku' | 'name' | 'stock'>
     onSave({
       sku: sku.trim(),
       name: name.trim(),
       stock: stock
     });
-    
+
     // Reset form (though typically component unmounts)
     setSku('');
     setName('');
@@ -63,9 +63,8 @@ const NewProductForm: React.FC<NewProductFormProps> = ({ inventory, onSave, onCa
             id="sku"
             value={sku}
             onChange={(e) => setSku(e.target.value)}
-            className={`shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border rounded-md p-2 ${
-              error && error.includes('SKU') ? 'border-red-300' : 'border-gray-300'
-            }`}
+            className={`shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border rounded-md p-2 ${error && error.includes('SKU') ? 'border-red-300' : 'border-gray-300'
+              }`}
             placeholder="Ej. A-001"
             required
           />
@@ -108,19 +107,19 @@ const NewProductForm: React.FC<NewProductFormProps> = ({ inventory, onSave, onCa
       </div>
 
       <div className="mt-5 sm:mt-6 sm:grid sm:grid-cols-2 sm:gap-3 sm:grid-flow-row-dense">
-        <Button 
-          type="submit" 
+        <Button
+          type="submit"
           // Fixed variant: changed from 'success' to 'primary' as 'success' is not valid
-          variant="primary" 
+          variant="primary"
           fullWidth
           disabled={!!error || !sku || !name}
           className="sm:col-start-2"
         >
           Guardar
         </Button>
-        <Button 
-          type="button" 
-          variant="secondary" 
+        <Button
+          type="button"
+          variant="secondary"
           fullWidth
           onClick={onCancel}
           className="sm:col-start-1 mt-3 sm:mt-0"

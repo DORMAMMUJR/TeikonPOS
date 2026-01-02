@@ -2,8 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useStore } from '../context/StoreContext';
 import { Product, CartItem, CartItemState } from '../types';
-import Button from './Button';
-import Modal from './Modal';
+import { Button, Modal } from '../src/components/ui';
 import SaleTicket from './SaleTicket';
 import POSHeader from './POSHeader';
 import SalesGoalModal from './SalesGoalModal';
@@ -352,6 +351,12 @@ const POS: React.FC = () => {
           paymentMethod="CASH"
           sellerId={currentUser?.username || "SISTEMA"}
           folio={saleSummary.folio}
+          date={new Date().toLocaleString()}
+          storeInfo={{
+            name: currentUser?.storeName || "TEIKON OS TERMINAL",
+            address: "NODO OPERATIVO ACTIVO",
+            phone: currentUser?.phone || "N/A"
+          }}
           onClose={() => setShowTicket(false)}
         />
       )}

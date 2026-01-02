@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
-import { Product } from '../types';
-import Button from './Button';
+import { useStore } from '../context/StoreContext';
+import { Product } from '../types'; // Added this import
+import { Button } from '../src/components/ui';
 
 interface RestockFormProps {
-  inventory: Product[];
+  inventory: Product[]; // Added this property
   onUpdate: (sku: string, amountToAdd: number) => void;
   onCancel: () => void;
 }
+// ...
 
-const RestockForm: React.FC<RestockFormProps> = ({ inventory, onUpdate, onCancel }) => {
+const RestockForm = ({ inventory, onUpdate, onCancel }: RestockFormProps) => {
   const [selectedSku, setSelectedSku] = useState('');
   const [amount, setAmount] = useState<string>(''); // Keep as string to handle empty input better
 
@@ -18,7 +20,7 @@ const RestockForm: React.FC<RestockFormProps> = ({ inventory, onUpdate, onCancel
     e.preventDefault();
     const amountNum = parseInt(amount);
     if (!selectedSku || isNaN(amountNum)) return;
-    
+
     onUpdate(selectedSku, amountNum);
     setSelectedSku('');
     setAmount('');
@@ -70,23 +72,23 @@ const RestockForm: React.FC<RestockFormProps> = ({ inventory, onUpdate, onCancel
           />
         </div>
         <p className="mt-1 text-xs text-gray-500">
-           Ingresa un número negativo para restar stock.
+          Ingresa un número negativo para restar stock.
         </p>
       </div>
 
       <div className="mt-5 sm:mt-6 sm:grid sm:grid-cols-2 sm:gap-3 sm:grid-flow-row-dense">
-        <Button 
-          type="submit" 
-          variant="primary" 
+        <Button
+          type="submit"
+          variant="primary"
           fullWidth
           disabled={!selectedSku || !amount}
           className="sm:col-start-2"
         >
           Actualizar Stock
         </Button>
-        <Button 
-          type="button" 
-          variant="secondary" 
+        <Button
+          type="button"
+          variant="secondary"
           fullWidth
           onClick={onCancel}
           className="sm:col-start-1 mt-3 sm:mt-0"

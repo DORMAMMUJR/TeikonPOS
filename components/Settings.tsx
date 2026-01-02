@@ -1,7 +1,7 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useStore } from '../context/StoreContext';
 import { useTheme } from '../context/ThemeContext';
+<<<<<<< HEAD
 import Modal from './Modal';
 import {
   Calculator,
@@ -11,13 +11,29 @@ import {
   LogOut,
   ChevronRight,
   ShieldCheck
+=======
+import {
+  Moon, Sun, DollarSign, TrendingUp, Package, Percent,
+  Save, RotateCcw, AlertTriangle, CheckCircle, Settings as SettingsIcon,
+  Bell, Lock, Globe, Smartphone, Monitor, Palette, Zap, Shield,
+  Calculator, ShieldCheck, LifeBuoy, ChevronRight, LogOut
+>>>>>>> bf8c5a6c68ba90d674e30bc90174141a3a0b2683
 } from 'lucide-react';
+import { Modal, Button } from '../src/components/ui';
+import DangerZone from './DangerZone';
 import SupportTicketModal from './SupportTicketModal';
-import Button from './Button';
 
 const Settings: React.FC = () => {
+<<<<<<< HEAD
   const { settings, updateSettings, currentSession, closeSession, currentUser, logout } = useStore();
   const { theme, toggleTheme } = useTheme();
+=======
+  const { settings, updateSettings, currentUser, calculateTotalInventoryValue, currentSession, closeSession, logout } = useStore();
+  const { isDarkMode, toggleDarkMode } = useTheme();
+
+
+
+>>>>>>> bf8c5a6c68ba90d674e30bc90174141a3a0b2683
 
   const [fixedCosts, setFixedCosts] = useState(settings.monthlyFixedCosts);
   const [isCloseModalOpen, setIsCloseModalOpen] = useState(false);
@@ -41,6 +57,11 @@ const Settings: React.FC = () => {
     setActualCash('');
   };
 
+  const handleStoreDeleted = () => {
+    // Redirect to login after store deletion
+    window.location.href = '/login';
+  };
+
   return (
     <div className="max-w-4xl mx-auto space-y-6 pb-20">
 
@@ -55,8 +76,8 @@ const Settings: React.FC = () => {
 
         <div className="flex flex-col sm:flex-row items-center justify-between p-4 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-100 dark:border-slate-800 gap-4">
           <div className="flex items-center gap-4 w-full">
-            <div className={`p-3 rounded-xl shrink-0 ${theme === 'dark' ? 'bg-indigo-500/10 text-indigo-400' : 'bg-amber-500/10 text-amber-500'}`}>
-              {theme === 'dark' ? <Moon size={20} /> : <Sun size={20} />}
+            <div className={`p-3 rounded-xl shrink-0 ${isDarkMode ? 'bg-indigo-500/10 text-indigo-400' : 'bg-amber-500/10 text-amber-500'}`}>
+              {isDarkMode ? <Moon size={20} /> : <Sun size={20} />}
             </div>
             <div>
               <p className="text-xs font-black uppercase tracking-widest text-slate-800 dark:text-white">Modo Oscuro</p>
@@ -65,6 +86,7 @@ const Settings: React.FC = () => {
           </div>
 
           <button
+<<<<<<< HEAD
             onClick={toggleTheme}
             aria-label="Cambiar modo de tema"
             title="Cambiar entre modo claro y oscuro"
@@ -72,6 +94,15 @@ const Settings: React.FC = () => {
               }`}
           >
             <div className={`w-6 h-6 bg-white rounded-full shadow-md transform transition-transform duration-300 ${theme === 'dark' ? 'translate-x-8' : 'translate-x-0'
+=======
+            onClick={toggleDarkMode}
+            title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
+            aria-label={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
+            className={`w-16 h-8 rounded-full transition-all duration-300 relative px-1 flex items-center shrink-0 min-h-[44px] ${isDarkMode ? 'bg-indigo-600' : 'bg-slate-300 dark:bg-slate-800'
+              }`}
+          >
+            <div className={`w-6 h-6 bg-white rounded-full shadow-md transform transition-transform duration-300 ${isDarkMode ? 'translate-x-8' : 'translate-x-0'
+>>>>>>> bf8c5a6c68ba90d674e30bc90174141a3a0b2683
               }`} />
           </button>
         </div>
@@ -161,6 +192,9 @@ const Settings: React.FC = () => {
           <span className="text-[11px] font-black uppercase tracking-[0.3em]">SALIR DEL SISTEMA</span>
         </button>
       </div>
+
+      {/* DANGER ZONE */}
+      <DangerZone onStoreDeleted={handleStoreDeleted} />
 
       <SupportTicketModal isOpen={isSupportModalOpen} onClose={() => setIsSupportModalOpen(false)} />
 

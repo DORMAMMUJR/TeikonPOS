@@ -1,21 +1,33 @@
-
 import React, { useState } from 'react';
 import { useStore } from '../context/StoreContext';
 import { Product } from '../types';
-import Button from './Button';
-import Modal from './Modal';
-import { Edit, Plus, Search, Image as ImageIcon, Upload, TrendingUp, DollarSign, PieChart, AlertTriangle, Trash2 } from 'lucide-react';
+import {
+  Search, Plus, Edit2, Trash2, Package, AlertTriangle, X,
+  DollarSign, PieChart, ImageIcon, TrendingUp, Edit, Upload
+} from 'lucide-react';
+// Asegúrate de que esta ruta sea correcta según tu proyecto
+import { Button, Modal } from '../src/components/ui';
 
 interface ProductListProps {
-  products?: Product[];
   targetStoreId?: string;
+  products?: Product[];
 }
 
+<<<<<<< HEAD
 const ProductList: React.FC<ProductListProps> = ({ products: propProducts, targetStoreId }) => {
   const { products: contextProducts, addProduct, updateProduct, deleteProduct, calculateTotalInventoryValue, currentUser } = useStore();
+=======
+export const ProductList: React.FC<ProductListProps> = ({ targetStoreId, products: propProducts }) => {
+  // 1. Extraemos todo lo necesario del Store
+  const { products: contextProducts, addProduct, updateProduct, deleteProduct } = useStore();
+>>>>>>> bf8c5a6c68ba90d674e30bc90174141a3a0b2683
 
-  // Use props if provided (Drill-Down mode), otherwise use context (Context mode)
-  const products = propProducts || contextProducts;
+  // 2. Lógica de selección de productos (Props o Contexto)
+  const products = propProducts || contextProducts || [];
+
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Partial<Product>>({});
 
   const handleDelete = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
@@ -23,10 +35,6 @@ const ProductList: React.FC<ProductListProps> = ({ products: propProducts, targe
       await deleteProduct(id);
     }
   };
-
-  const [searchTerm, setSearchTerm] = useState('');
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<Partial<Product>>({});
 
   // Recalculate based on current products view
   const totalInvestment = products.reduce((acc, product) => {
@@ -79,8 +87,10 @@ const ProductList: React.FC<ProductListProps> = ({ products: propProducts, targe
         storeId: editingProduct.storeId || ''
       } as Product);
     } else {
+      // Usamos targetStoreId aquí si es un producto nuevo
       addProduct({
-        ...productData
+        ...productData,
+        storeId: ''
       }, targetStoreId);
     }
     setIsModalOpen(false);

@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { X, Send, LifeBuoy, User, Store, MessageSquare } from 'lucide-react';
+import { X, Send, LifeBuoy, User as UserIcon, Store as StoreIcon, MessageSquare } from 'lucide-react';
 import Button from './Button';
 
 interface SupportTicketModalProps {
@@ -64,12 +64,16 @@ const SupportTicketModal: React.FC<SupportTicketModalProps> = ({ isOpen, onClose
                 <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Asistencia Técnica Directa</p>
               </div>
             </div>
+<<<<<<< HEAD
             <button
               onClick={onClose}
               aria-label="Cerrar modal"
               title="Cerrar"
               className="text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
             >
+=======
+            <button onClick={onClose} aria-label="Cerrar" className="text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors">
+>>>>>>> bf8c5a6c68ba90d674e30bc90174141a3a0b2683
               <X size={20} />
             </button>
           </div>
@@ -90,7 +94,11 @@ const SupportTicketModal: React.FC<SupportTicketModalProps> = ({ isOpen, onClose
                 <div className="space-y-1.5">
                   <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Solicitante</label>
                   <div className="relative group">
+<<<<<<< HEAD
                     <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500" size={16} />
+=======
+                    <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500" size={16} />
+>>>>>>> bf8c5a6c68ba90d674e30bc90174141a3a0b2683
                     <input
                       required
                       placeholder="Nombre Completo"
@@ -103,7 +111,11 @@ const SupportTicketModal: React.FC<SupportTicketModalProps> = ({ isOpen, onClose
                 <div className="space-y-1.5">
                   <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Tienda / Nodo</label>
                   <div className="relative group">
+<<<<<<< HEAD
                     <Store className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500" size={16} />
+=======
+                    <StoreIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500" size={16} />
+>>>>>>> bf8c5a6c68ba90d674e30bc90174141a3a0b2683
                     <input
                       required
                       placeholder="Sucursal"

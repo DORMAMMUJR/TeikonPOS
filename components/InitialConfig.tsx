@@ -1,14 +1,18 @@
-
 import React, { useState } from 'react';
 import { useStore } from '../context/StoreContext';
+<<<<<<< HEAD
 import { Button } from '../src/components/ui';
+=======
+>>>>>>> bf8c5a6c68ba90d674e30bc90174141a3a0b2683
 import { Store, Phone, ShieldCheck, Rocket } from 'lucide-react';
-import TeikonLogo from './TeikonLogo';
+import { Button, TeikonLogo } from '../src/components/ui';
 
 const InitialConfig: React.FC = () => {
   const { updateCurrentUser, addProduct, currentUser } = useStore();
   const [storeName, setStoreName] = useState('');
   const [phone, setPhone] = useState('');
+  const [step, setStep] = useState(1);
+  const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   /**
@@ -59,7 +63,8 @@ const InitialConfig: React.FC = () => {
         stock: 12,
         minStock: 3,
         taxRate: 0,
-        isActive: true
+        isActive: true,
+        storeId: ''
       });
 
       // 3. REDIRECCIÓN POST-ONBOARDING
