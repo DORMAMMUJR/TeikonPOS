@@ -1552,6 +1552,186 @@ app.post('/api/turnos/:id/cerrar', authenticateToken, async (req, res) => {
 });
 
 // ==========================================
+// ENDPOINTS DE SHIFTS (Compatibilidad Frontend)
+// ==========================================
+
+// GET /api/shifts/current - Obtener turno actual abierto (para CloseShiftModal)
+app.get('/api/shifts/current', authenticateToken, async (req, res) => {
+    try {
+        const shift = await CashShift.findOne({
+            where: {
+                storeId: req.storeId,
+                status: 'OPEN'
+            },
+            order: [['apertura', 'DESC']]
+        });
+
+        if (!shift) {
+            return res.status(404).json({ error: 'No hay un turno abierto' });
+        }
+
+        // Calcular ventas en efectivo desde la apertura del turno
+        const ventasEfectivo = await Sale.sum('total', {
+            where: {
+                storeId: req.storeId,
+                paymentMethod: 'CASH',
+                status: 'ACTIVE',
+                created_at: {
+                    [Op.gte]: shift.apertura
+                }
+            }
+        }) || 0;
+
+        // Calcular gastos desde la apertura del turno
+        const gastos = await Expense.sum('monto', {
+            where: {
+                storeId: req.storeId,
+                created_at: {
+                    [Op.gte]: shift.apertura
+                }
+            }
+        }) || 0;
+
+        // Calcular monto esperado
+        const montoEsperado = parseFloat(shift.montoInicial) + parseFloat(ventasEfectivo) - parseFloat(gastos);
+
+        // Calcular ventas totales (todos los métodos de pago)
+        const ventasTotales = await Sale.sum('total', {
+            where: {
+                storeId: req.storeId,
+                status: 'ACTIVE',
+                created_at: {
+                    [Op.gte]: shift.apertura
+                }
+            }
+        }) || 0;
+
+        res.json({
+            id: shift.id,
+            montoInicial: parseFloat(shift.montoInicial),
+            ventasEfectivo: parseFloat(ventasEfectivo),
+            gastos: parseFloat(gastos),
+            montoEsperado: parseFloat(montoEsperado),
+            ventasTotales: parseFloat(ventasTotales),
+            abiertoPor: shift.cajero,
+            createdAt: shift.apertura
+        });
+    } catch (error) {
+        console.error('Error al obtener turno actual:', error);
+        res.status(500).json({ error: 'Error al obtener turno actual' });
+    }
+});
+
+// POST /api/shifts/end - Cerrar turno (para CloseShiftModal)
+app.post('/api/shifts/end', authenticateToken, async (req, res) => {
+    try {
+        const { shiftId, montoReal, notas } = req.body;
+
+        if (!shiftId || montoReal === undefined || montoReal === null) {
+            return res.status(400).json({ error: 'shiftId y montoReal son requeridos' });
+        }
+
+        // Buscar el turno
+        const shift = await CashShift.findOne({
+            where: {
+                id: shiftId,
+                storeId: req.storeId,
+                status: 'OPEN'
+            }
+        });
+
+        if (!shift) {
+            return res.status(404).json({ error: 'Turno no encontrado o ya cerrado' });
+        }
+
+        // Calcular ventas en efectivo
+        const ventasEfectivo = await Sale.sum('total', {
+            where: {
+                storeId: req.storeId,
+                paymentMethod: 'CASH',
+                status: 'ACTIVE',
+                created_at: {
+                    [Op.gte]: shift.apertura
+                }
+            }
+        }) || 0;
+
+        // Calcular gastos
+        const gastos = await Expense.sum('monto', {
+            where: {
+                storeId: req.storeId,
+                created_at: {
+                    [Op.gte]: shift.apertura
+                }
+            }
+        }) || 0;
+
+        // Calcular ventas por método de pago
+        const ventasPorMetodo = await Sale.findAll({
+            where: {
+                storeId: req.storeId,
+                status: 'ACTIVE',
+                created_at: {
+                    [Op.gte]: shift.apertura
+                }
+            },
+            attributes: [
+                'paymentMethod',
+                [sequelize.fn('SUM', sequelize.col('total')), 'total'],
+                [sequelize.fn('COUNT', sequelize.col('id')), 'cantidad']
+            ],
+            group: ['paymentMethod']
+        });
+
+        const ventasMetodo = {};
+        ventasPorMetodo.forEach(v => {
+            ventasMetodo[v.paymentMethod] = {
+                total: parseFloat(v.dataValues.total || 0),
+                cantidad: parseInt(v.dataValues.cantidad || 0)
+            };
+        });
+
+        // Calcular monto esperado y diferencia
+        const montoEsperado = parseFloat(shift.montoInicial) + parseFloat(ventasEfectivo) - parseFloat(gastos);
+        const diferencia = parseFloat(montoReal) - montoEsperado;
+
+        // Actualizar turno
+        await shift.update({
+            cierre: new Date(),
+            montoReal: parseFloat(montoReal),
+            ventasEfectivo: parseFloat(ventasEfectivo),
+            gastos: parseFloat(gastos),
+            diferencia: parseFloat(diferencia),
+            ventasPorMetodo: ventasMetodo,
+            notas: notas || '',
+            status: 'CLOSED'
+        });
+
+        res.json({
+            message: 'Turno cerrado exitosamente',
+            shift: {
+                id: shift.id,
+                montoInicial: parseFloat(shift.montoInicial),
+                montoFinal: parseFloat(montoReal),
+                ventasEfectivo: parseFloat(ventasEfectivo),
+                gastos: parseFloat(gastos),
+                montoEsperado: parseFloat(montoEsperado),
+                diferencia: parseFloat(diferencia),
+                ventasPorMetodo: ventasMetodo,
+                notas: shift.notas,
+                abiertoPor: shift.cajero,
+                cerradoPor: req.usuario,
+                fechaApertura: shift.apertura,
+                fechaCierre: shift.cierre
+            }
+        });
+    } catch (error) {
+        console.error('Error al cerrar turno:', error);
+        res.status(500).json({ error: 'Error al cerrar turno: ' + error.message });
+    }
+});
+
+// ==========================================
 // ENDPOINT DE TESTING (SOLO PARA VALIDACIÓN)
 // ==========================================
 

@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { useStore } from '../context/StoreContext';
-import Button from './Button';
+import { Button } from '../src/components/ui';
 import { Store, Phone, ShieldCheck, Rocket } from 'lucide-react';
 import TeikonLogo from './TeikonLogo';
 
@@ -25,14 +25,14 @@ const InitialConfig: React.FC = () => {
       // 1. ACTUALIZACIÓN DE PERFIL Y SINCRONIZACIÓN CON SUPER ADMIN
       // Simulamos la latencia de red de una actualización en base de datos
       await new Promise(resolve => setTimeout(resolve, 1000));
-      
+
       // Actualizamos el estado local del usuario (esto gatilla la redirección en App.tsx)
       updateCurrentUser({ storeName, phone });
 
       // Persistencia para que el 'Panel de Super Admin' vea la nueva tienda inmediatamente
       const savedStoresRaw = localStorage.getItem('teikon_all_stores');
       const allStores = savedStoresRaw ? JSON.parse(savedStoresRaw) : [];
-      
+
       const newStoreEntry = {
         id: `ST-${Math.floor(Math.random() * 900 + 100)}`,
         name: storeName,
@@ -49,6 +49,7 @@ const InitialConfig: React.FC = () => {
       // Requerimiento: Coca Cola 600ml, Costo 15, Venta 22, Stock 12, Categoría Bebidas
       await new Promise(resolve => setTimeout(resolve, 500));
       addProduct({
+        storeId: currentUser?.storeId,
         sku: 'DEMO-COKE-01',
         name: 'Coca Cola 600ml (Ejemplo)',
         category: 'Bebidas',

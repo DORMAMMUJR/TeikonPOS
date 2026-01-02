@@ -1,5 +1,5 @@
 
-export type Role = 'admin' | 'seller' | 'superuser';
+export type Role = 'admin' | 'seller' | 'superuser' | 'SUPER_ADMIN';
 
 // ==========================================
 // NUEVAS INTERFACES PARA BACKEND
@@ -33,6 +33,7 @@ export interface User {
   department: string;
   storeName?: string;
   phone?: string;
+  fullName?: string; // Nombre completo del usuario
   // Nuevos campos para backend
   storeId?: string;
   organizationId?: string;

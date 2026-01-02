@@ -7,7 +7,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import TeikonLogo from './TeikonLogo';
 import ProductList from './ProductList';
-import Button from './Button';
+import { Button } from '../src/components/ui';
 import Dashboard from './Dashboard';
 import SalesHistory from './SalesHistory';
 import StoreOperations from './StoreOperations';

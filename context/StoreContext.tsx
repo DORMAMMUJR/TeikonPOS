@@ -250,7 +250,7 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     });
 
     const newSale = {
-      storeId: currentUser.storeId || currentUser.store_id || 'unknown',
+      storeId: currentUser.storeId || 'unknown',
       vendedor: currentUser.username,
       subtotal: totalTransactionRevenue,
       totalDiscount: 0,

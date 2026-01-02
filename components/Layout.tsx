@@ -5,7 +5,7 @@ import { useTheme } from '../context/ThemeContext';
 import TeikonLogo from './TeikonLogo';
 import SupportTicketModal from './SupportTicketModal';
 import SalesGoalModal from './SalesGoalModal';
-import CashRegisterModal from './CashRegisterModal';
+import CloseShiftModal from './CloseShiftModal';
 import ProfileSettings from './ProfileSettings';
 import ConnectionStatus from './ConnectionStatus';
 import Sidebar from './Sidebar';
@@ -17,7 +17,7 @@ interface LayoutProps {
 }
 
 const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => {
-  const { currentUser, getDashboardStats, settings, sales } = useStore();
+  const { currentUser, getDashboardStats, settings, sales, logout } = useStore();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
   const [isGoalModalOpen, setIsGoalModalOpen] = useState(false);
@@ -176,7 +176,15 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => 
       {/* Modals */}
       <SupportTicketModal isOpen={isSupportModalOpen} onClose={() => setIsSupportModalOpen(false)} />
       <SalesGoalModal isOpen={isGoalModalOpen} onClose={() => setIsGoalModalOpen(false)} />
-      <CashRegisterModal isOpen={isCashCloseOpen} onClose={() => setIsCashCloseOpen(false)} />
+      <CloseShiftModal
+        isOpen={isCashCloseOpen}
+        onClose={() => setIsCashCloseOpen(false)}
+        onShiftClosed={() => {
+          setIsCashCloseOpen(false);
+          logout();
+          window.location.href = '/login';
+        }}
+      />
       {isProfileOpen && <ProfileSettings onClose={() => setIsProfileOpen(false)} />}
     </div>
   );

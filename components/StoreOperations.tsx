@@ -1,7 +1,8 @@
 
+
 import React, { useState, useEffect } from 'react';
 import { DollarSign, Target, Save, Calculator, AlertTriangle, CheckCircle2 } from 'lucide-react';
-import Button from './Button';
+import { Button } from '../src/components/ui';
 import { getAuthToken, API_URL } from '../utils/api';
 
 interface StoreOperationsProps {

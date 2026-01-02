@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useStore } from '../context/StoreContext';
 import { Sale } from '../types';
 import Modal from './Modal';
-import Button from './Button';
+import { Button } from '../src/components/ui';
 import SaleTicket from './SaleTicket';
 import { Search, FileText, History as HistoryIcon, Printer, Share2, Check } from 'lucide-react';
 import TeikonWordmark from './TeikonWordmark';

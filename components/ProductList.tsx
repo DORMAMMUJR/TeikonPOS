@@ -12,7 +12,7 @@ interface ProductListProps {
 }
 
 const ProductList: React.FC<ProductListProps> = ({ products: propProducts, targetStoreId }) => {
-  const { products: contextProducts, addProduct, updateProduct, deleteProduct, calculateTotalInventoryValue } = useStore();
+  const { products: contextProducts, addProduct, updateProduct, deleteProduct, calculateTotalInventoryValue, currentUser } = useStore();
 
   // Use props if provided (Drill-Down mode), otherwise use context (Context mode)
   const products = propProducts || contextProducts;
@@ -68,14 +68,14 @@ const ProductList: React.FC<ProductListProps> = ({ products: propProducts, targe
       minStock: editingProduct.minStock || 0,
       taxRate: editingProduct.taxRate || 0,
       isActive: editingProduct.isActive !== undefined ? editingProduct.isActive : true,
-      image: editingProduct.image || undefined
+      image: editingProduct.image || undefined,
+      storeId: currentUser?.storeId || targetStoreId || ''
     };
 
     if (editingProduct.id) {
       updateProduct({
         ...productData,
         id: editingProduct.id,
-        ownerId: editingProduct.ownerId || '',
         storeId: editingProduct.storeId || ''
       } as Product);
     } else {

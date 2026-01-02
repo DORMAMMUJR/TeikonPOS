@@ -3,12 +3,12 @@ import React, { useState } from 'react';
 import { useStore } from '../context/StoreContext';
 import { useTheme } from '../context/ThemeContext';
 import Modal from './Modal';
-import { 
-  Calculator, 
-  Sun, 
-  Moon, 
-  LifeBuoy, 
-  LogOut, 
+import {
+  Calculator,
+  Sun,
+  Moon,
+  LifeBuoy,
+  LogOut,
   ChevronRight,
   ShieldCheck
 } from 'lucide-react';
@@ -18,16 +18,16 @@ import Button from './Button';
 const Settings: React.FC = () => {
   const { settings, updateSettings, currentSession, closeSession, currentUser, logout } = useStore();
   const { theme, toggleTheme } = useTheme();
-  
+
   const [fixedCosts, setFixedCosts] = useState(settings.monthlyFixedCosts);
   const [isCloseModalOpen, setIsCloseModalOpen] = useState(false);
   const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
   const [actualCash, setActualCash] = useState('');
 
-  const expectedCash = currentSession 
+  const expectedCash = currentSession
     ? (currentSession.startBalance + currentSession.cashSales - currentSession.refunds)
     : 0;
-    
+
   const difference = (parseFloat(actualCash) || 0) - expectedCash;
 
   const handleSaveSettings = () => {
@@ -43,7 +43,7 @@ const Settings: React.FC = () => {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 pb-20">
-      
+
       {/* APARIENCIA */}
       <div className="card-premium p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
         <div className="flex items-center gap-3 mb-6">
@@ -63,16 +63,16 @@ const Settings: React.FC = () => {
               <p className="text-[10px] font-bold text-slate-400 uppercase mt-0.5">Interfaz optimizada</p>
             </div>
           </div>
-          
-          <button 
+
+          <button
             onClick={toggleTheme}
-            className={`w-16 h-8 rounded-full transition-all duration-300 relative px-1 flex items-center shrink-0 min-h-[44px] ${
-              theme === 'dark' ? 'bg-indigo-600' : 'bg-slate-300 dark:bg-slate-800'
-            }`}
+            aria-label="Cambiar modo de tema"
+            title="Cambiar entre modo claro y oscuro"
+            className={`w-16 h-8 rounded-full transition-all duration-300 relative px-1 flex items-center shrink-0 min-h-[44px] ${theme === 'dark' ? 'bg-indigo-600' : 'bg-slate-300 dark:bg-slate-800'
+              }`}
           >
-            <div className={`w-6 h-6 bg-white rounded-full shadow-md transform transition-transform duration-300 ${
-              theme === 'dark' ? 'translate-x-8' : 'translate-x-0'
-            }`} />
+            <div className={`w-6 h-6 bg-white rounded-full shadow-md transform transition-transform duration-300 ${theme === 'dark' ? 'translate-x-8' : 'translate-x-0'
+              }`} />
           </button>
         </div>
       </div>
@@ -86,7 +86,7 @@ const Settings: React.FC = () => {
             </div>
             <h3 className="text-xs font-black uppercase tracking-widest text-slate-800 dark:text-white">Gastos</h3>
           </div>
-          
+
           <div className="space-y-4">
             <div className="space-y-1">
               <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Fijo Mensual</label>
@@ -94,10 +94,12 @@ const Settings: React.FC = () => {
                 type="number"
                 value={fixedCosts}
                 onChange={(e) => setFixedCosts(parseFloat(e.target.value))}
+                placeholder="0.00"
+                aria-label="Gastos fijos mensuales"
                 className="w-full h-12 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 text-sm font-black text-slate-900 dark:text-white outline-none focus:border-brand-blue transition-all"
               />
             </div>
-            <Button 
+            <Button
               fullWidth
               variant="finance"
               onClick={handleSaveSettings}
@@ -121,8 +123,8 @@ const Settings: React.FC = () => {
             </div>
           </div>
 
-          <button 
-            onClick={() => setIsCloseModalOpen(true)} 
+          <button
+            onClick={() => setIsCloseModalOpen(true)}
             className="mt-6 w-full h-14 border-2 border-red-500/20 text-red-500 hover:bg-red-500 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 min-h-[56px]"
           >
             <ShieldCheck size={18} /> FINALIZAR JORNADA
@@ -132,7 +134,7 @@ const Settings: React.FC = () => {
 
       {/* SOPORTE */}
       <div className="card-premium p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
-        <button 
+        <button
           onClick={() => setIsSupportModalOpen(true)}
           className="w-full min-h-[64px] px-6 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-100 dark:border-slate-800 flex items-center justify-between group hover:border-indigo-500/30 transition-all gap-4"
         >
@@ -151,7 +153,7 @@ const Settings: React.FC = () => {
 
       {/* CIERRE DE SESIÓN */}
       <div className="card-premium p-6 bg-red-500/5 dark:bg-red-500/10 border border-red-500/10 shadow-sm">
-        <button 
+        <button
           onClick={logout}
           className="w-full h-16 px-6 bg-white dark:bg-slate-900 rounded-2xl border border-red-500/20 flex items-center justify-center gap-3 text-red-500 hover:bg-red-500 hover:text-white transition-all active:scale-95 shadow-lg shadow-red-500/5 min-h-[64px]"
         >
@@ -179,19 +181,18 @@ const Settings: React.FC = () => {
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Efectivo Real</label>
             <div className="relative">
               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl font-black text-slate-300">$</span>
-              <input 
-                type="number" autoFocus 
+              <input
+                type="number" autoFocus
                 className="w-full h-16 pl-12 pr-4 text-4xl font-black bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl outline-none focus:border-brand-blue text-slate-900 dark:text-white transition-all shadow-inner"
                 placeholder="0.00"
-                value={actualCash} 
+                value={actualCash}
                 onChange={e => setActualCash(e.target.value)}
               />
             </div>
           </div>
 
-          <div className={`p-5 rounded-2xl border-2 flex justify-between items-center transition-all ${
-            difference < 0 ? 'bg-red-500/5 border-red-500/20 text-red-500' : 'bg-emerald-500/5 border-emerald-500/20 text-emerald-500'
-          }`}>
+          <div className={`p-5 rounded-2xl border-2 flex justify-between items-center transition-all ${difference < 0 ? 'bg-red-500/5 border-red-500/20 text-red-500' : 'bg-emerald-500/5 border-emerald-500/20 text-emerald-500'
+            }`}>
             <span className="text-[10px] font-black uppercase tracking-widest">{difference < 0 ? 'Faltante' : 'Balance'}</span>
             <span className="text-3xl font-black">${Math.abs(difference).toFixed(2)}</span>
           </div>
