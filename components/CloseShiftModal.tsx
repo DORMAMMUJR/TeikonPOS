@@ -42,10 +42,22 @@ const CloseShiftModal: React.FC<CloseShiftModalProps> = ({ isOpen, onClose, onSh
         setLoading(true);
         setError(null);
         try {
-            // TODO: Endpoint /api/shifts/current not implemented yet
-            // Temporarily disabled to prevent errors
-            throw new Error('Endpoint not implemented');
+            const response = await fetch(`${API_URL}/api/shifts/current`, {
+                headers: getHeaders()
+            });
 
+            if (!response.ok) {
+                if (response.status === 404) {
+                    setError('No hay un turno activo para cerrar.');
+                } else {
+                    throw new Error('Error al obtener datos del turno');
+                }
+                setShiftData(null);
+                return;
+            }
+
+            const data = await response.json();
+            setShiftData(data);
         } catch (err) {
             console.error(err);
             setError('Error de conexión con el servidor');

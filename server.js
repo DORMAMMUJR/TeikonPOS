@@ -1329,6 +1329,87 @@ app.post('/api/shifts/start', authenticateToken, async (req, res) => {
     }
 });
 
+// GET /api/shifts/current - Obtener turno activo actual
+app.get('/api/shifts/current', authenticateToken, async (req, res) => {
+    try {
+        const currentShift = await CashShift.findOne({
+            where: {
+                storeId: req.storeId,
+                status: 'OPEN'
+            },
+            order: [['apertura', 'DESC']]
+        });
+
+        if (!currentShift) {
+            return res.status(404).json({
+                success: false,
+                message: 'No hay un turno activo en este momento'
+            });
+        }
+
+        res.json(currentShift);
+    } catch (error) {
+        console.error('Error al obtener turno actual:', error);
+        res.status(500).json({ error: 'Error interno al obtener turno actual' });
+    }
+});
+
+// POST /api/shifts/end - Cerrar turno activo
+app.post('/api/shifts/end', authenticateToken, async (req, res) => {
+    try {
+        const { shiftId, montoReal, notas } = req.body;
+
+        if (!shiftId) {
+            return res.status(400).json({ error: 'Se requiere el ID del turno' });
+        }
+
+        if (montoReal === undefined || montoReal === null) {
+            return res.status(400).json({ error: 'Se requiere el monto real contado' });
+        }
+
+        // Buscar el turno
+        const shift = await CashShift.findOne({
+            where: {
+                id: shiftId,
+                storeId: req.storeId,
+                status: 'OPEN'
+            }
+        });
+
+        if (!shift) {
+            return res.status(404).json({ error: 'No se encontró un turno activo con ese ID' });
+        }
+
+        // Calcular el monto esperado (fondo inicial + ventas en efectivo - gastos)
+        const montoEsperado = parseFloat(shift.montoInicial || 0) +
+            parseFloat(shift.ventasEfectivo || 0) -
+            parseFloat(shift.gastos || 0);
+
+        // Calcular la diferencia
+        const diferencia = parseFloat(montoReal) - montoEsperado;
+
+        // Actualizar el turno
+        await shift.update({
+            cierre: new Date(),
+            montoEsperado: montoEsperado,
+            montoReal: parseFloat(montoReal),
+            diferencia: diferencia,
+            notas: notas || null,
+            status: 'CLOSED'
+        });
+
+        res.json({
+            success: true,
+            message: 'Turno cerrado exitosamente',
+            shift: shift,
+            diferencia: diferencia
+        });
+    } catch (error) {
+        console.error('Error al cerrar turno:', error);
+        res.status(500).json({ error: 'Error interno al cerrar turno' });
+    }
+});
+
 // GET /api/turnos - Listar turnos
 app.get('/api/turnos', authenticateToken, async (req, res) => {
     try {
