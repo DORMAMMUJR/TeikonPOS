@@ -1,18 +1,33 @@
 import { Op } from 'sequelize';
-import { Sale, SaleItem, Product, StoreConfig } from '../models.js';
+import { Sale, SaleItem, Product, StoreConfig, CashSession } from '../models.js';
 
 export const getCashCloseDetails = async (req, res) => {
     try {
-        const storeId = req.storeId; // From authenticateToken middleware
+        // SUPER_ADMIN override or fallback to user's store
+        let storeId = req.storeId;
+        if (req.user && req.user.role === 'SUPER_ADMIN' && req.query.storeId) {
+            storeId = req.query.storeId;
+        }
 
-        // Get shift start time from request (sent from frontend)
-        const { shiftStartTime } = req.query;
+        if (!storeId) {
+            return res.status(400).json({ success: false, message: 'Store ID required' });
+        }
+
+        // Get shift start time from query OR find active session
+        let { shiftStartTime } = req.query;
 
         if (!shiftStartTime) {
-            return res.status(400).json({
-                success: false,
-                message: 'Shift start time is required'
+            const activeSession = await CashSession.findOne({
+                where: { storeId, status: 'OPEN' }
             });
+            if (activeSession) {
+                shiftStartTime = activeSession.startTime;
+            } else {
+                // If no session and no time provided, default to today 00:00 (or return error)
+                // Returning empty/zero stats instead of error to prevent UI crash
+                shiftStartTime = new Date();
+                shiftStartTime.setHours(0, 0, 0, 0);
+            }
         }
 
         const shiftStart = new Date(shiftStartTime);
