@@ -607,6 +607,80 @@ const CashShift = sequelize.define('CashShift', {
 });
 
 // ==========================================
+// MODELO: CashSession (Sesión de Caja en Tiempo Real)
+// ==========================================
+const CashSession = sequelize.define('CashSession', {
+    id: {
+        type: DataTypes.UUID,
+        defaultValue: DataTypes.UUIDV4,
+        primaryKey: true
+    },
+    storeId: {
+        type: DataTypes.UUID,
+        allowNull: false,
+        references: {
+            model: 'stores',
+            key: 'id'
+        },
+        field: 'store_id'
+    },
+    ownerId: {
+        type: DataTypes.UUID,
+        allowNull: false,
+        comment: 'User ID who opened the session'
+    },
+    startTime: {
+        type: DataTypes.DATE,
+        allowNull: false,
+        defaultValue: DataTypes.NOW
+    },
+    endTime: {
+        type: DataTypes.DATE,
+        allowNull: true
+    },
+    startBalance: {
+        type: DataTypes.DECIMAL(10, 2),
+        allowNull: false,
+        defaultValue: 0,
+        field: 'start_balance'
+    },
+    expectedBalance: {
+        type: DataTypes.DECIMAL(10, 2),
+        allowNull: true,
+        field: 'expected_balance'
+    },
+    endBalanceReal: {
+        type: DataTypes.DECIMAL(10, 2),
+        allowNull: true,
+        field: 'end_balance_real'
+    },
+    cashSales: {
+        type: DataTypes.DECIMAL(10, 2),
+        defaultValue: 0,
+        field: 'cash_sales'
+    },
+    refunds: {
+        type: DataTypes.DECIMAL(10, 2),
+        defaultValue: 0
+    },
+    status: {
+        type: DataTypes.ENUM('OPEN', 'CLOSED'),
+        defaultValue: 'OPEN'
+    }
+}, {
+    tableName: 'cash_sessions',
+    timestamps: true,
+    indexes: [
+        {
+            fields: ['store_id']
+        },
+        {
+            fields: ['status']
+        }
+    ]
+});
+
+// ==========================================
 // RELACIONES
 // ==========================================
 
@@ -757,5 +831,6 @@ export {
     CashShift,
     Client,
     Ticket,
-    StoreConfig
+    StoreConfig,
+    CashSession
 };
