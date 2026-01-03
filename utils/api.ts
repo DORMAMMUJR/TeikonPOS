@@ -1,9 +1,7 @@
-// API Base URL - automatically uses current domain in production
-// Re-export verified
-
-// API Base URL - Environment aware
-// API Base URL - Environment aware
-export const API_URL = (import.meta as any).env?.VITE_API_URL || ((import.meta as any).env?.PROD ? '' : 'http://localhost:5000');
+// API Base URL - Environment aware with proper empty string handling
+export const API_URL = (import.meta as any).env?.VITE_API_URL !== undefined
+    ? (import.meta as any).env.VITE_API_URL
+    : ((import.meta as any).env?.PROD ? '' : 'http://localhost:5000');
 
 // Get auth token from localStorage
 export const getAuthToken = (): string | null => {
@@ -124,14 +122,20 @@ const safeFetch = async (url: string, options: RequestInit): Promise<Response> =
         if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
             console.error('❌ Network Error (CORS/Server Down):', error);
 
-            // Extract port for local dev, or use generic message for Prod
-            const portMatch = API_URL.match(/:(\d+)/);
-            const port = portMatch ? portMatch[1] : (API_URL.startsWith('https') ? '443 (HTTPS)' : '80');
-            const isProd = API_URL.startsWith('https');
+            // Determine if using relative or absolute URL
+            const isRelativeURL = !API_URL || API_URL === '' || API_URL.startsWith('/');
+            const isHTTPS = API_URL.startsWith('https');
 
-            const msg = isProd
-                ? `⚠️ Error de Conexión con Servidor SaaS:\nNo se pudo conectar a ${API_URL}.\n\nPosibles causas:\n• Mantenimiento del servidor\n• Problema de conexión a internet`
-                : `⚠️ Error de Conexión: No se pudo contactar al servidor en el puerto ${port}.\n\nPosibles causas:\n• El servidor backend no está corriendo\n• Antivirus/Firewall bloqueando la conexión`;
+            let msg: string;
+            if (isRelativeURL) {
+                msg = `⚠️ Error de Conexión:\nNo se pudo conectar al servidor.\n\nPosibles causas:\n• El servidor está en mantenimiento\n• Problema de conexión a internet\n• Verifica que el backend esté corriendo`;
+            } else if (isHTTPS) {
+                msg = `⚠️ Error de Conexión con Servidor SaaS:\nNo se pudo conectar a ${API_URL}.\n\nPosibles causas:\n• Mantenimiento del servidor\n• Problema de conexión a internet`;
+            } else {
+                const portMatch = API_URL.match(/:(\d+)/);
+                const port = portMatch ? portMatch[1] : '5000';
+                msg = `⚠️ Error de Conexión: No se pudo contactar al servidor en el puerto ${port}.\n\nPosibles causas:\n• El servidor backend no está corriendo\n• Antivirus/Firewall bloqueando la conexión`;
+            }
 
             alert(msg);
             throw new Error('NETWORK_ERROR');
