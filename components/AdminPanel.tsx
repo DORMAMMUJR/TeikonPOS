@@ -18,8 +18,6 @@ interface StoreData {
   name: string;
   owner: string;
   phone: string;
-  plan: 'Basic' | 'Premium' | 'Enterprise';
-  status: 'active' | 'suspended';
   lastActive: string;
 }
 
@@ -29,7 +27,7 @@ interface AdminPanelProps {
 
 const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
   const navigate = useNavigate();
-  // const { products: allProducts, sales: allSales } = useStore(); // Unused for now
+  const { currentUser } = useStore();
 
   // States
   const [activeView, setActiveView] = useState<'stores' | 'tickets'>('stores');
@@ -44,13 +42,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
   // Tickets Data
   const [tickets, setTickets] = useState<any[]>([]);
 
-  // Global Sales Data
-  const [globalSales, setGlobalSales] = useState<any[]>([]);
-  const [isLoadingSales, setIsLoadingSales] = useState(false);
 
-  // All Sales Monitor Data
-  const [allSales, setAllSales] = useState<any[]>([]);
-  const [isLoadingAllSales, setIsLoadingAllSales] = useState(false);
 
   // Modals
   const [isStoreModalOpen, setIsStoreModalOpen] = useState(false);
@@ -73,16 +65,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
   useEffect(() => {
     fetchStores();
     fetchTickets();
-    if (activeView === 'stores' && !selectedStore) {
-      fetchGlobalSales();
-      fetchAllSales();
-      // Auto-refresh every 30 seconds
-      const interval = setInterval(() => {
-        fetchGlobalSales();
-        fetchAllSales();
-      }, 30000);
-      return () => clearInterval(interval);
-    }
   }, [activeView, selectedStore]);
 
   // --- API CALLS ---
@@ -107,37 +89,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
     }
   };
 
-  const fetchGlobalSales = async () => {
-    setIsLoadingSales(true);
-    try {
-      const response = await fetch(`${API_URL} /api/admin / global - sales ? limit = 15`, {
-        headers: getHeaders()
-      });
-      if (!response.ok) throw new Error('Error fetching sales');
-      const data = await response.json();
-      setGlobalSales(data);
-    } catch (error) {
-      console.error('Error fetching global sales:', error);
-    } finally {
-      setIsLoadingSales(false);
-    }
-  };
 
-  const fetchAllSales = async () => {
-    setIsLoadingAllSales(true);
-    try {
-      const response = await fetch(`${API_URL} /api/admin / all - sales ? limit = 50`, {
-        headers: getHeaders()
-      });
-      if (!response.ok) throw new Error('Error fetching all sales');
-      const data = await response.json();
-      setAllSales(data);
-    } catch (error) {
-      console.error('Error fetching all sales:', error);
-    } finally {
-      setIsLoadingAllSales(false);
-    }
-  };
 
   const handleCreateStore = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -183,6 +135,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
             <button
               onClick={() => setSelectedStore(null)}
               className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition-colors"
+              aria-label="Volver a la lista"
             >
               <ChevronLeft size={24} className="text-slate-600 dark:text-slate-300" />
             </button>
@@ -359,17 +312,20 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                       >
                         <Zap size={14} className="mr-1" /> RESET
                       </Button>
-                      <Button
-                        variant="secondary"
-                        className="bg-red-50 text-red-600 hover:bg-red-100 border-red-100"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setStoreToDelete(store);
-                          setIsDeleteModalOpen(true);
-                        }}
-                      >
-                        <X size={14} className="mr-1" /> ELIMINAR
-                      </Button>
+
+                      {currentUser?.role === 'SUPER_ADMIN' && (
+                        <Button
+                          variant="secondary"
+                          className="bg-red-50 text-red-600 hover:bg-red-100 border-red-100"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setStoreToDelete(store);
+                            setIsDeleteModalOpen(true);
+                          }}
+                        >
+                          <X size={14} className="mr-1" /> ELIMINAR
+                        </Button>
+                      )}
                       <Button variant="secondary" className="group-hover:bg-white group-hover:shadow-sm" onClick={() => setSelectedStore(store)}>
                         GESTIONAR <ChevronLeft className="rotate-180 ml-1" size={12} />
                       </Button>
@@ -381,7 +337,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
           </tbody>
         </table>
       </div>
-    </div>
+    </div >
   );
 
   const renderTicketsView = () => (
@@ -526,6 +482,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                 onClick={() => setIsStoreModalOpen(false)}
                 className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full text-slate-400 transition-colors"
                 type="button"
+                aria-label="Cerrar modal"
               >
                 <X size={20} />
               </button>

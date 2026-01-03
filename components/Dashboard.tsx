@@ -158,6 +158,30 @@ const Dashboard: React.FC<DashboardProps> = ({ storeId }) => {
         </div>
       </div>
 
+      {/* PROGRESS BAR - DAILY GOAL */}
+      <div className="card-premium p-6 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm">
+        <div className="flex justify-between items-center mb-4">
+          <div>
+            <h4 className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Meta de Venta Diaria</h4>
+            <div className="flex items-baseline gap-2 mt-1">
+              <span className="text-2xl font-black text-slate-900 dark:text-white">{(stats?.salesToday || 0).toLocaleString('es-MX', { style: 'currency', currency: 'MXN' })}</span>
+              <span className="text-xs font-bold text-slate-400">/ {(stats?.dailyTarget || 0).toLocaleString('es-MX', { style: 'currency', currency: 'MXN' })}</span>
+            </div>
+          </div>
+          <div className="text-right">
+            <span className={`text-xl font-black ${(stats?.salesToday || 0) >= (stats?.dailyTarget || 1) ? 'text-brand-emerald' : 'text-brand-purple'}`}>
+              {stats?.dailyTarget ? Math.min(((stats.salesToday / stats.dailyTarget) * 100), 100).toFixed(0) : 0}%
+            </span>
+          </div>
+        </div>
+        <div className="w-full bg-slate-100 dark:bg-slate-900 rounded-full h-3 overflow-hidden">
+          <div
+            className={`h-full rounded-full transition-all duration-1000 ease-out ${(stats?.salesToday || 0) >= (stats?.dailyTarget || 1) ? 'bg-brand-emerald' : 'bg-brand-purple'}`}
+            style={{ width: `${stats?.dailyTarget ? Math.min(((stats.salesToday / stats.dailyTarget) * 100), 100) : 0}%` }}
+          ></div>
+        </div>
+      </div>
+
       {/* KPI GRID */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {kpis.map((kpi, i) => (

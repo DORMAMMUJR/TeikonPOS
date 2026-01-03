@@ -40,7 +40,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
                 <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
 
                 <div
-                    className="relative inline-block align-bottom bg-white dark:bg-brand-panel border border-slate-200 dark:border-brand-border text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full cut-corner p-6"
+                    className="relative inline-block align-bottom bg-white/95 dark:bg-brand-panel/95 backdrop-blur-md border border-slate-200 dark:border-brand-border text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full cut-corner p-6"
                 >
                     <div className="flex justify-between items-start mb-8 border-b border-slate-100 dark:border-brand-border pb-4">
                         <h3 className="text-xs font-black uppercase tracking-[0.3em] text-slate-900 dark:text-brand-text" id="modal-title">

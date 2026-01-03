@@ -3,7 +3,7 @@
 
 // API Base URL - Environment aware
 // API Base URL - Environment aware
-export const API_URL = (import.meta as any).env?.VITE_API_URL || ((import.meta as any).env?.PROD ? '' : 'http://localhost:80');
+export const API_URL = (import.meta as any).env?.VITE_API_URL || ((import.meta as any).env?.PROD ? '' : 'http://localhost:5000');
 
 // Get auth token from localStorage
 export const getAuthToken = (): string | null => {

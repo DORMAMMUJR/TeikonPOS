@@ -43,14 +43,19 @@ export const getCashCloseDetails = async (req, res) => {
             }
         });
 
-        // 2. Get Daily Goal
+        // 2. Get Daily Goal (Strict Calculation from Monthly Expenses / 30)
         const config = await StoreConfig.findOne({ where: { storeId } });
-        const dailyGoal = config ? parseFloat(config.dailyGoal || config.breakEvenGoal || 0) : 10000;
+
+        // Requirement: "strictly use the database-configured monthly_expenses value" (mapped to breakEvenGoal)
+        // Requirement: "If monthly_expenses is 0 ... daily goal must also be 0"
+        // Requirement: "Eliminate hardcoded default values"
+        const monthlyExpenses = config ? parseFloat(config.breakEvenGoal || 0) : 0;
+        const dailyGoal = monthlyExpenses > 0 ? (monthlyExpenses / 30) : 0;
 
         // 3. Calculate profit margin
         const profitMargin = salesTotal > 0 ? ((profitTotal / salesTotal) * 100) : 0;
 
-        // 4. Respond
+        // 4. Respond with implicit session termination signal
         res.json({
             success: true,
             totalRevenue: parseFloat(salesTotal),
@@ -59,7 +64,8 @@ export const getCashCloseDetails = async (req, res) => {
             profitMargin: parseFloat(profitMargin.toFixed(2)),
             dailyGoal: parseFloat(dailyGoal),
             shiftDuration: Math.floor((now - shiftStart) / 1000 / 60), // minutes
-            date: now
+            date: now,
+            shouldLogout: true // Signal for frontend to invalidate session
         });
 
     } catch (error) {

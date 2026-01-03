@@ -121,6 +121,8 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         name: p.nombre || p.name || 'Sin Nombre',
         category: p.categoria || p.category || 'General',
         image: p.imagen || p.image,
+        costPrice: Number(p.costPrice || 0),
+        salePrice: Number(p.salePrice || 0),
         // Bidirectional mapping: backend 'activo' <-> frontend 'isActive'
         isActive: p.activo !== undefined ? p.activo : (p.isActive !== undefined ? p.isActive : true)
       })) : [];

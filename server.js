@@ -450,16 +450,21 @@ app.put('/api/me/profile', authenticateToken, async (req, res) => {
     try {
         const { storeName, newPassword } = req.body;
         const storeId = req.storeId;
+        const userId = req.user.userId; // Ensure we track the actual User ID if available
 
         const store = await Store.findByPk(storeId);
         if (!store) {
             return res.status(404).json({ error: 'Tienda no encontrada' });
         }
 
+        let updatedName = store.nombre;
+
         // Update Store Name if provided
         if (storeName && storeName !== store.nombre) {
             store.nombre = storeName;
             await store.save();
+            updatedName = storeName;
+            console.log(`✅ Store Name Updated: ${updatedName}`);
         }
 
         // Update Password if provided
@@ -478,7 +483,25 @@ app.put('/api/me/profile', authenticateToken, async (req, res) => {
             }
         }
 
-        res.json({ message: 'Perfil actualizado correctamente', storeName: store.nombre });
+        // --- NEW: Contextual Data Consistency ---
+        // Issue a NEW token with the updated store name to ensure subsequent 
+        // requests use the correct context without needing cache refreshes.
+        const newTokenPayload = {
+            userId: req.user.userId,
+            storeId: store.id,
+            organizationId: store.organizationId,
+            storeName: updatedName, // THE CRITICAL UPDATE
+            usuario: store.usuario,
+            role: req.user.role
+        };
+
+        const newToken = jwt.sign(newTokenPayload, JWT_SECRET, { expiresIn: '30d' });
+
+        res.json({
+            message: 'Perfil actualizado correctamente',
+            storeName: updatedName,
+            token: newToken // Return new token for frontend to update storage
+        });
     } catch (error) {
         console.error('Error al actualizar perfil:', error);
         res.status(500).json({ error: 'Error al actualizar perfil' });

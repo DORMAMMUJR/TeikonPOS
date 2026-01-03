@@ -10,6 +10,7 @@ import ProfileSettings from './ProfileSettings';
 import ConnectionStatus from './ConnectionStatus';
 import Sidebar from './Sidebar';
 
+// --- REFACTOR NOTE: Mobile menu state logic removed to satisfy constraint "Sidebar must disappear on <768px"
 interface LayoutProps {
   children: React.ReactNode;
   activeTab: string;
@@ -18,7 +19,7 @@ interface LayoutProps {
 
 const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => {
   const { currentUser, getDashboardStats, settings, sales, logout } = useStore();
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  // const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); // Removed per constraint
   const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
   const [isGoalModalOpen, setIsGoalModalOpen] = useState(false);
   const [isCashCloseOpen, setIsCashCloseOpen] = useState(false);
@@ -71,7 +72,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => 
 
   const handleMobileNav = (tabId: string) => {
     onTabChange(tabId);
-    setIsMobileMenuOpen(false);
+    // setIsMobileMenuOpen(false); // Removed
   };
 
   return (
@@ -79,49 +80,34 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => 
 
       <ConnectionStatus />
 
-      {/* --- MOBILE HEADER --- */}
-      <div className="md:hidden bg-brand-panel border-b border-brand-border px-4 py-3 flex justify-between items-center shrink-0 z-[60] shadow-sm fixed top-0 left-0 right-0">
+      {/* --- MOBILE HEADER (Content Only) --- */}
+      <div className="md:hidden bg-brand-panel border-b border-brand-border px-4 py-3 flex justify-between items-center shrink-0 z-[60] shadow-sm fixed top-0 left-0 right-0 h-14">
         <div className="flex items-center gap-3">
-          <button
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="p-2 -ml-2 text-brand-text rounded-lg active:bg-slate-100 dark:active:bg-slate-800 focus:outline-none"
-          >
-            {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-          </button>
+          <div className="p-2 -ml-2 text-brand-text rounded-lg">
+            <TeikonLogo size={24} />
+          </div>
           <div className="flex flex-col">
-            <h1 className="text-lg font-black text-slate-900 dark:text-white">
+            <h1 className="text-lg font-black text-slate-900 dark:text-white leading-none">
               {currentUser?.storeName || 'TeikonPOS'}
             </h1>
             <span className="text-[10px] font-bold text-brand-muted">
-              Hola, {currentUser?.fullName || currentUser?.username}
+              {currentUser?.fullName || currentUser?.username}
             </span>
           </div>
         </div>
       </div>
 
-      {/* --- SIDEBAR (Desktop) / DRAWER (Mobile) --- */}
-      <div className={`
-        fixed inset-y-0 left-0 z-[70] transform transition-transform duration-300
-        ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
-        md:relative md:translate-x-0 md:flex
-      `}>
+      {/* --- SIDEBAR (Desktop ONLY) --- */}
+      <div className="hidden md:flex md:relative">
         <Sidebar
           activeTab={activeTab}
-          onTabChange={handleMobileNav}
+          onTabChange={onTabChange}
           onOpenGoalModal={() => setIsGoalModalOpen(true)}
           onOpenCashClose={() => setIsCashCloseOpen(true)}
           onOpenSupport={() => setIsSupportModalOpen(true)}
           onOpenProfile={() => setIsProfileOpen(true)}
         />
       </div>
-
-      {/* Overlay para cerrar drawer en móvil */}
-      {isMobileMenuOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-[65] md:hidden backdrop-blur-sm"
-          onClick={() => setIsMobileMenuOpen(false)}
-        />
-      )}
 
       {/* --- MAIN CONTENT AREA --- */}
       <div className="flex-1 flex flex-col min-w-0 relative w-full h-full bg-brand-bg mt-14 md:mt-0">

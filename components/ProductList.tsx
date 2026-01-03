@@ -166,12 +166,12 @@ const ProductList: React.FC<ProductListProps> = ({ products: propProducts, targe
         </Button>
       </div>
 
-      {/* MOBILE LIST VIEW (Cards) */}
-      <div className="block md:hidden space-y-4">
+      {/* RESPONSIVE GRID VIEW (Replaces separate mobile list) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
         {filtered.map((p) => {
           const margin = p.salePrice > 0 ? ((p.salePrice - p.costPrice) / p.salePrice) * 100 : 0;
           return (
-            <div key={p.id} onClick={() => openEdit(p)} className="card-premium bg-white dark:bg-slate-900 p-4 active:scale-[0.98] transition-transform border border-slate-200 dark:border-slate-800">
+            <div key={p.id} onClick={() => openEdit(p)} className="card-premium bg-white dark:bg-slate-900 p-4 active:scale-[0.98] transition-all duration-200 hover:scale-105 hover:shadow-xl border border-slate-200 dark:border-slate-800 cursor-pointer h-full flex flex-col">
               <div className="flex gap-4">
                 <div className="h-20 w-20 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-800 shrink-0 border border-slate-200 dark:border-slate-700">
                   {p.image ? (
@@ -218,8 +218,8 @@ const ProductList: React.FC<ProductListProps> = ({ products: propProducts, targe
         })}
       </div>
 
-      {/* DESKTOP TABLE VIEW */}
-      <div className="hidden md:block card-premium overflow-hidden border-t-4 border-t-orange-500">
+      {/* DESKTOP TABLE VIEW (Legacy - Optional or Hidden based on preference, currently keeping visible only on md+ but grid is better) */}
+      <div className="hidden md:block card-premium overflow-hidden border-t-4 border-t-orange-500 mt-8">
         <div className="overflow-x-auto no-scrollbar">
           <table className="min-w-full divide-y divide-brand-border">
             <thead className="bg-orange-50/50 dark:bg-orange-950/10">

@@ -1,110 +1,85 @@
 import { Op } from 'sequelize';
-import { sequelize, Sale, Product, StoreConfig } from '../models.js';
+import { Sale, Product, StoreConfig, sequelize } from '../models.js';
 
 export const getDashboardSummary = async (req, res) => {
     try {
-        const { period = 'day', storeId } = req.query;
-        const whereSale = { status: 'ACTIVE' };
+        const { storeId } = req; // Extracted from authenticateToken middleware
 
-        // Aislamiento de tiendas
-        // Si se pasa storeId explícitamente (ej. Super Admin filtrando), usarlo.
-        // Si no, y no es Super Admin, usar req.storeId del token.
-        // Nota: req.storeId viene del middleware authenticateToken.
+        // --- 1. Define Time Range (Today) ---
+        // Using server time. For widespread usage, timezone handling should be improved.
+        const startOfDay = new Date();
+        startOfDay.setHours(0, 0, 0, 0);
 
-        let targetStoreId = storeId;
-        if (req.role !== 'SUPER_ADMIN') {
-            targetStoreId = req.storeId;
-        }
+        const endOfDay = new Date();
+        endOfDay.setHours(23, 59, 59, 999);
 
-        if (targetStoreId) {
-            whereSale.storeId = targetStoreId;
-        }
-
-        // Filtro de Fecha
-        const now = new Date();
-        const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-
-        if (period === 'day') {
-            whereSale.createdAt = {
-                [Op.gte]: startOfDay
-            };
-        } else if (period === 'month') {
-            const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-            whereSale.createdAt = {
-                [Op.gte]: startOfMonth
-            };
-        }
-
-        // 1. Calcular Ventas y Utilidad Bruta
-        const salesStats = await Sale.findAll({
-            attributes: [
-                [sequelize.fn('SUM', sequelize.col('total')), 'totalSales'],
-                [sequelize.fn('COUNT', sequelize.col('id')), 'count'],
-                [sequelize.fn('SUM', sequelize.col('net_profit')), 'grossProfit']
-            ],
-            where: whereSale,
-            raw: true
-        });
-
-        const salesToday = parseFloat(salesStats[0].totalSales || 0);
-        const ordersCount = parseInt(salesStats[0].count || 0);
-        const grossProfit = parseFloat(salesStats[0].grossProfit || 0);
-
-        // 2. Calcular Valor de Inventario (Solo productos activos)
-        const whereProduct = { activo: true };
-        if (targetStoreId) {
-            whereProduct.storeId = targetStoreId;
-        }
-
-        // Calcular inversión: SUM(costPrice * stock)
-        const inventoryStats = await Product.findAll({
-            attributes: [
-                [sequelize.literal('SUM("cost_price" * "stock")'), 'investment']
-            ],
-            where: whereProduct,
-            raw: true
-        });
-
-        const investment = parseFloat(inventoryStats[0].investment || 0);
-
-        // 3. Obtener Configuración para Metas y Gastos Fijos (STRICT MODE - NO FALLBACKS)
-        let dailyTarget = 0;
-        let monthlyExpenses = 0;
-
-        if (targetStoreId) {
-            const config = await StoreConfig.findOne({ where: { storeId: targetStoreId } });
-
-            if (config) {
-                // Use strict values from DB, default to 0 if null
-                // Note: database field might be 'breakEvenGoal' or 'monthly_expenses' depending on schema version
-                // We use breakEvenGoal as the field for monthly fixed costs based on previous context
-                monthlyExpenses = parseFloat(config.breakEvenGoal || 0);
-
-                // If period is 'day', divide by 30. If 'month', use full value.
-                if (period === 'day') {
-                    dailyTarget = monthlyExpenses / 30;
-                } else {
-                    dailyTarget = monthlyExpenses;
+        // --- 2. Aggregate Sales Data (Today) ---
+        // We calculate metrics based on sales created today
+        const salesMetrics = await Sale.findAll({
+            where: {
+                storeId,
+                status: 'ACTIVE', // Only active sales
+                createdAt: {
+                    [Op.gte]: startOfDay,
+                    [Op.lte]: endOfDay
                 }
-            }
-        }
+            },
+            attributes: [
+                [sequelize.fn('COUNT', sequelize.col('id')), 'ordersCount'],
+                [sequelize.fn('SUM', sequelize.col('total')), 'salesToday'],
+                [sequelize.fn('SUM', sequelize.col('net_profit')), 'grossProfit'] // netProfit in DB is actually Gross Profit (Rev - Cost) per sale
+            ],
+            raw: true
+        });
 
-        // 4. Calcular Utilidad Neta (Utilidad Bruta - Gastos Operativos Diarios)
-        const netProfit = grossProfit - dailyTarget;
+        const metrics = salesMetrics[0] || {};
+        const ordersCount = parseInt(metrics.ordersCount || 0);
+        const salesToday = parseFloat(metrics.salesToday || 0);
+        const grossProfit = parseFloat(metrics.grossProfit || 0);
+
+        // --- 3. Calculate Total Investment (Inventory Value) ---
+        // Sum of (costPrice * stock) for all active products
+        const productsInvestment = await Product.findAll({
+            where: {
+                storeId,
+                activo: true
+            },
+            attributes: [
+                [sequelize.literal('SUM("cost_price" * "stock")'), 'totalInvestment']
+            ],
+            raw: true
+        });
+
+        const investment = parseFloat(productsInvestment[0]?.totalInvestment || 0);
+
+        // --- 4. Get Store Configuration (Operational Costs) ---
+        const config = await StoreConfig.findOne({ where: { storeId } });
+        const monthlyOperationalCost = config ? parseFloat(config.breakEvenGoal || 0) : 0;
+
+        // Calculate Daily Operational Cost portion
+        const dailyOperationalCost = monthlyOperationalCost / 30;
+
+        // --- 5. Calculate Net Profit ---
+        // Net Profit = Gross Profit (from sales) - Daily Operational Cost
+        const netProfit = grossProfit - dailyOperationalCost;
+
+        // --- 6. Construct Response ---
+        // dailyTarget: Usually the Break Even Goal is the monthly target, 
+        // so daily target is that / 30.
+        const dailyTarget = monthlyOperationalCost / 30;
 
         res.json({
             salesToday,
             ordersCount,
             grossProfit,
-            investment,
             netProfit,
+            investment,
             dailyTarget,
-            dailyOperationalCost: dailyTarget, // Map dailyTarget to dailyOperationalCost for frontend compatibility
-            period
+            dailyOperationalCost
         });
 
     } catch (error) {
-        console.error('Error en dashboard summary:', error);
-        res.status(500).json({ error: 'Error al obtener resumen del dashboard' });
+        console.error('Error fetching dashboard summary:', error);
+        res.status(500).json({ error: 'Error calculating dashboard metrics' });
     }
 };

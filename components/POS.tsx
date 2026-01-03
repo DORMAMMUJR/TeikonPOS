@@ -147,7 +147,7 @@ const POS: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col gap-6 h-[calc(100vh-140px)] md:h-[calc(100vh-180px)]">
+    <div className="flex flex-col gap-6 h-[calc(100vh-80px)] md:h-[calc(100vh-140px)] overflow-hidden">
       {/* POS HEADER */}
       <POSHeader
         searchTerm={searchTerm}
@@ -159,14 +159,13 @@ const POS: React.FC = () => {
         {/* SECCIÓN IZQUIERDA: PRODUCT GRID */}
         {/* Mobile: Full height with bottom padding for sticky bar */}
         {/* Desktop: 2/3 width with normal height */}
-        <div className="lg:w-2/3 flex flex-col card-premium overflow-hidden border-t-4 border-t-brand-emerald bg-white dark:bg-slate-900 shadow-xl flex-1 min-h-0 pb-[140px] lg:pb-0">
-
-          <div className="flex-1 overflow-y-auto p-4 grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4 content-start">
+        <div className="flex-1 flex flex-col lg:w-2/3 card-premium overflow-hidden border-t-4 border-t-brand-emerald bg-white dark:bg-slate-900 shadow-xl min-h-0 pb-0 relative">
+          <div className="absolute inset-0 overflow-y-auto p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4 content-start pb-[100px] lg:pb-4 custom-scrollbar">
             {filteredProducts.map((p, idx) => (
               <div
                 key={p.id}
                 onClick={() => addToCart(p)}
-                className={`group relative p-2 md:p-2.5 bg-white dark:bg-slate-800 border-2 rounded-2xl cursor-pointer transition-all duration-150 ease-in-out active:scale-95 hover:shadow-lg min-h-[120px] ${lastAddedId === p.id
+                className={`group relative p-2 md:p-2.5 bg-white dark:bg-slate-800 border-2 rounded-2xl cursor-pointer transition-all duration-200 ease-out hover:scale-105 hover:shadow-xl min-h-[120px] ${lastAddedId === p.id
                   ? 'border-brand-emerald ring-4 ring-brand-emerald/10'
                   : 'border-slate-100 dark:border-slate-700 hover:border-brand-emerald/40'
                   }`}
@@ -225,6 +224,7 @@ const POS: React.FC = () => {
                   <button
                     onClick={() => setCart(c => c.filter(i => i.productId !== item.productId))}
                     className="min-w-[44px] min-h-[44px] flex items-center justify-center text-slate-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-lg active:scale-90 transition-all"
+                    aria-label="Eliminar item"
                   >
                     <Trash2 size={18} />
                   </button>
@@ -236,6 +236,7 @@ const POS: React.FC = () => {
                       <button
                         onClick={() => updateQuantity(item.productId, -1)}
                         className="min-w-[44px] min-h-[44px] flex items-center justify-center bg-slate-100 dark:bg-slate-800 rounded-lg active:scale-90 transition-transform"
+                        aria-label="Disminuir cantidad"
                       >
                         <Minus size={16} />
                       </button>
@@ -243,6 +244,7 @@ const POS: React.FC = () => {
                       <button
                         onClick={() => updateQuantity(item.productId, 1)}
                         className="min-w-[44px] min-h-[44px] flex items-center justify-center bg-slate-100 dark:bg-slate-800 rounded-lg active:scale-90 transition-transform"
+                        aria-label="Aumentar cantidad"
                       >
                         <Plus size={16} />
                       </button>
@@ -262,9 +264,11 @@ const POS: React.FC = () => {
           </div>
 
           <div className="p-4 border-t border-brand-border bg-slate-50 dark:bg-slate-950 mt-auto shrink-0">
-            <div className={`flex justify-between items-center mb-3 transition-all duration-300 ${animateCart ? 'animate-pop' : ''}`}>
-              <span className="text-[9px] font-black uppercase tracking-widest">Total Final</span>
-              <p className="text-3xl font-black text-brand-emerald tracking-tighter">${(total || 0).toLocaleString()}</p>
+            <div className={`flex flex-col md:flex-row justify-between items-center mb-3 gap-2 transition-all duration-300 ${animateCart ? 'animate-pop' : ''}`}>
+              <span className="text-[9px] font-black uppercase tracking-widest whitespace-nowrap">Total Final</span>
+              <p className="text-xl md:text-3xl font-black text-brand-emerald tracking-tighter whitespace-nowrap overflow-hidden text-ellipsis">
+                {new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(total || 0)}
+              </p>
             </div>
             {/* Touch-optimized checkout button: 48px height */}
             <Button
@@ -292,7 +296,7 @@ const POS: React.FC = () => {
               </span>
             </div>
             <p className="text-2xl md:text-3xl font-black text-brand-emerald tracking-tighter">
-              ${total.toLocaleString()}
+              {new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(total || 0)}
             </p>
           </div>
 
@@ -341,28 +345,30 @@ const POS: React.FC = () => {
         </div>
       </Modal>
 
-      {showTicket && saleSummary && (
-        <SaleTicket
-          items={saleSummary.items}
-          total={saleSummary.revenue}
-          paymentMethod="CASH"
-          sellerId={currentUser?.username || "SISTEMA"}
-          folio={saleSummary.folio}
-          date={new Date().toLocaleString()}
-          storeInfo={{
-            name: currentUser?.storeName || "TEIKON OS TERMINAL",
-            address: "NODO OPERATIVO ACTIVO",
-            phone: currentUser?.phone || "N/A"
-          }}
-          onClose={() => setShowTicket(false)}
-        />
-      )}
+      {
+        showTicket && saleSummary && (
+          <SaleTicket
+            items={saleSummary.items}
+            total={saleSummary.revenue}
+            paymentMethod="CASH"
+            sellerId={currentUser?.username || "SISTEMA"}
+            folio={saleSummary.folio}
+            date={new Date().toLocaleString()}
+            storeInfo={{
+              name: currentUser?.storeName || "TEIKON OS TERMINAL",
+              address: "NODO OPERATIVO ACTIVO",
+              phone: currentUser?.phone || "N/A"
+            }}
+            onClose={() => setShowTicket(false)}
+          />
+        )
+      }
 
       {/* Modals */}
       <SalesGoalModal isOpen={isGoalModalOpen} onClose={() => setIsGoalModalOpen(false)} />
       <CashRegisterModal isOpen={isCashCloseOpen} onClose={() => setIsCashCloseOpen(false)} />
       <SupportTicketModal isOpen={isSupportOpen} onClose={() => setIsSupportOpen(false)} />
-    </div>
+    </div >
   );
 };
 
