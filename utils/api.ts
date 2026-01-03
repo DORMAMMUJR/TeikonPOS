@@ -1,4 +1,5 @@
 // API Base URL - Environment aware with proper empty string handling
+// Build: 2026-01-02T22:15:00 - Cache Bust
 export const API_URL = (import.meta as any).env?.VITE_API_URL !== undefined
     ? (import.meta as any).env.VITE_API_URL
     : ((import.meta as any).env?.PROD ? '' : 'http://localhost:5000');
