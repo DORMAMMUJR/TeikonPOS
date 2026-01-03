@@ -123,7 +123,12 @@ const safeFetch = async (url: string, options: RequestInit): Promise<Response> =
         // Handle Network Errors (TypeError: Failed to fetch)
         if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
             console.error('❌ Network Error (CORS/Server Down):', error);
-            alert('⚠️ Error de Conexión: No se pudo contactar al servidor. \n\nVerifique que el Backend (puerto 5000) esté corriendo y que no haya bloqueros de antivirus.');
+
+            // Extract port from API_URL for dynamic error message
+            const portMatch = API_URL.match(/:(\d+)/);
+            const port = portMatch ? portMatch[1] : '80';
+
+            alert(`⚠️ Error de Conexión: No se pudo contactar al servidor en el puerto ${port}.\n\nPosibles causas:\n• El servidor backend no está corriendo\n• Antivirus/Firewall bloqueando la conexión\n• Configuración de CORS incorrecta\n\nVerifique que el Backend esté activo ejecutando 'npm start' en la terminal del servidor.`);
             throw new Error('NETWORK_ERROR');
         }
         throw error;

@@ -180,7 +180,8 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ onClose }) => {
                 </form>
 
                 {/* DANGER ZONE - RBAC RESTRICTED */}
-                {currentUser?.role === 'SUPER_ADMIN' && (
+                {/* Only render for SUPER_ADMIN or store owners (admin role) */}
+                {(currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'admin') && (
                     <div className="mt-6 pt-6 border-t border-slate-200 dark:border-slate-800">
                         <DangerZone onStoreDeleted={handleStoreDeleted} />
                     </div>

@@ -166,16 +166,21 @@ const ProductList: React.FC<ProductListProps> = ({ products: propProducts, targe
         </Button>
       </div>
 
-      {/* RESPONSIVE GRID VIEW (Replaces separate mobile list) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+      {/* MOBILE-FIRST: Vertical List View (visible on mobile, hidden on md+) */}
+      <div className="block md:hidden space-y-3">
         {filtered.map((p) => {
           const margin = p.salePrice > 0 ? ((p.salePrice - p.costPrice) / p.salePrice) * 100 : 0;
+          const profit = p.salePrice - p.costPrice;
+
           return (
-            <div key={p.id} className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl p-3 shadow-sm hover:shadow-md transition-all group relative overflow-hidden">
-              {/* Product Layout */}
-              <div className="flex gap-3">
-                {/* Image Container - Fixed Aspect Ratio */}
-                <div className="w-16 h-16 sm:w-20 sm:h-20 shrink-0 rounded-xl overflow-hidden bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 relative">
+            <div
+              key={p.id}
+              className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-4 active:scale-[0.98] transition-all"
+            >
+              {/* Horizontal Layout: Image | Content | Action */}
+              <div className="flex items-center gap-4">
+                {/* Left: Item Image */}
+                <div className="w-16 h-16 rounded-xl overflow-hidden bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shrink-0">
                   {p.image ? (
                     <img src={p.image} className="w-full h-full object-cover" alt={p.name} />
                   ) : (
@@ -183,56 +188,185 @@ const ProductList: React.FC<ProductListProps> = ({ products: propProducts, targe
                       <ImageIcon size={20} />
                     </div>
                   )}
-                  {/* Stock Badge - Over Image but smaller and cleaner */}
-                  <div className={`absolute bottom-0 right-0 left-0 text-[8px] font-black text-center py-0.5 ${p.stock <= p.minStock ? 'bg-red-500 text-white' : 'bg-slate-100/90 text-slate-600 backdrop-blur-sm'}`}>
-                    Stock: {p.stock}
-                  </div>
                 </div>
 
-                {/* Content */}
-                <div className="flex-1 min-w-0 flex flex-col justify-center">
-                  <div className="flex justify-between items-start mb-1">
-                    <p className="font-bold text-sm text-slate-800 dark:text-white truncate pr-2" title={p.name}>{p.name}</p>
-                    {/* SKU Badge */}
-                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-tighter bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded ml-auto shrink-0">
-                      {p.sku}
+                {/* Center: Item Name, Price, Stock */}
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-bold text-sm text-slate-800 dark:text-white truncate mb-1">
+                    {p.name}
+                  </h3>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-base font-black text-orange-500">
+                      ${p.salePrice.toLocaleString()}
+                    </span>
+                    <span className={`text-xs font-bold px-2 py-0.5 rounded ${p.stock <= p.minStock
+                        ? 'bg-red-100 dark:bg-red-950/30 text-red-600 dark:text-red-400'
+                        : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+                      }`}>
+                      Stock: {p.stock}
                     </span>
                   </div>
-
-                  <div className="flex items-baseline gap-2 mt-auto">
-                    <span className="text-sm font-black text-brand-blue">${p.salePrice.toLocaleString()}</span>
-                    {p.costPrice > 0 && <span className="text-[10px] text-slate-400 line-through decoration-slate-300">${p.costPrice.toLocaleString()}</span>}
+                  <div className="flex items-center gap-1">
+                    <TrendingUp size={10} className={profit > 0 ? 'text-emerald-500' : 'text-red-500'} />
+                    <span className={`text-[10px] font-bold ${profit > 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                      {margin.toFixed(0)}% MG
+                    </span>
                   </div>
                 </div>
-              </div>
 
-              {/* Actions Footer - Separated from Content */}
-              <div className="mt-3 pt-2 border-t border-slate-50 dark:border-slate-800 flex justify-between items-center">
-                <span className={`text-[9px] font-bold flex items-center gap-1 ${margin > 30 ? 'text-emerald-500' : 'text-orange-500'}`}>
-                  <TrendingUp size={10} /> MG: {margin.toFixed(0)}%
-                </span>
-
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={() => openEdit(p)}
-                    className="flex items-center gap-1 text-[10px] font-bold text-brand-blue hover:text-blue-600 transition-colors p-1"
-                    aria-label={`Editar ${p.name}`}
-                  >
-                    <Edit size={12} /> <span className="hidden sm:inline">EDITAR</span>
-                  </button>
-                  <button
-                    onClick={(e) => handleDelete(e, p.id)}
-                    className="flex items-center gap-1 text-[10px] font-bold text-red-500 hover:text-red-600 transition-colors p-1"
-                    aria-label={`Eliminar ${p.name}`}
-                  >
-                    <Trash2 size={12} /> <span className="hidden sm:inline">BORRAR</span>
-                  </button>
-                </div>
+                {/* Right: Action Button */}
+                <button
+                  onClick={() => openEdit(p)}
+                  className="flex items-center justify-center w-12 h-12 bg-orange-500 hover:bg-orange-600 text-white rounded-xl transition-all active:scale-95 shadow-sm shrink-0"
+                  aria-label={`Ver detalles de ${p.name}`}
+                >
+                  <Edit size={18} />
+                </button>
               </div>
             </div>
           );
         })}
       </div>
+
+      {/* DESKTOP: Professional Table View (hidden on mobile, visible on md+) */}
+      <div className="hidden md:block w-full max-w-7xl mx-auto">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
+          <table className="w-full text-left border-collapse">
+            <thead className="bg-orange-50/50 dark:bg-orange-950/10 border-b-2 border-orange-200 dark:border-orange-900/20">
+              <tr>
+                <th className="px-6 py-4 text-[10px] font-black text-orange-600 dark:text-orange-400 uppercase tracking-widest">
+                  ÍTEM
+                </th>
+                <th className="px-6 py-4 text-[10px] font-black text-orange-600 dark:text-orange-400 uppercase tracking-widest">
+                  SKU
+                </th>
+                <th className="px-6 py-4 text-right text-[10px] font-black text-orange-600 dark:text-orange-400 uppercase tracking-widest">
+                  PRECIO
+                </th>
+                <th className="px-6 py-4 text-right text-[10px] font-black text-orange-600 dark:text-orange-400 uppercase tracking-widest">
+                  RENTABILIDAD
+                </th>
+                <th className="px-6 py-4 text-center text-[10px] font-black text-orange-600 dark:text-orange-400 uppercase tracking-widest">
+                  STOCK
+                </th>
+                <th className="px-6 py-4 text-center text-[10px] font-black text-orange-600 dark:text-orange-400 uppercase tracking-widest">
+                  ACCIÓN
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+              {filtered.map((p) => {
+                const margin = p.salePrice > 0 ? ((p.salePrice - p.costPrice) / p.salePrice) * 100 : 0;
+                const profit = p.salePrice - p.costPrice;
+
+                return (
+                  <tr key={p.id} className="hover:bg-orange-50/30 dark:hover:bg-orange-950/5 transition-colors group">
+                    {/* ÍTEM Column - Image + Name */}
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-xl overflow-hidden bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shrink-0">
+                          {p.image ? (
+                            <img src={p.image} className="w-full h-full object-cover" alt={p.name} />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-slate-300">
+                              <ImageIcon size={18} />
+                            </div>
+                          )}
+                        </div>
+                        <span className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate max-w-[200px]" title={p.name}>
+                          {p.name}
+                        </span>
+                      </div>
+                    </td>
+
+                    {/* SKU Column */}
+                    <td className="px-6 py-4">
+                      <span className="text-xs font-black text-slate-400 uppercase tracking-tight">
+                        {p.sku}
+                      </span>
+                    </td>
+
+                    {/* PRECIO Column */}
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex flex-col items-end">
+                        <span className="text-base font-black text-slate-900 dark:text-white">
+                          ${p.salePrice.toLocaleString()}
+                        </span>
+                        {p.costPrice > 0 && (
+                          <span className="text-[10px] text-slate-400 line-through">
+                            Costo: ${p.costPrice.toLocaleString()}
+                          </span>
+                        )}
+                      </div>
+                    </td>
+
+                    {/* RENTABILIDAD Column */}
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex flex-col items-end gap-1">
+                        <span className={`text-sm font-black ${profit > 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                          ${profit.toLocaleString()}
+                        </span>
+                        <div className="flex items-center gap-1">
+                          <TrendingUp size={12} className={profit > 0 ? 'text-emerald-500' : 'text-red-500'} />
+                          <span className={`text-[10px] font-bold ${profit > 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                            {margin.toFixed(1)}% MG
+                          </span>
+                        </div>
+                      </div>
+                    </td>
+
+                    {/* STOCK Column - Badge Style */}
+                    <td className="px-6 py-4 text-center">
+                      <span className={`inline-flex items-center justify-center px-3 py-1.5 rounded-lg text-xs font-black uppercase border-2 ${p.stock <= p.minStock
+                          ? 'bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 border-red-200 dark:border-red-900/50'
+                          : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700'
+                        }`}>
+                        {p.stock}
+                      </span>
+                    </td>
+
+                    {/* ACCIÓN Column - Spaced Buttons */}
+                    <td className="px-6 py-4">
+                      <div className="flex items-center justify-center gap-4">
+                        <button
+                          onClick={() => openEdit(p)}
+                          className="flex items-center gap-2 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-xs font-bold uppercase transition-all active:scale-95 shadow-sm hover:shadow-md"
+                          aria-label={`Editar ${p.name}`}
+                        >
+                          <Edit size={14} />
+                          Editar
+                        </button>
+                        <button
+                          onClick={(e) => handleDelete(e, p.id)}
+                          className="flex items-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-xs font-bold uppercase transition-all active:scale-95 shadow-sm hover:shadow-md"
+                          aria-label={`Eliminar ${p.name}`}
+                        >
+                          <Trash2 size={14} />
+                          Borrar
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* COMMENTED OUT: Old Card Grid View - Kept for reference */}
+      {/* 
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+        {filtered.map((p) => {
+          const margin = p.salePrice > 0 ? ((p.salePrice - p.costPrice) / p.salePrice) * 100 : 0;
+          return (
+            <div key={p.id} className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl p-3 shadow-sm hover:shadow-md transition-all group relative overflow-hidden">
+              ... card content ...
+            </div>
+          );
+        })}
+      </div>
+      */}
 
       {/* DESKTOP TABLE VIEW (Legacy - Optional or Hidden based on preference, currently keeping visible only on md+ but grid is better) */}
       <div className="hidden md:block card-premium overflow-hidden border-t-4 border-t-orange-500 mt-8">

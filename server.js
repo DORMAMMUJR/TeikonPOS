@@ -271,21 +271,41 @@ app.get('/api/stores', authenticateToken, async (req, res) => {
     }
 });
 
-// DELETE /api/stores/:id - Eliminar tienda (SOLO SUPER_ADMIN con confirmación de contraseña)
+// DELETE /api/stores/:id - Eliminar tienda (RBAC: SUPER_ADMIN o admin propietario)
 app.delete('/api/stores/:id', authenticateToken, async (req, res) => {
     try {
-        if (req.role !== 'SUPER_ADMIN') {
-            return res.status(403).json({ error: 'Acceso denegado' });
-        }
-
+        const targetStoreId = req.params.id;
+        const { role, storeId: userStoreId } = req; // Del token JWT
         const { password } = req.body;
 
-        // Validar que se proporcionó la contraseña
+        // ==========================================
+        // VALIDACIÓN RBAC - Capa de Seguridad Backend
+        // ==========================================
+
+        // REGLA 1: SUPER_ADMIN puede eliminar cualquier tienda
+        const isSuperAdmin = role === 'SUPER_ADMIN';
+
+        // REGLA 2: admin puede eliminar SOLO su propia tienda
+        const isStoreOwner = role === 'admin' && userStoreId === targetStoreId;
+
+        // Si no cumple ninguna de las dos reglas, denegar acceso
+        if (!isSuperAdmin && !isStoreOwner) {
+            console.warn(`🚫 INTENTO DE ELIMINACIÓN DENEGADO: Usuario ${req.usuario} (${role}) intentó eliminar tienda ${targetStoreId}`);
+            return res.status(403).json({
+                error: 'ACCESO DENEGADO',
+                message: 'No tienes privilegios suficientes para realizar esta acción crítica.'
+            });
+        }
+
+        // ==========================================
+        // VALIDACIÓN DE CONTRASEÑA (Doble Factor)
+        // ==========================================
+
         if (!password) {
             return res.status(400).json({ error: 'Se requiere confirmación de contraseña' });
         }
 
-        // Buscar el usuario Super Admin actual
+        // Buscar el usuario actual para verificar contraseña
         const currentUser = await User.findOne({ where: { username: req.usuario } });
         if (!currentUser) {
             return res.status(404).json({ error: 'Usuario no encontrado' });
@@ -294,17 +314,25 @@ app.delete('/api/stores/:id', authenticateToken, async (req, res) => {
         // Verificar contraseña con bcrypt
         const isPasswordValid = await bcrypt.compare(password, currentUser.password);
         if (!isPasswordValid) {
+            console.warn(`🚫 CONTRASEÑA INCORRECTA: Usuario ${req.usuario} intentó eliminar tienda ${targetStoreId}`);
             return res.status(403).json({ error: 'Contraseña incorrecta' });
         }
 
+        // ==========================================
+        // ELIMINACIÓN DE TIENDA
+        // ==========================================
+
         // Buscar la tienda a eliminar
-        const store = await Store.findByPk(req.params.id);
+        const store = await Store.findByPk(targetStoreId);
         if (!store) {
             return res.status(404).json({ error: 'Tienda no encontrada' });
         }
 
-        // Log de seguridad
-        console.log(`🔴 ELIMINACIÓN DE TIENDA: ${store.nombre} (ID: ${store.id}) por ${req.usuario}`);
+        // Log de seguridad (auditoría)
+        console.log(`🔴 ELIMINACIÓN DE TIENDA AUTORIZADA:`);
+        console.log(`   - Tienda: ${store.nombre} (ID: ${store.id})`);
+        console.log(`   - Usuario: ${req.usuario} (Rol: ${role})`);
+        console.log(`   - Timestamp: ${new Date().toISOString()}`);
 
         // Cascade delete is handled by Database definition (onDelete: CASCADE)
         await store.destroy();
