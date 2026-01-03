@@ -712,6 +712,10 @@ Expense.belongsTo(Store, { foreignKey: 'storeId', as: 'store' });
 Store.hasMany(CashShift, { foreignKey: 'storeId', as: 'cashShifts', onDelete: 'CASCADE' });
 CashShift.belongsTo(Store, { foreignKey: 'storeId', as: 'store' });
 
+// Store -> CashSession (1:N)
+Store.hasMany(CashSession, { foreignKey: 'storeId', as: 'cashSessions', onDelete: 'CASCADE' });
+CashSession.belongsTo(Store, { foreignKey: 'storeId', as: 'store' });
+
 // Store -> User (1:N)
 Store.hasMany(User, { foreignKey: 'storeId', as: 'users', onDelete: 'CASCADE' });
 User.belongsTo(Store, { foreignKey: 'storeId', as: 'store' });
