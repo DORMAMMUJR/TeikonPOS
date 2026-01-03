@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useStore } from '../context/StoreContext';
-import { Product } from '../types';
+import { Product } from "@/Product";
 import {
   Search, Plus, Edit2, Trash2, Package, AlertTriangle, X,
   DollarSign, PieChart, ImageIcon, TrendingUp, Edit, Upload
@@ -200,8 +200,8 @@ const ProductList: React.FC<ProductListProps> = ({ products: propProducts, targe
                       ${p.salePrice.toLocaleString()}
                     </span>
                     <span className={`text-xs font-bold px-2 py-0.5 rounded ${p.stock <= p.minStock
-                        ? 'bg-red-100 dark:bg-red-950/30 text-red-600 dark:text-red-400'
-                        : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+                      ? 'bg-red-100 dark:bg-red-950/30 text-red-600 dark:text-red-400'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
                       }`}>
                       Stock: {p.stock}
                     </span>
@@ -318,8 +318,8 @@ const ProductList: React.FC<ProductListProps> = ({ products: propProducts, targe
                     {/* STOCK Column - Badge Style */}
                     <td className="px-6 py-4 text-center">
                       <span className={`inline-flex items-center justify-center px-3 py-1.5 rounded-lg text-xs font-black uppercase border-2 ${p.stock <= p.minStock
-                          ? 'bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 border-red-200 dark:border-red-900/50'
-                          : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700'
+                        ? 'bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 border-red-200 dark:border-red-900/50'
+                        : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700'
                         }`}>
                         {p.stock}
                       </span>
@@ -369,66 +369,7 @@ const ProductList: React.FC<ProductListProps> = ({ products: propProducts, targe
       */}
 
       {/* DESKTOP TABLE VIEW (Legacy - Optional or Hidden based on preference, currently keeping visible only on md+ but grid is better) */}
-      <div className="hidden md:block card-premium overflow-hidden border-t-4 border-t-orange-500 mt-8">
-        <div className="overflow-x-auto no-scrollbar">
-          <table className="min-w-full divide-y divide-brand-border">
-            <thead className="bg-orange-50/50 dark:bg-orange-950/10">
-              <tr>
-                <th className="px-6 py-4 text-left text-[9px] font-black text-orange-600 dark:text-orange-400 uppercase tracking-widest">Ítem</th>
-                <th className="px-6 py-4 text-left text-[9px] font-black text-orange-600 dark:text-orange-400 uppercase tracking-widest">SKU</th>
-                <th className="px-6 py-4 text-right text-[9px] font-black text-orange-600 dark:text-orange-400 uppercase tracking-widest">Precio</th>
-                <th className="px-6 py-4 text-right text-[9px] font-black text-brand-muted uppercase tracking-widest">Rentabilidad</th>
-                <th className="px-6 py-4 text-center text-[9px] font-black text-orange-600 dark:text-orange-400 uppercase tracking-widest">Stock</th>
-                <th className="px-6 py-4 text-center text-[9px] font-black text-orange-600 dark:text-orange-400 uppercase tracking-widest">Acción</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-brand-border bg-white dark:bg-slate-900">
-              {filtered.map((p, idx) => {
-                const margin = p.salePrice > 0 ? ((p.salePrice - p.costPrice) / p.salePrice) * 100 : 0;
-                return (
-                  <tr key={p.id} className="hover:bg-orange-500/5 transition-colors group">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-lg overflow-hidden border border-orange-100 dark:border-orange-900/20 shadow-sm shrink-0 bg-slate-50 dark:bg-slate-800">
-                          {p.image ? (
-                            <img src={p.image} className="h-full w-full object-cover" alt="" />
-                          ) : (
-                            <div className="h-full w-full flex items-center justify-center text-slate-300">
-                              <ImageIcon size={18} />
-                            </div>
-                          )}
-                        </div>
-                        <span className="text-[11px] font-bold text-slate-800 dark:text-slate-200 truncate max-w-[150px]">{p.name}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-[10px] font-black text-brand-muted uppercase tracking-tighter">{p.sku}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-[11px] text-right text-slate-900 dark:text-brand-text font-black">${p.salePrice.toLocaleString()}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right">
-                      <div className="flex flex-col items-end">
-                        <span className="text-[10px] font-black text-emerald-500">${(p.salePrice - p.costPrice).toLocaleString()}</span>
-                        <span className="text-[8px] font-bold text-slate-400">{margin.toFixed(1)}% MG</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-center">
-                      <span className={`px-2 py-1 rounded text-[9px] font-black uppercase border ${p.stock <= p.minStock ? 'bg-red-500/10 text-red-500 border-red-500/20' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-transparent'}`}>
-                        {p.stock}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-center">
-                      <button onClick={(e) => handleDelete(e, p.id)} className="p-2 text-red-500 hover:bg-red-500/10 rounded-lg transition-all active:scale-90 mr-1" title="Eliminar">
-                        <Trash2 size={18} />
-                      </button>
-                      <button onClick={() => openEdit(p)} className="p-2 text-orange-500 hover:bg-orange-500/10 rounded-lg transition-all active:scale-90" title="Editar">
-                        <Edit size={18} />
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
+
 
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingProduct.id ? "Modificar" : "Nuevo Ítem"}>
         <form onSubmit={handleSave} className="space-y-6">

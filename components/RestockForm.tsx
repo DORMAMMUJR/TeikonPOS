@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useStore } from '../context/StoreContext';
-import { Product } from '../types'; // Added this import
+import { Product } from "@/Product";
 import { Button } from '../src/components/ui';
 
 interface RestockFormProps {

@@ -49,7 +49,7 @@ const InitialConfig: React.FC = () => {
       // Requerimiento: Coca Cola 600ml, Costo 15, Venta 22, Stock 12, Categoría Bebidas
       await new Promise(resolve => setTimeout(resolve, 500));
       addProduct({
-        storeId: currentUser?.storeId,
+        storeId: currentUser!.storeId!,
         sku: 'DEMO-COKE-01',
         name: 'Coca Cola 600ml (Ejemplo)',
         category: 'Bebidas',

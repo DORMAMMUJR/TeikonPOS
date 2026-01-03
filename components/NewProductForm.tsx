@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useStore } from '../context/StoreContext';
-import { Product } from '../types';
+import { Product } from "@/Product";
 import { Button } from '../src/components/ui';
 
 interface NewProductFormProps {

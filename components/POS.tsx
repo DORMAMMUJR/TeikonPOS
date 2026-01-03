@@ -1,7 +1,8 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useStore } from '../context/StoreContext';
-import { Product, CartItem, CartItemState } from '../types';
+import { CartItem, CartItemState } from '../types';
+import { Product } from "@/Product";
 import { Button, Modal } from '../src/components/ui';
 import SaleTicket from './SaleTicket';
 import POSHeader from './POSHeader';
