@@ -13,6 +13,10 @@
     "types": [
       "node"
     ],
+    /* Type Checking */
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    /* Module Resolution */
     "moduleResolution": "bundler",
     "isolatedModules": true,
     "moduleDetection": "force",

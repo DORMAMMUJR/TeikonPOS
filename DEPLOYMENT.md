@@ -24,16 +24,38 @@ PORT=80
 ## Credenciales de Acceso
 
 **SUPER_ADMIN:**
+
 - Usuario: `admin`
 - Contraseña: `admin123`
 
 **Usuario Demo:**
+
 - Usuario: `demo_user`
 - Contraseña: `user123`
 
+## Endpoints de la API
+
+### Públicos (No requieren autenticación)
+
+- `POST /api/auth/login` - Iniciar sesión
+- `POST /api/auth/register` - Registro de nuevas organizaciones
+
+### Protegidos (Requieren token JWT)
+
+- `GET /api/dashboard/summary` - Resumen del dashboard
+- `GET /api/productos` - Lista de productos
+- `GET /api/ventas` - Historial de ventas
+- `POST /api/productos` - Crear producto
+- Todos los demás endpoints de gestión
+
+**¿Por qué `/api/dashboard/summary` requiere token?**
+
+Este endpoint devuelve datos sensibles del negocio (ventas, ingresos, estadísticas). Por seguridad, SOLO usuarios autenticados pueden acceder. El error `{"error":"Token no proporcionado"}` es **correcto** y esperado cuando intentas acceder sin login.
+
 ## Notas de Seguridad
 
-⚠️ **IMPORTANTE:** 
+⚠️ **IMPORTANTE:**
+
 - El JWT_SECRET es crítico para la seguridad de la aplicación
 - NUNCA compartas este archivo públicamente
 - Este archivo NO debe subirse a GitHub
