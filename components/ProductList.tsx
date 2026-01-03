@@ -354,22 +354,6 @@ const ProductList: React.FC<ProductListProps> = ({ products: propProducts, targe
         </div>
       </div>
 
-      {/* COMMENTED OUT: Old Card Grid View - Kept for reference */}
-      {/* 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-        {filtered.map((p) => {
-          const margin = p.salePrice > 0 ? ((p.salePrice - p.costPrice) / p.salePrice) * 100 : 0;
-          return (
-            <div key={p.id} className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl p-3 shadow-sm hover:shadow-md transition-all group relative overflow-hidden">
-              ... card content ...
-            </div>
-          );
-        })}
-      </div>
-      */}
-
-      {/* DESKTOP TABLE VIEW (Legacy - Optional or Hidden based on preference, currently keeping visible only on md+ but grid is better) */}
-
 
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingProduct.id ? "Modificar" : "Nuevo Ítem"}>
         <form onSubmit={handleSave} className="space-y-6">

@@ -262,8 +262,69 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
         </Button>
       </div>
 
-      {/* Stores Table */}
-      <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+      {/* MOBILE: Stores Card View (visible on mobile, hidden on md+) */}
+      <div className="block md:hidden space-y-3">
+        {isLoading ? (
+          <div className="p-8 text-center text-slate-400 text-xs font-bold">Cargando datos del ecosistema...</div>
+        ) : filteredStores.length === 0 ? (
+          <div className="p-8 text-center text-slate-400 text-xs font-bold">No se encontraron tiendas registradas.</div>
+        ) : (
+          filteredStores.map(store => (
+            <div
+              key={store.id}
+              className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-4 active:scale-[0.98] transition-all"
+              onClick={() => setSelectedStore(store)}
+            >
+              {/* Store Header */}
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-brand-blue to-cyan-500 flex items-center justify-center text-white font-black text-sm shadow-lg shadow-brand-blue/20 shrink-0">
+                  {store.name.substring(0, 2).toUpperCase()}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-bold text-sm text-slate-900 dark:text-white truncate">
+                    {store.name}
+                  </h3>
+                  <div className="flex items-center gap-2 text-slate-500 text-xs">
+                    <User size={12} />
+                    <span className="truncate">{store.owner}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Store Actions */}
+              <div className="flex gap-2">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setStoreToReset(store);
+                    setIsResetModalOpen(true);
+                  }}
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-amber-50 text-amber-600 hover:bg-amber-100 rounded-xl text-xs font-bold uppercase transition-all active:scale-95 min-h-[44px]"
+                  aria-label={`Resetear contraseña de ${store.name}`}
+                >
+                  <Zap size={16} /> RESET
+                </button>
+                {currentUser?.role === 'SUPER_ADMIN' && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setStoreToDelete(store);
+                      setIsDeleteModalOpen(true);
+                    }}
+                    className="flex items-center justify-center px-3 py-3 bg-red-50 text-red-600 hover:bg-red-100 rounded-xl transition-all active:scale-95 min-h-[44px] min-w-[44px]"
+                    aria-label={`Eliminar ${store.name}`}
+                  >
+                    <X size={16} />
+                  </button>
+                )}
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* DESKTOP: Stores Table (hidden on mobile, visible on md+) */}
+      <div className="hidden md:block bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
         <table className="w-full">
           <thead className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-700">
             <tr>
@@ -303,7 +364,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                     <div className="flex items-center justify-end gap-2" onClick={e => e.stopPropagation()}>
                       <Button
                         variant="secondary"
-                        className="bg-amber-50 text-amber-600 hover:bg-amber-100 border-amber-100"
+                        className="bg-amber-50 text-amber-600 hover:bg-amber-100 border-amber-100 min-h-[44px]"
                         onClick={(e) => {
                           e.stopPropagation();
                           setStoreToReset(store);
@@ -316,7 +377,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                       {currentUser?.role === 'SUPER_ADMIN' && (
                         <Button
                           variant="secondary"
-                          className="bg-red-50 text-red-600 hover:bg-red-100 border-red-100"
+                          className="bg-red-50 text-red-600 hover:bg-red-100 border-red-100 min-h-[44px]"
                           onClick={(e) => {
                             e.stopPropagation();
                             setStoreToDelete(store);
@@ -326,7 +387,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                           <X size={14} className="mr-1" /> ELIMINAR
                         </Button>
                       )}
-                      <Button variant="secondary" className="group-hover:bg-white group-hover:shadow-sm" onClick={() => setSelectedStore(store)}>
+                      <Button variant="secondary" className="group-hover:bg-white group-hover:shadow-sm min-h-[44px]" onClick={() => setSelectedStore(store)}>
                         GESTIONAR <ChevronLeft className="rotate-180 ml-1" size={12} />
                       </Button>
                     </div>
@@ -349,7 +410,50 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
         </div>
       </div>
 
-      <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+      {/* MOBILE: Tickets Card View (visible on mobile, hidden on md+) */}
+      <div className="block md:hidden space-y-3">
+        {tickets.length === 0 ? (
+          <div className="p-10 text-center text-slate-400 font-bold text-xs">No hay tickets pendientes. ¡Buen trabajo! 🎉</div>
+        ) : (
+          tickets.map((t: any) => (
+            <div
+              key={t.id}
+              className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-4 active:scale-[0.98] transition-all"
+            >
+              {/* Ticket Header */}
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-xs font-black text-slate-900 dark:text-white">#{t.id.substring(0, 6)}</span>
+                    <span className={`px-2 py-1 rounded text-[10px] font-black uppercase ${t.prioridad === 'URGENT' ? 'bg-red-100 text-red-600 dark:bg-red-950/30 dark:text-red-400' :
+                        t.prioridad === 'HIGH' ? 'bg-orange-100 text-orange-600 dark:bg-orange-950/30 dark:text-orange-400' :
+                          'bg-blue-100 text-blue-600 dark:bg-blue-950/30 dark:text-blue-400'
+                      }`}>
+                      {t.prioridad}
+                    </span>
+                  </div>
+                  <p className="text-sm font-bold text-slate-800 dark:text-slate-200 mb-1">{t.titulo}</p>
+                  <p className="text-xs text-slate-500 line-clamp-2">{t.descripcion}</p>
+                </div>
+                <span className={`px-2 py-1 rounded-full text-[10px] font-black uppercase border ml-2 ${t.status === 'OPEN' ? 'bg-green-100 text-green-600 border-green-200 dark:bg-green-950/30 dark:text-green-400 dark:border-green-900' :
+                    'bg-slate-100 text-slate-500 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700'
+                  }`}>
+                  {t.status}
+                </span>
+              </div>
+
+              {/* Ticket Footer */}
+              <div className="flex items-center justify-between text-xs text-slate-500 pt-3 border-t border-slate-100 dark:border-slate-700">
+                <span className="font-bold">{t.store?.nombre || 'Tienda Desconocida'}</span>
+                <span>{new Date(t.createdAt).toLocaleDateString()}</span>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* DESKTOP: Tickets Table (hidden on mobile, visible on md+) */}
+      <div className="hidden md:block bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
         <table className="w-full">
           <thead className="bg-slate-50 dark:bg-slate-900/50">
             <tr>
@@ -375,16 +479,17 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                     <p className="text-xs text-slate-500 truncate max-w-[200px]">{t.descripcion}</p>
                   </td>
                   <td className="px-6 py-4 text-center">
-                    <span className={`px - 2 py - 1 rounded text - [10px] font - black uppercase ${t.prioridad === 'URGENT' ? 'bg-red-100 text-red-600' :
-                      t.prioridad === 'HIGH' ? 'bg-orange-100 text-orange-600' :
-                        'bg-blue-100 text-blue-600'
-                      } `}>
+                    <span className={`px-2 py-1 rounded text-[10px] font-black uppercase ${t.prioridad === 'URGENT' ? 'bg-red-100 text-red-600' :
+                        t.prioridad === 'HIGH' ? 'bg-orange-100 text-orange-600' :
+                          'bg-blue-100 text-blue-600'
+                      }`}>
                       {t.prioridad}
                     </span>
                   </td>
                   <td className="px-6 py-4 text-center">
-                    <span className={`px - 2 py - 1 rounded - full text - [10px] font - black uppercase border ${t.status === 'OPEN' ? 'bg-green-100 text-green-600 border-green-200' : 'bg-slate-100 text-slate-500 border-slate-200'
-                      } `}>
+                    <span className={`px-2 py-1 rounded-full text-[10px] font-black uppercase border ${t.status === 'OPEN' ? 'bg-green-100 text-green-600 border-green-200' :
+                        'bg-slate-100 text-slate-500 border-slate-200'
+                      }`}>
                       {t.status}
                     </span>
                   </td>
