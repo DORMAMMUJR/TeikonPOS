@@ -23,15 +23,45 @@ PORT=80
 
 ## Credenciales de Acceso
 
-**SUPER_ADMIN:**
+**SUPER_ADMIN (Master):**
+
+- Usuario: `dev@master.com`
+- Contraseña: `DevMaster2025!`
+- Role: `SUPER_ADMIN`
+- User ID: `56c07762-37de-45d7-97cd-f2b0d08a8d4f`
+
+**JWT Token (Válido 30 días - Expira: 2026-02-01):**
+
+```
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI1NmMwNzc2Mi0zN2RlLTQ1ZDctOTdjZC1mMmIwZDA4YThkNGYiLCJzdG9yZUlkIjpudWxsLCJyb2xlIjoiU1VQRVJfQURNSU4iLCJ1c2VybmFtZSI6ImRldkBtYXN0ZXIuY29tIiwiaWF0IjoxNzY3NDE3Mjk3LCJleHAiOjE3NzAwMDkyOTd9.7ljTb6tLar3ruL1HgFD81uWJo6lg5rm8kBj7-VflST4
+```
+
+**Usuario Demo (Original):**
 
 - Usuario: `admin`
 - Contraseña: `admin123`
 
-**Usuario Demo:**
+**Usuario Demo 2:**
 
 - Usuario: `demo_user`
 - Contraseña: `user123`
+
+## Uso del Token JWT
+
+### En PowerShell
+
+```powershell
+$token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI1NmMwNzc2Mi0zN2RlLTQ1ZDctOTdjZC1mMmIwZDA4YThkNGYiLCJzdG9yZUlkIjpudWxsLCJyb2xlIjoiU1VQRVJfQURNSU4iLCJ1c2VybmFtZSI6ImRldkBtYXN0ZXIuY29tIiwiaWF0IjoxNzY3NDE3Mjk3LCJleHAiOjE3NzAwMDkyOTd9.7ljTb6tLar3ruL1HgFD81uWJo6lg5rm8kBj7-VflST4"
+
+# Listar tiendas
+Invoke-RestMethod -Uri "https://web-trh228bezhj8.up-de-fra1-k8s-1.apps.run-on-seenode.com/api/stores" -Headers @{Authorization="Bearer $token"}
+```
+
+### En curl
+
+```bash
+curl -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." https://web-trh228bezhj8.up-de-fra1-k8s-1.apps.run-on-seenode.com/api/stores
+```
 
 ## Endpoints de la API
 
