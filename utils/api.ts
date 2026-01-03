@@ -124,11 +124,16 @@ const safeFetch = async (url: string, options: RequestInit): Promise<Response> =
         if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
             console.error('❌ Network Error (CORS/Server Down):', error);
 
-            // Extract port from API_URL for dynamic error message
+            // Extract port for local dev, or use generic message for Prod
             const portMatch = API_URL.match(/:(\d+)/);
-            const port = portMatch ? portMatch[1] : '80';
+            const port = portMatch ? portMatch[1] : (API_URL.startsWith('https') ? '443 (HTTPS)' : '80');
+            const isProd = API_URL.startsWith('https');
 
-            alert(`⚠️ Error de Conexión: No se pudo contactar al servidor en el puerto ${port}.\n\nPosibles causas:\n• El servidor backend no está corriendo\n• Antivirus/Firewall bloqueando la conexión\n• Configuración de CORS incorrecta\n\nVerifique que el Backend esté activo ejecutando 'npm start' en la terminal del servidor.`);
+            const msg = isProd
+                ? `⚠️ Error de Conexión con Servidor SaaS:\nNo se pudo conectar a ${API_URL}.\n\nPosibles causas:\n• Mantenimiento del servidor\n• Problema de conexión a internet`
+                : `⚠️ Error de Conexión: No se pudo contactar al servidor en el puerto ${port}.\n\nPosibles causas:\n• El servidor backend no está corriendo\n• Antivirus/Firewall bloqueando la conexión`;
+
+            alert(msg);
             throw new Error('NETWORK_ERROR');
         }
         throw error;
