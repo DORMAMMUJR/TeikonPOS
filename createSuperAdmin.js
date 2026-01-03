@@ -45,7 +45,7 @@ async function createSuperAdmin() {
         console.log('═══════════════════════════════════════════════════════════════');
         console.log('                    🔐 SUPER ADMIN CREDENTIALS                  ');
         console.log('═══════════════════════════════════════════════════════════════');
-        console.log(`\nEmail/Username: ${email}`);
+        console.log(`\nEmail/Username: ${emailTO}`);
         console.log(`Password: ${password}`);
         console.log(`Role: SUPER_ADMIN`);
         console.log(`User ID: ${user.id}`);
