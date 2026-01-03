@@ -60,11 +60,12 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   }, []);
 
   // Refresh currentUser from token periodically to detect token changes/expiration
+  // OPTIMIZADO: Reducido de 1s a 30s para no saturar servidor SaaS en producción
   useEffect(() => {
     const interval = setInterval(() => {
       const user = getCurrentUserFromToken();
       setCurrentUser(user);
-    }, 1000); // Check every second
+    }, 30000); // Check every 30 seconds (optimized for production)
 
     return () => clearInterval(interval);
   }, []);
@@ -97,23 +98,36 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   // Initial Data Fetch
   const syncData = useCallback(async () => {
     if (!currentUser || !isOnline) return;
+
+    setIsLoading(true);
+    setError(null);
+
     try {
       // 1. Sync Pending Offline Sales first
       const pendingSales = await getPendingSales();
       if (pendingSales.length > 0) {
         console.log(`Syncing ${pendingSales.length} offline sales...`);
-        // We sync one by one or batch if API supports it. Current API supports batch.
-        // Transforming PendingSale to structure API expects if needed, or just sending
-        // For 'sync' endpoint.
-        await salesAPI.sync(pendingSales);
-        await clearPendingSales();
-        console.log('Offline sales synced successfully');
+        try {
+          await salesAPI.sync(pendingSales);
+          await clearPendingSales();
+          console.log('✅ Offline sales synced successfully');
+        } catch (syncError) {
+          console.warn('⚠️ Failed to sync offline sales, will retry later:', syncError);
+          // Don't block the app, just log and continue
+        }
       }
 
-      // 2. Fetch fresh data
+      // 2. Fetch fresh data with timeout and retry logic
+      const fetchWithTimeout = async (promise: Promise<any>, timeoutMs = 10000) => {
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('REQUEST_TIMEOUT')), timeoutMs)
+        );
+        return Promise.race([promise, timeoutPromise]);
+      };
+
       const [fetchedProducts, fetchedSales] = await Promise.all([
-        productsAPI.getAll(),
-        salesAPI.getAll()
+        fetchWithTimeout(productsAPI.getAll()),
+        fetchWithTimeout(salesAPI.getAll())
       ]);
 
       const mappedProducts = Array.isArray(fetchedProducts) ? fetchedProducts.map((p: any) => ({
@@ -129,16 +143,71 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
       setProducts(mappedProducts as Product[]);
       setSales(fetchedSales);
+      setIsLoading(false);
 
-      // Expenses and Sessions could be fetched here too if needed
-    } catch (error: any) {
-      console.error('Data Sync Error:', error);
-
-      // Handle session expiration - the global interceptor will have already
-      // shown the alert and redirected, but we clean up local state too
-      if (error.message === 'SESIÓN_EXPIRADA') {
-        logout();
+      // Cache data for offline fallback
+      try {
+        localStorage.setItem('cachedProducts', JSON.stringify(mappedProducts));
+        localStorage.setItem('cachedSales', JSON.stringify(fetchedSales));
+        console.log('💾 Data cached successfully for offline use');
+      } catch (cacheError) {
+        console.warn('⚠️ Failed to cache data:', cacheError);
       }
+
+      console.log('✅ Data synced successfully from SaaS server');
+
+    } catch (error: any) {
+      console.error('❌ Data Sync Error:', error);
+
+      // Handle different error types
+      if (error.message === 'SESIÓN_EXPIRADA') {
+        // Session expired - the global interceptor will have already handled redirect
+        logout();
+        setIsLoading(false);
+        return;
+      }
+
+      if (error.message === 'NETWORK_ERROR' || error.message === 'REQUEST_TIMEOUT' || error.name === 'TypeError') {
+        // Network error or timeout - Enter graceful offline mode
+        console.warn('⚠️ Servidor SaaS no disponible - Activando Modo Offline');
+        setError('Modo Offline: No se pudo conectar al servidor. Los datos se sincronizarán cuando vuelva la conexión.');
+        setIsOnline(false);
+
+        // Try to load cached data from localStorage as fallback
+        try {
+          const cachedProducts = localStorage.getItem('cachedProducts');
+          const cachedSales = localStorage.getItem('cachedSales');
+
+          if (cachedProducts) {
+            setProducts(JSON.parse(cachedProducts));
+            console.log('📦 Loaded products from cache');
+          }
+
+          if (cachedSales) {
+            setSales(JSON.parse(cachedSales));
+            console.log('💰 Loaded sales from cache');
+          }
+        } catch (cacheError) {
+          console.error('Failed to load cached data:', cacheError);
+        }
+
+        setIsLoading(false);
+
+        // Retry connection after 30 seconds
+        setTimeout(() => {
+          console.log('🔄 Retrying connection to SaaS server...');
+          setIsOnline(navigator.onLine);
+          if (navigator.onLine) {
+            syncData();
+          }
+        }, 30000);
+
+        return;
+      }
+
+      // Other errors - show generic error but don't block app
+      setError('Error al sincronizar datos. La app funcionará con datos locales.');
+      setIsLoading(false);
     }
   }, [currentUser, isOnline]);
 
