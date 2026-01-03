@@ -171,47 +171,63 @@ const ProductList: React.FC<ProductListProps> = ({ products: propProducts, targe
         {filtered.map((p) => {
           const margin = p.salePrice > 0 ? ((p.salePrice - p.costPrice) / p.salePrice) * 100 : 0;
           return (
-            <div key={p.id} onClick={() => openEdit(p)} className="card-premium bg-white dark:bg-slate-900 p-4 active:scale-[0.98] transition-all duration-200 hover:scale-105 hover:shadow-xl border border-slate-200 dark:border-slate-800 cursor-pointer h-full flex flex-col">
-              <div className="flex gap-4">
-                <div className="h-20 w-20 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-800 shrink-0 border border-slate-200 dark:border-slate-700">
+            <div key={p.id} className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl p-3 shadow-sm hover:shadow-md transition-all group relative overflow-hidden">
+              {/* Product Layout */}
+              <div className="flex gap-3">
+                {/* Image Container - Fixed Aspect Ratio */}
+                <div className="w-16 h-16 sm:w-20 sm:h-20 shrink-0 rounded-xl overflow-hidden bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 relative">
                   {p.image ? (
-                    <img src={p.image} className="h-full w-full object-cover" alt={p.name} />
+                    <img src={p.image} className="w-full h-full object-cover" alt={p.name} />
                   ) : (
-                    <div className="h-full w-full flex items-center justify-center text-slate-300">
-                      <ImageIcon size={24} />
+                    <div className="w-full h-full flex items-center justify-center text-slate-300">
+                      <ImageIcon size={20} />
                     </div>
                   )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex justify-between items-start">
-                    <h4 className="font-black text-sm text-slate-900 dark:text-white uppercase truncate pr-2">{p.name}</h4>
-                    <span className="text-[10px] font-black text-brand-muted bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md">{p.sku}</span>
+                  {/* Stock Badge - Over Image but smaller and cleaner */}
+                  <div className={`absolute bottom-0 right-0 left-0 text-[8px] font-black text-center py-0.5 ${p.stock <= p.minStock ? 'bg-red-500 text-white' : 'bg-slate-100/90 text-slate-600 backdrop-blur-sm'}`}>
+                    Stock: {p.stock}
                   </div>
-                  <div className="flex items-end justify-between mt-2">
-                    <div>
-                      <p className="text-[10px] text-slate-500 font-bold uppercase">Precio Venta</p>
-                      <p className="text-xl font-black text-orange-500">${p.salePrice.toLocaleString()}</p>
-                    </div>
-                    <div className="text-right">
-                      <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase border ${p.stock <= p.minStock ? 'bg-red-500 text-white border-red-600' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700'}`}>
-                        Stock: {p.stock}
-                      </span>
-                    </div>
+                </div>
+
+                {/* Content */}
+                <div className="flex-1 min-w-0 flex flex-col justify-center">
+                  <div className="flex justify-between items-start mb-1">
+                    <p className="font-bold text-sm text-slate-800 dark:text-white truncate pr-2" title={p.name}>{p.name}</p>
+                    {/* SKU Badge */}
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-tighter bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded ml-auto shrink-0">
+                      {p.sku}
+                    </span>
+                  </div>
+
+                  <div className="flex items-baseline gap-2 mt-auto">
+                    <span className="text-sm font-black text-brand-blue">${p.salePrice.toLocaleString()}</span>
+                    {p.costPrice > 0 && <span className="text-[10px] text-slate-400 line-through decoration-slate-300">${p.costPrice.toLocaleString()}</span>}
                   </div>
                 </div>
               </div>
-              <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center">
-                <span className="text-[10px] font-bold text-emerald-500 flex items-center gap-1">
-                  <TrendingUp size={12} /> MG: {margin.toFixed(1)}%
+
+              {/* Actions Footer - Separated from Content */}
+              <div className="mt-3 pt-2 border-t border-slate-50 dark:border-slate-800 flex justify-between items-center">
+                <span className={`text-[9px] font-bold flex items-center gap-1 ${margin > 30 ? 'text-emerald-500' : 'text-orange-500'}`}>
+                  <TrendingUp size={10} /> MG: {margin.toFixed(0)}%
                 </span>
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                  <button onClick={(e) => handleDelete(e, p.id)} className="flex items-center gap-1 text-red-500 hover:text-red-600 transition-colors">
-                    <Trash2 size={12} /> Eliminar
+
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => openEdit(p)}
+                    className="flex items-center gap-1 text-[10px] font-bold text-brand-blue hover:text-blue-600 transition-colors p-1"
+                    aria-label={`Editar ${p.name}`}
+                  >
+                    <Edit size={12} /> <span className="hidden sm:inline">EDITAR</span>
                   </button>
-                  <span className="flex items-center gap-1 cursor-pointer hover:text-orange-500 transition-colors" onClick={() => openEdit(p)}>
-                    <Edit size={12} /> Editar
-                  </span>
-                </span>
+                  <button
+                    onClick={(e) => handleDelete(e, p.id)}
+                    className="flex items-center gap-1 text-[10px] font-bold text-red-500 hover:text-red-600 transition-colors p-1"
+                    aria-label={`Eliminar ${p.name}`}
+                  >
+                    <Trash2 size={12} /> <span className="hidden sm:inline">BORRAR</span>
+                  </button>
+                </div>
               </div>
             </div>
           );

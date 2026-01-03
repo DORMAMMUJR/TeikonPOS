@@ -179,10 +179,12 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ onClose }) => {
 
                 </form>
 
-                {/* DANGER ZONE */}
-                <div className="mt-6 pt-6 border-t border-slate-200 dark:border-slate-800">
-                    <DangerZone onStoreDeleted={handleStoreDeleted} />
-                </div>
+                {/* DANGER ZONE - RBAC RESTRICTED */}
+                {currentUser?.role === 'SUPER_ADMIN' && (
+                    <div className="mt-6 pt-6 border-t border-slate-200 dark:border-slate-800">
+                        <DangerZone onStoreDeleted={handleStoreDeleted} />
+                    </div>
+                )}
             </div>
         </div>
     );
