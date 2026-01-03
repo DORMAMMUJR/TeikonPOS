@@ -48,7 +48,16 @@ if (!JWT_SECRET) {
 // ==========================================
 // MIDDLEWARE
 // ==========================================
-app.use(cors());
+
+// CORS Configuration - Permitir credenciales y headers de autorización
+app.use(cors({
+    origin: true, // Permite cualquier origen (para SaaS multi-tenant)
+    credentials: true, // Permite cookies y credenciales
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    exposedHeaders: ['Authorization'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
+}));
+
 // Aumentar límite para subida de imágenes en Base64
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
