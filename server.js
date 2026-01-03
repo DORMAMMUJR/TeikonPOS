@@ -13,6 +13,7 @@ dotenv.config();
 // Importar controladores
 import { getDashboardSummary } from './controllers/dashboardController.js';
 import { getCashCloseDetails } from './controllers/salesController.js';
+import { createStore, getStores, deleteStore } from './controllers/storeController.js';
 
 import {
     sequelize,
@@ -162,190 +163,20 @@ app.post('/api/auth/login', async (req, res) => {
     }
 });
 
-// POST /api/stores/new - Crear nueva sucursal + Usuario Admin
-app.post('/api/stores/new', authenticateToken, async (req, res) => {
-    try {
-        const { nombre, usuario, password, direccion, telefono, ownerName } = req.body;
 
-        if (!nombre || !usuario || !password) {
-            return res.status(400).json({ error: 'Faltan campos requeridos' });
-        }
 
-        // Verificar que usuario no exista (en Users o Stores)
-        const existingStore = await Store.findOne({ where: { usuario } });
-        const existingUser = await User.findOne({ where: { username: usuario } });
+// ==========================================
+// ENDPOINTS DE TIENDAS (STORE API)
+// ==========================================
 
-        if (existingStore || existingUser) {
-            return res.status(400).json({ error: 'El usuario/email ya existe' });
-        }
-
-        // Encriptar password
-        const hashedPassword = await bcrypt.hash(password, 10);
-
-        // --- NEW: Robust Organization ID Handling ---
-        let targetOrganizationId = req.organizationId;
-
-        // If no organizationId in request/token, look for one or create default
-        if (!targetOrganizationId) {
-            const firstOrg = await Organization.findOne();
-            if (firstOrg) {
-                targetOrganizationId = firstOrg.id;
-            } else {
-                console.log('⚠️ No organization found. Creating Default Organization...');
-                const newOrg = await Organization.create({
-                    name: 'Default Organization',
-                    slug: `default-org-${Date.now()}`,
-                    plan: 'ENTERPRISE'
-                });
-                targetOrganizationId = newOrg.id;
-            }
-        }
-
-        // 1. Crear Store (Legacy + New fields)
-        const store = await Store.create({
-            organizationId: targetOrganizationId,
-            nombre,
-            slug: `${nombre.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}`,
-            usuario, // Legacy field, keeping for compatibility
-            password: hashedPassword, // Legacy field
-            direccion: direccion || 'N/A',
-            telefono
-        });
-
-        // 2. Crear User Admin para esta Store
-        const user = await User.create({
-            username: usuario,
-            password: hashedPassword,
-            role: 'ADMIN',
-            storeId: store.id,
-            fullName: ownerName || nombre // Use ownerName if provided, else store name
-        });
-
-        // 3. Inicializar Configuración
-        await StoreConfig.create({
-            storeId: store.id,
-            breakEvenGoal: 0.00,
-            theme: 'light'
-        });
-
-        res.status(201).json({
-            id: store.id,
-            nombre: store.nombre,
-            usuario: store.usuario,
-            owner: user.fullName,
-            organizationId: store.organizationId
-        });
-    } catch (error) {
-        console.error('Error al crear sucursal:', error);
-        res.status(500).json({ error: 'Error al crear sucursal: ' + error.message });
-    }
-});
+// POST /api/stores/new - Crear nueva tienda (SOLO SUPER_ADMIN o Registro Público)
+app.post('/api/stores/new', createStore);
 
 // GET /api/stores - Listar todas las tiendas (SOLO SUPER_ADMIN)
-app.get('/api/stores', authenticateToken, async (req, res) => {
-    try {
-        if (req.role !== 'SUPER_ADMIN') {
-            return res.status(403).json({ error: 'Acceso denegado' });
-        }
-
-        const stores = await Store.findAll({
-            attributes: ['id', 'nombre', 'usuario', 'telefono', 'direccion', 'createdAt'],
-            order: [['createdAt', 'DESC']]
-        });
-
-        // Map to frontend expectation
-        const mappedStores = stores.map(s => ({
-            id: s.id,
-            name: s.nombre,
-            owner: s.usuario,
-            phone: s.telefono || 'N/A',
-            plan: 'Premium',
-            status: 'active',
-            lastActive: new Date(s.createdAt).toLocaleDateString()
-        }));
-
-        res.json(mappedStores);
-    } catch (error) {
-        console.error('Error al listar sucursales:', error);
-        res.status(500).json({ error: 'Error al listar sucursales' });
-    }
-});
+app.get('/api/stores', authenticateToken, getStores);
 
 // DELETE /api/stores/:id - Eliminar tienda (RBAC: SUPER_ADMIN o admin propietario)
-app.delete('/api/stores/:id', authenticateToken, async (req, res) => {
-    try {
-        const targetStoreId = req.params.id;
-        const { role, storeId: userStoreId } = req; // Del token JWT
-        const { password } = req.body;
-
-        // ==========================================
-        // VALIDACIÓN RBAC - Capa de Seguridad Backend
-        // ==========================================
-
-        // REGLA 1: SUPER_ADMIN puede eliminar cualquier tienda
-        const isSuperAdmin = role === 'SUPER_ADMIN';
-
-        // REGLA 2: admin puede eliminar SOLO su propia tienda
-        const isStoreOwner = role === 'admin' && userStoreId === targetStoreId;
-
-        // Si no cumple ninguna de las dos reglas, denegar acceso
-        if (!isSuperAdmin && !isStoreOwner) {
-            console.warn(`🚫 INTENTO DE ELIMINACIÓN DENEGADO: Usuario ${req.usuario} (${role}) intentó eliminar tienda ${targetStoreId}`);
-            return res.status(403).json({
-                error: 'ACCESO DENEGADO',
-                message: 'No tienes privilegios suficientes para realizar esta acción crítica.'
-            });
-        }
-
-        // ==========================================
-        // VALIDACIÓN DE CONTRASEÑA (Doble Factor)
-        // ==========================================
-
-        if (!password) {
-            return res.status(400).json({ error: 'Se requiere confirmación de contraseña' });
-        }
-
-        // Buscar el usuario actual para verificar contraseña
-        const currentUser = await User.findOne({ where: { username: req.usuario } });
-        if (!currentUser) {
-            return res.status(404).json({ error: 'Usuario no encontrado' });
-        }
-
-        // Verificar contraseña con bcrypt
-        const isPasswordValid = await bcrypt.compare(password, currentUser.password);
-        if (!isPasswordValid) {
-            console.warn(`🚫 CONTRASEÑA INCORRECTA: Usuario ${req.usuario} intentó eliminar tienda ${targetStoreId}`);
-            return res.status(403).json({ error: 'Contraseña incorrecta' });
-        }
-
-        // ==========================================
-        // ELIMINACIÓN DE TIENDA
-        // ==========================================
-
-        // Buscar la tienda a eliminar
-        const store = await Store.findByPk(targetStoreId);
-        if (!store) {
-            return res.status(404).json({ error: 'Tienda no encontrada' });
-        }
-
-        // Log de seguridad (auditoría)
-        console.log(`🔴 ELIMINACIÓN DE TIENDA AUTORIZADA:`);
-        console.log(`   - Tienda: ${store.nombre} (ID: ${store.id})`);
-        console.log(`   - Usuario: ${req.usuario} (Rol: ${role})`);
-        console.log(`   - Timestamp: ${new Date().toISOString()}`);
-
-        // Cascade delete is handled by Database definition (onDelete: CASCADE)
-        await store.destroy();
-
-        res.json({
-            message: 'Tienda eliminada correctamente',
-            deletedStore: store.nombre
-        });
-    } catch (error) {
-        console.error('Error al eliminar tienda:', error);
-        res.status(500).json({ error: 'Error al eliminar tienda' });
-    }
-});
+app.delete('/api/stores/:id', authenticateToken, deleteStore);
 
 // POST /api/admin/reset-password - Super Admin Reset Password
 app.post('/api/admin/reset-password', authenticateToken, async (req, res) => {
