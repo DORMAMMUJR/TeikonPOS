@@ -165,8 +165,8 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     setAuthToken(token);
     const user = getCurrentUserFromToken();
     setCurrentUser(user);
-    // Force reload to clear any stale state
-    window.location.href = user?.role === 'SUPER_ADMIN' ? '/admin/stores' : '/dashboard';
+    // Navigation handled by Login component - removed window.location.href to fix token persistence
+    // window.location.href = user?.role === 'SUPER_ADMIN' ? '/admin/stores' : '/dashboard';
   };
 
   const logout = () => {
