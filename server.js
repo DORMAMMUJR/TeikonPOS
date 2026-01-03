@@ -2271,7 +2271,19 @@ const startServer = async () => {
             }
         });
 
-        // Iniciar servidor
+        // ==========================================
+        // SERVIR FRONTEND EN PRODUCCIÓN
+        // ==========================================
+
+        // 1. Servir archivos estáticos generados por Vite (dist/)
+        app.use(express.static(path.join(__dirname, 'dist')));
+
+        // 2. Catch-All: Cualquier ruta que NO sea API, redirige al index.html
+        // Esto permite que React Router maneje las rutas del frontend (SPA)
+        app.get('*', (req, res) => {
+            res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+        });
+
         // ==========================================
         // INICIAR SERVIDOR
         // ==========================================
