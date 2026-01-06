@@ -5,7 +5,7 @@ import { useStore } from '../context/StoreContext';
 interface POSHeaderProps {
     searchTerm: string;
     setSearchTerm: (term: string) => void;
-    searchInputRef: React.RefObject<HTMLInputElement>;
+    searchInputRef: React.RefObject<HTMLInputElement | null>;
 }
 
 const POSHeader: React.FC<POSHeaderProps> = ({

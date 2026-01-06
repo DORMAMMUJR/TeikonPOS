@@ -161,24 +161,24 @@ const POS: React.FC = () => {
         {/* Mobile: Full height with bottom padding for sticky bar */}
         {/* Desktop: 2/3 width with normal height */}
         <div className="flex-1 flex flex-col lg:w-2/3 card-premium overflow-hidden border-t-4 border-t-brand-emerald bg-white dark:bg-slate-900 shadow-xl min-h-0 pb-0 relative">
-          <div className="absolute inset-0 overflow-y-auto p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4 content-start pb-[100px] lg:pb-4 custom-scrollbar">
+          <div className="absolute inset-0 overflow-y-auto p-4 grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-3 md:gap-4 content-start pb-[100px] lg:pb-4 custom-scrollbar">
             {filteredProducts.map((p, idx) => (
               <div
                 key={p.id}
                 onClick={() => addToCart(p)}
-                className={`group relative p-2 md:p-2.5 bg-white dark:bg-slate-800 border-2 rounded-2xl cursor-pointer transition-all duration-200 ease-out hover:scale-105 hover:shadow-xl min-h-[120px] ${lastAddedId === p.id
+                className={`group relative p-1.5 sm:p-2 md:p-2.5 bg-white dark:bg-slate-800 border-2 rounded-2xl cursor-pointer transition-all duration-200 ease-out hover:scale-105 hover:shadow-xl min-h-[140px] sm:min-h-[160px] ${lastAddedId === p.id
                   ? 'border-brand-emerald ring-4 ring-brand-emerald/10'
                   : 'border-slate-100 dark:border-slate-700 hover:border-brand-emerald/40'
                   }`}
               >
-                <div className="relative aspect-square w-full bg-slate-50 dark:bg-slate-900 rounded-xl mb-2 md:mb-3 flex items-center justify-center overflow-hidden border border-slate-100 dark:border-slate-700">
+                <div className="relative aspect-square w-full bg-slate-50 dark:bg-slate-900 rounded-xl mb-1.5 sm:mb-2 md:mb-3 flex items-center justify-center overflow-hidden border border-slate-100 dark:border-slate-700">
                   {p.image ? (
                     <img src={p.image} className="h-full w-full object-cover group-hover:scale-110 transition-transform duration-500" alt={p.name} />
                   ) : (
                     <ImageOff className="text-slate-200 dark:text-slate-700" size={32} />
                   )}
 
-                  <div className={`absolute top-2 right-2 px-1.5 py-0.5 rounded-md text-[7px] md:text-[8px] font-black uppercase tracking-tighter ${p.stock <= p.minStock
+                  <div className={`absolute top-2 right-2 px-1 py-0.5 sm:px-1.5 rounded-md text-[6px] sm:text-[7px] md:text-[8px] font-black uppercase tracking-tighter ${p.stock <= p.minStock
                     ? 'bg-red-500 text-white animate-pulse'
                     : 'bg-black/40 dark:bg-white/10 text-white backdrop-blur-sm'
                     }`}>
@@ -187,11 +187,11 @@ const POS: React.FC = () => {
                 </div>
 
                 <div className="px-1 space-y-1">
-                  <h4 className="text-[10px] md:text-[11px] font-black text-slate-900 dark:text-white line-clamp-2 min-h-[2rem] leading-tight uppercase tracking-tight">
+                  <h4 className="text-[9px] sm:text-[10px] md:text-[11px] font-black text-slate-900 dark:text-white line-clamp-2 min-h-[1.75rem] sm:min-h-[2rem] leading-tight uppercase tracking-tight">
                     {p.name}
                   </h4>
                   <div className="flex justify-between items-center pt-1">
-                    <p className="text-base md:text-lg font-black text-brand-emerald tracking-tighter">
+                    <p className="text-sm sm:text-base md:text-lg font-black text-brand-emerald tracking-tighter">
                       ${(p.salePrice || 0).toLocaleString()}
                     </p>
                     <div className="hidden md:block p-1.5 bg-brand-emerald/10 text-brand-emerald rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
