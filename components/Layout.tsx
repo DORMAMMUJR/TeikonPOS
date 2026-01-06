@@ -19,7 +19,7 @@ interface LayoutProps {
 
 const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => {
   const { currentUser, getDashboardStats, settings, sales, logout } = useStore();
-  // const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); // Removed per constraint
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
   const [isGoalModalOpen, setIsGoalModalOpen] = useState(false);
   const [isCashCloseOpen, setIsCashCloseOpen] = useState(false);
@@ -72,7 +72,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => 
 
   const handleMobileNav = (tabId: string) => {
     onTabChange(tabId);
-    // setIsMobileMenuOpen(false); // Removed
+    setIsMobileMenuOpen(false);
   };
 
   return (
@@ -83,9 +83,14 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => 
       {/* --- MOBILE HEADER (Content Only) --- */}
       <div className="md:hidden bg-brand-panel border-b border-brand-border px-4 py-3 flex justify-between items-center shrink-0 z-[60] shadow-sm fixed top-0 left-0 right-0 h-14">
         <div className="flex items-center gap-3">
-          <div className="p-2 -ml-2 text-brand-text rounded-lg">
-            <TeikonLogo size={24} />
-          </div>
+          {/* Hamburger Menu Button */}
+          <button
+            onClick={() => setIsMobileMenuOpen(true)}
+            className="p-2 -ml-2 text-brand-text hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+            aria-label="Open menu"
+          >
+            <Menu size={24} />
+          </button>
           <div className="flex flex-col">
             <h1 className="text-lg font-black text-slate-900 dark:text-white leading-none">
               {currentUser?.storeName || 'TeikonPOS'}
@@ -97,11 +102,31 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => 
         </div>
       </div>
 
-      {/* --- SIDEBAR (Desktop ONLY) --- */}
-      <div className="hidden md:flex md:relative">
+      {/* --- OVERLAY (Mobile Only) --- */}
+      {isMobileMenuOpen && (
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 md:hidden animate-fade-in"
+          onClick={() => setIsMobileMenuOpen(false)}
+          aria-label="Close menu"
+        />
+      )}
+
+      {/* --- SIDEBAR (Responsive Drawer) --- */}
+      <div
+        className={`
+          fixed md:relative
+          top-0 left-0 h-full
+          z-[60] md:z-auto
+          transition-all duration-300
+          ${isMobileMenuOpen ? 'translate-x-0 opacity-100' : '-translate-x-full opacity-0 md:translate-x-0 md:opacity-100'}
+        `}
+        style={{
+          transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)'
+        }}
+      >
         <Sidebar
           activeTab={activeTab}
-          onTabChange={onTabChange}
+          onTabChange={handleMobileNav}
           onOpenGoalModal={() => setIsGoalModalOpen(true)}
           onOpenCashClose={() => setIsCashCloseOpen(true)}
           onOpenSupport={() => setIsSupportModalOpen(true)}

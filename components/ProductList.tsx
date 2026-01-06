@@ -231,126 +231,128 @@ const ProductList: React.FC<ProductListProps> = ({ products: propProducts, targe
       {/* DESKTOP: Professional Table View (hidden on mobile, visible on md+) */}
       <div className="hidden md:block w-full max-w-7xl mx-auto">
         <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
-          <table className="w-full text-left border-collapse">
-            <thead className="bg-orange-50/50 dark:bg-orange-950/10 border-b-2 border-orange-200 dark:border-orange-900/20">
-              <tr>
-                <th className="px-6 py-4 text-[10px] font-black text-orange-600 dark:text-orange-400 uppercase tracking-widest">
-                  ÍTEM
-                </th>
-                <th className="px-6 py-4 text-[10px] font-black text-orange-600 dark:text-orange-400 uppercase tracking-widest">
-                  SKU
-                </th>
-                <th className="px-6 py-4 text-right text-[10px] font-black text-orange-600 dark:text-orange-400 uppercase tracking-widest">
-                  PRECIO
-                </th>
-                <th className="px-6 py-4 text-right text-[10px] font-black text-orange-600 dark:text-orange-400 uppercase tracking-widest">
-                  RENTABILIDAD
-                </th>
-                <th className="px-6 py-4 text-center text-[10px] font-black text-orange-600 dark:text-orange-400 uppercase tracking-widest">
-                  STOCK
-                </th>
-                <th className="px-6 py-4 text-center text-[10px] font-black text-orange-600 dark:text-orange-400 uppercase tracking-widest">
-                  ACCIÓN
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-              {filtered.map((p) => {
-                const margin = p.salePrice > 0 ? ((p.salePrice - p.costPrice) / p.salePrice) * 100 : 0;
-                const profit = p.salePrice - p.costPrice;
+          <div className="table-scroll-container">
+            <table className="w-full text-left border-collapse">
+              <thead className="bg-orange-50/50 dark:bg-orange-950/10 border-b-2 border-orange-200 dark:border-orange-900/20">
+                <tr>
+                  <th className="px-6 py-4 text-[10px] font-black text-orange-600 dark:text-orange-400 uppercase tracking-widest">
+                    ÍTEM
+                  </th>
+                  <th className="px-6 py-4 text-[10px] font-black text-orange-600 dark:text-orange-400 uppercase tracking-widest">
+                    SKU
+                  </th>
+                  <th className="px-6 py-4 text-right text-[10px] font-black text-orange-600 dark:text-orange-400 uppercase tracking-widest">
+                    PRECIO
+                  </th>
+                  <th className="px-6 py-4 text-right text-[10px] font-black text-orange-600 dark:text-orange-400 uppercase tracking-widest">
+                    RENTABILIDAD
+                  </th>
+                  <th className="px-6 py-4 text-center text-[10px] font-black text-orange-600 dark:text-orange-400 uppercase tracking-widest">
+                    STOCK
+                  </th>
+                  <th className="px-6 py-4 text-center text-[10px] font-black text-orange-600 dark:text-orange-400 uppercase tracking-widest">
+                    ACCIÓN
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                {filtered.map((p) => {
+                  const margin = p.salePrice > 0 ? ((p.salePrice - p.costPrice) / p.salePrice) * 100 : 0;
+                  const profit = p.salePrice - p.costPrice;
 
-                return (
-                  <tr key={p.id} className="hover:bg-orange-50/30 dark:hover:bg-orange-950/5 transition-colors group">
-                    {/* ÍTEM Column - Image + Name */}
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-xl overflow-hidden bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shrink-0">
-                          {p.image ? (
-                            <img src={p.image} className="w-full h-full object-cover" alt={p.name} />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-slate-300">
-                              <ImageIcon size={18} />
-                            </div>
+                  return (
+                    <tr key={p.id} className="hover:bg-orange-50/30 dark:hover:bg-orange-950/5 transition-colors group">
+                      {/* ÍTEM Column - Image + Name */}
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 rounded-xl overflow-hidden bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shrink-0">
+                            {p.image ? (
+                              <img src={p.image} className="w-full h-full object-cover" alt={p.name} />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-slate-300">
+                                <ImageIcon size={18} />
+                              </div>
+                            )}
+                          </div>
+                          <span className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate max-w-[200px]" title={p.name}>
+                            {p.name}
+                          </span>
+                        </div>
+                      </td>
+
+                      {/* SKU Column */}
+                      <td className="px-6 py-4">
+                        <span className="text-xs font-black text-slate-400 uppercase tracking-tight">
+                          {p.sku}
+                        </span>
+                      </td>
+
+                      {/* PRECIO Column */}
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex flex-col items-end">
+                          <span className="text-base font-black text-slate-900 dark:text-white">
+                            ${p.salePrice.toLocaleString()}
+                          </span>
+                          {p.costPrice > 0 && (
+                            <span className="text-[10px] text-slate-400 line-through">
+                              Costo: ${p.costPrice.toLocaleString()}
+                            </span>
                           )}
                         </div>
-                        <span className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate max-w-[200px]" title={p.name}>
-                          {p.name}
-                        </span>
-                      </div>
-                    </td>
+                      </td>
 
-                    {/* SKU Column */}
-                    <td className="px-6 py-4">
-                      <span className="text-xs font-black text-slate-400 uppercase tracking-tight">
-                        {p.sku}
-                      </span>
-                    </td>
-
-                    {/* PRECIO Column */}
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex flex-col items-end">
-                        <span className="text-base font-black text-slate-900 dark:text-white">
-                          ${p.salePrice.toLocaleString()}
-                        </span>
-                        {p.costPrice > 0 && (
-                          <span className="text-[10px] text-slate-400 line-through">
-                            Costo: ${p.costPrice.toLocaleString()}
+                      {/* RENTABILIDAD Column */}
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex flex-col items-end gap-1">
+                          <span className={`text-sm font-black ${profit > 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                            ${profit.toLocaleString()}
                           </span>
-                        )}
-                      </div>
-                    </td>
-
-                    {/* RENTABILIDAD Column */}
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex flex-col items-end gap-1">
-                        <span className={`text-sm font-black ${profit > 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                          ${profit.toLocaleString()}
-                        </span>
-                        <div className="flex items-center gap-1">
-                          <TrendingUp size={12} className={profit > 0 ? 'text-emerald-500' : 'text-red-500'} />
-                          <span className={`text-[10px] font-bold ${profit > 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                            {margin.toFixed(1)}% MG
-                          </span>
+                          <div className="flex items-center gap-1">
+                            <TrendingUp size={12} className={profit > 0 ? 'text-emerald-500' : 'text-red-500'} />
+                            <span className={`text-[10px] font-bold ${profit > 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                              {margin.toFixed(1)}% MG
+                            </span>
+                          </div>
                         </div>
-                      </div>
-                    </td>
+                      </td>
 
-                    {/* STOCK Column - Badge Style */}
-                    <td className="px-6 py-4 text-center">
-                      <span className={`inline-flex items-center justify-center px-3 py-1.5 rounded-lg text-xs font-black uppercase border-2 ${p.stock <= p.minStock
-                        ? 'bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 border-red-200 dark:border-red-900/50'
-                        : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700'
-                        }`}>
-                        {p.stock}
-                      </span>
-                    </td>
+                      {/* STOCK Column - Badge Style */}
+                      <td className="px-6 py-4 text-center">
+                        <span className={`inline-flex items-center justify-center px-3 py-1.5 rounded-lg text-xs font-black uppercase border-2 ${p.stock <= p.minStock
+                          ? 'bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 border-red-200 dark:border-red-900/50'
+                          : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700'
+                          }`}>
+                          {p.stock}
+                        </span>
+                      </td>
 
-                    {/* ACCIÓN Column - Spaced Buttons */}
-                    <td className="px-6 py-4">
-                      <div className="flex items-center justify-center gap-4">
-                        <button
-                          onClick={() => openEdit(p)}
-                          className="flex items-center gap-2 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-xs font-bold uppercase transition-all active:scale-95 shadow-sm hover:shadow-md"
-                          aria-label={`Editar ${p.name}`}
-                        >
-                          <Edit size={14} />
-                          Editar
-                        </button>
-                        <button
-                          onClick={(e) => handleDelete(e, p.id)}
-                          className="flex items-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-xs font-bold uppercase transition-all active:scale-95 shadow-sm hover:shadow-md"
-                          aria-label={`Eliminar ${p.name}`}
-                        >
-                          <Trash2 size={14} />
-                          Borrar
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                      {/* ACCIÓN Column - Spaced Buttons */}
+                      <td className="px-6 py-4">
+                        <div className="flex items-center justify-center gap-4">
+                          <button
+                            onClick={() => openEdit(p)}
+                            className="flex items-center gap-2 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-xs font-bold uppercase transition-all active:scale-95 shadow-sm hover:shadow-md"
+                            aria-label={`Editar ${p.name}`}
+                          >
+                            <Edit size={14} />
+                            Editar
+                          </button>
+                          <button
+                            onClick={(e) => handleDelete(e, p.id)}
+                            className="flex items-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-xs font-bold uppercase transition-all active:scale-95 shadow-sm hover:shadow-md"
+                            aria-label={`Eliminar ${p.name}`}
+                          >
+                            <Trash2 size={14} />
+                            Borrar
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 
