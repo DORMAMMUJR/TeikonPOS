@@ -37,6 +37,16 @@ const __dirname = dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 80;
 
+// ==========================================
+// CONFIGURACIÓN DE PROXY (SEENODE)
+// ==========================================
+// Confiar en el balanceador de carga de Seenode
+// Esto es CRÍTICO para que HTTPS funcione correctamente detrás del proxy
+if (process.env.TRUST_PROXIES === 'true') {
+    app.set('trust proxy', 1);
+    console.log('✅ Trust Proxy habilitado para balanceador de carga');
+}
+
 // Seguridad: JWT_SECRET debe estar en variables de entorno
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) {
@@ -45,13 +55,39 @@ if (!JWT_SECRET) {
     process.exit(1);
 }
 
+// JWT Expiration (default 30d, production 90d)
+const JWT_EXPIRATION = process.env.JWT_EXPIRATION || '30d';
+console.log(`🔐 JWT Expiration configurado a: ${JWT_EXPIRATION}`);
+
 // ==========================================
 // MIDDLEWARE
 // ==========================================
 
 // CORS Configuration - Permitir credenciales y headers de autorización
+// Configuración mejorada para producción en Seenode
+const allowedOrigins = [
+    'http://localhost:5173',
+    'http://localhost:3000',
+    process.env.PRODUCTION_URL
+].filter(Boolean); // Eliminar valores undefined
+
 app.use(cors({
-    origin: true, // Permite cualquier origen (para SaaS multi-tenant)
+    origin: (origin, callback) => {
+        // Permitir requests sin origin (mobile apps, Postman, etc.)
+        if (!origin) return callback(null, true);
+
+        // En desarrollo, permitir cualquier origen
+        if (process.env.NODE_ENV !== 'production') {
+            return callback(null, true);
+        }
+
+        // En producción, verificar lista de orígenes permitidos
+        if (allowedOrigins.indexOf(origin) !== -1) {
+            callback(null, true);
+        } else {
+            callback(null, true); // Permitir de todas formas (SaaS multi-tenant)
+        }
+    },
     credentials: true, // Permite cookies y credenciales
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
     exposedHeaders: ['Authorization'],
@@ -118,7 +154,7 @@ app.post('/api/auth/login', async (req, res) => {
                 storeId: user.storeId, // Puede ser null si es SUPER_ADMIN
                 role: user.role,
                 username: user.username
-            }, JWT_SECRET, { expiresIn: '30d' });
+            }, JWT_SECRET, { expiresIn: JWT_EXPIRATION });
 
             return res.json({
                 token,
@@ -152,7 +188,7 @@ app.post('/api/auth/login', async (req, res) => {
             storeName: store.nombre,
             usuario: store.usuario,
             role: 'ADMIN' // Asumimos rol admin para cuenta de tienda
-        }, JWT_SECRET, { expiresIn: '30d' });
+        }, JWT_SECRET, { expiresIn: JWT_EXPIRATION });
 
         res.json({
             token,
@@ -363,7 +399,7 @@ app.put('/api/me/profile', authenticateToken, async (req, res) => {
             role: req.user.role
         };
 
-        const newToken = jwt.sign(newTokenPayload, JWT_SECRET, { expiresIn: '30d' });
+        const newToken = jwt.sign(newTokenPayload, JWT_SECRET, { expiresIn: JWT_EXPIRATION });
 
         res.json({
             message: 'Perfil actualizado correctamente',
