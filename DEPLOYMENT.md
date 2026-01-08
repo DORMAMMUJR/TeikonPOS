@@ -25,8 +25,8 @@ PORT=80
 
 **SUPER_ADMIN (Master):**
 
-- Usuario: `dev@master.com`
-- Contraseña: `DevMaster2025!`
+- Usuario: `DORAMMU70`
+- Contraseña: `Sasquexy1`
 - Role: `SUPER_ADMIN`
 - User ID: `56c07762-37de-45d7-97cd-f2b0d08a8d4f`
 

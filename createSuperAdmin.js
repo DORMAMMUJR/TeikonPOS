@@ -8,8 +8,8 @@ async function createSuperAdmin() {
         await sequelize.authenticate();
         console.log('✅ Database connection established\n');
 
-        const email = 'dev@master.com';
-        const password = 'DevMaster2025!';
+        const email = 'DORAMMU70';
+        const password = 'Sasquexy1';
 
         // Check if user already exists
         const existing = await User.findOne({ where: { username: email } });
@@ -45,7 +45,7 @@ async function createSuperAdmin() {
         console.log('═══════════════════════════════════════════════════════════════');
         console.log('                    🔐 SUPER ADMIN CREDENTIALS                  ');
         console.log('═══════════════════════════════════════════════════════════════');
-        console.log(`\nEmail/Username: ${emailTO}`);
+        console.log(`\nEmail/Username: ${email}`);
         console.log(`Password: ${password}`);
         console.log(`Role: SUPER_ADMIN`);
         console.log(`User ID: ${user.id}`);
