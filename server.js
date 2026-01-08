@@ -223,42 +223,92 @@ app.get('/api/stores', authenticateToken, getStores);
 // DELETE /api/stores/:id - Eliminar tienda (RBAC: SUPER_ADMIN o admin propietario)
 app.delete('/api/stores/:id', authenticateToken, deleteStore);
 
-// POST /api/admin/reset-password - Super Admin Reset Password
-app.post('/api/admin/reset-password', authenticateToken, async (req, res) => {
+// POST /api/admin/update-store - Super Admin Update Store (Complete Edit)
+app.post('/api/admin/update-store', authenticateToken, async (req, res) => {
     try {
         if (req.role !== 'SUPER_ADMIN') {
             return res.status(403).json({ error: 'Acceso denegado' });
         }
 
-        const { targetStoreId, newPassword } = req.body;
-        if (!targetStoreId || !newPassword) {
-            return res.status(400).json({ error: 'Faltan datos (ID Tienda o Contraseña)' });
+        const { targetStoreId, name, ownerName, email, newPassword } = req.body;
+
+        if (!targetStoreId) {
+            return res.status(400).json({ error: 'ID de tienda requerido' });
         }
 
+        // Find store
         const store = await Store.findByPk(targetStoreId);
         if (!store) {
             return res.status(404).json({ error: 'Tienda no encontrada' });
         }
 
-        // Hash new password
-        const hashedPassword = await bcrypt.hash(newPassword, 10);
-
-        // 1. Update Store Password (Legacy)
-        store.password = hashedPassword;
-        await store.save();
-
-        // 2. Update Admin User Password
-        // Find the admin user linked to this store (role ADMIN)
+        // Find admin user linked to this store
         const adminUser = await User.findOne({ where: { storeId: targetStoreId, role: 'ADMIN' } });
+
+        // 1. Update Store Name
+        if (name && name !== store.nombre) {
+            console.log(`📝 Updating store name: ${store.nombre} → ${name}`);
+            store.nombre = name;
+        }
+
+        // 2. Update Owner Name (in User table)
+        if (ownerName && adminUser) {
+            console.log(`👤 Updating owner name: ${adminUser.fullName} → ${ownerName}`);
+            adminUser.fullName = ownerName;
+        }
+
+        // 3. Update Email/Username
+        if (email && email !== store.usuario) {
+            // Validate email is not already in use by another store
+            const existingStore = await Store.findOne({ where: { usuario: email } });
+            if (existingStore && existingStore.id !== targetStoreId) {
+                return res.status(400).json({ error: 'Este email ya está en uso por otra tienda' });
+            }
+
+            // Validate email is not already in use by another user
+            const existingUser = await User.findOne({ where: { username: email } });
+            if (existingUser && existingUser.storeId !== targetStoreId) {
+                return res.status(400).json({ error: 'Este email ya está en uso por otro usuario' });
+            }
+
+            console.log(`📧 Updating email: ${store.usuario} → ${email}`);
+            store.usuario = email;
+
+            if (adminUser) {
+                adminUser.username = email;
+            }
+        }
+
+        // 4. Update Password (if provided)
+        if (newPassword) {
+            console.log(`🔐 Updating password for store ${store.nombre}`);
+            const hashedPassword = await bcrypt.hash(newPassword, 10);
+            store.password = hashedPassword;
+
+            if (adminUser) {
+                adminUser.password = hashedPassword;
+            }
+        }
+
+        // Save all changes
+        await store.save();
         if (adminUser) {
-            adminUser.password = hashedPassword;
             await adminUser.save();
         }
 
-        res.json({ message: 'Contraseña reseteada exitosamente' });
+        console.log(`✅ Store updated successfully: ${store.nombre}`);
+        res.json({
+            message: 'Tienda actualizada exitosamente',
+            store: {
+                id: store.id,
+                name: store.nombre,
+                owner: adminUser?.fullName || 'N/A',
+                email: store.usuario
+            }
+        });
     } catch (error) {
-        console.error('Error al resetear contraseña:', error);
-        res.status(500).json({ error: 'Error interno al resetear contraseña' });
+        console.error('Error al actualizar tienda:', error);
+        res.status(500).json({ error: 'Error interno al actualizar tienda' });
     }
 });
 

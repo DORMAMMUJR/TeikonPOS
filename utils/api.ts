@@ -202,11 +202,19 @@ export const authAPI = {
         return response.json();
     },
 
-    adminResetPassword: async (targetStoreId: string, newPassword: string) => {
-        const response = await safeFetch(`${API_URL}/api/admin/reset-password`, {
+    adminUpdateStore: async (
+        targetStoreId: string,
+        updates: {
+            name?: string;
+            ownerName?: string;
+            email?: string;
+            newPassword?: string;
+        }
+    ) => {
+        const response = await safeFetch(`${API_URL}/api/admin/update-store`, {
             method: 'POST',
             headers: getHeaders(),
-            body: JSON.stringify({ targetStoreId, newPassword })
+            body: JSON.stringify({ targetStoreId, ...updates })
         });
         return response.json();
     }

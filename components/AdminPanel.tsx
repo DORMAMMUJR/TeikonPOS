@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Store, TrendingUp, ShieldCheck, Search, Plus, User,
   ChevronLeft, AlertCircle, CheckCircle, Zap, X, Lock, Eye, EyeOff, Building,
-  LayoutDashboard, Package, LogOut, Ticket, DollarSign, Trash2, RefreshCw
+  LayoutDashboard, Package, LogOut, Ticket, DollarSign, Trash2, RefreshCw, Edit2
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../context/StoreContext';
@@ -48,10 +48,16 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
   const [isStoreModalOpen, setIsStoreModalOpen] = useState(false);
   const [newStoreData, setNewStoreData] = useState({ name: '', email: '', password: '', phone: '', ownerName: '' });
 
-  // Reset Password State
-  const [isResetModalOpen, setIsResetModalOpen] = useState(false);
-  const [storeToReset, setStoreToReset] = useState<StoreData | null>(null);
-  const [resetPasswordValue, setResetPasswordValue] = useState('');
+  // Edit Store State
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [storeToEdit, setStoreToEdit] = useState<StoreData | null>(null);
+  const [editTab, setEditTab] = useState<'info' | 'security'>('info');
+  const [editFormData, setEditFormData] = useState({
+    name: '',
+    ownerName: '',
+    email: '',
+    newPassword: ''
+  });
 
   // Delete Store State
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -296,13 +302,20 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    setStoreToReset(store);
-                    setIsResetModalOpen(true);
+                    setStoreToEdit(store);
+                    setEditFormData({
+                      name: store.name,
+                      ownerName: store.owner,
+                      email: '',
+                      newPassword: ''
+                    });
+                    setEditTab('info');
+                    setIsEditModalOpen(true);
                   }}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-amber-50 text-amber-600 hover:bg-amber-100 rounded-xl text-xs font-bold uppercase transition-all active:scale-95 min-h-[44px]"
-                  aria-label={`Resetear contraseña de ${store.name}`}
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-blue-50 text-brand-blue hover:bg-blue-100 rounded-xl text-xs font-bold uppercase transition-all active:scale-95 min-h-[44px]"
+                  aria-label={`Editar ${store.name}`}
                 >
-                  <Zap size={16} /> RESET
+                  <Edit2 size={16} /> EDITAR
                 </button>
                 {currentUser?.role === 'SUPER_ADMIN' && (
                   <button
@@ -364,14 +377,21 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                     <div className="flex items-center justify-end gap-2" onClick={e => e.stopPropagation()}>
                       <Button
                         variant="secondary"
-                        className="bg-amber-50 text-amber-600 hover:bg-amber-100 border-amber-100 min-h-[44px]"
+                        className="bg-blue-50 text-brand-blue hover:bg-blue-100 border-blue-100 min-h-[44px]"
                         onClick={(e) => {
                           e.stopPropagation();
-                          setStoreToReset(store);
-                          setIsResetModalOpen(true);
+                          setStoreToEdit(store);
+                          setEditFormData({
+                            name: store.name,
+                            ownerName: store.owner,
+                            email: '',
+                            newPassword: ''
+                          });
+                          setEditTab('info');
+                          setIsEditModalOpen(true);
                         }}
                       >
-                        <Zap size={14} className="mr-1" /> RESET
+                        <Edit2 size={14} className="mr-1" /> EDITAR
                       </Button>
 
                       {currentUser?.role === 'SUPER_ADMIN' && (
@@ -426,8 +446,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                   <div className="flex items-center gap-2 mb-1">
                     <span className="text-xs font-black text-slate-900 dark:text-white">#{t.id.substring(0, 6)}</span>
                     <span className={`px-2 py-1 rounded text-[10px] font-black uppercase ${t.prioridad === 'URGENT' ? 'bg-red-100 text-red-600 dark:bg-red-950/30 dark:text-red-400' :
-                        t.prioridad === 'HIGH' ? 'bg-orange-100 text-orange-600 dark:bg-orange-950/30 dark:text-orange-400' :
-                          'bg-blue-100 text-blue-600 dark:bg-blue-950/30 dark:text-blue-400'
+                      t.prioridad === 'HIGH' ? 'bg-orange-100 text-orange-600 dark:bg-orange-950/30 dark:text-orange-400' :
+                        'bg-blue-100 text-blue-600 dark:bg-blue-950/30 dark:text-blue-400'
                       }`}>
                       {t.prioridad}
                     </span>
@@ -436,7 +456,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                   <p className="text-xs text-slate-500 line-clamp-2">{t.descripcion}</p>
                 </div>
                 <span className={`px-2 py-1 rounded-full text-[10px] font-black uppercase border ml-2 ${t.status === 'OPEN' ? 'bg-green-100 text-green-600 border-green-200 dark:bg-green-950/30 dark:text-green-400 dark:border-green-900' :
-                    'bg-slate-100 text-slate-500 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700'
+                  'bg-slate-100 text-slate-500 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700'
                   }`}>
                   {t.status}
                 </span>
@@ -480,15 +500,15 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                   </td>
                   <td className="px-6 py-4 text-center">
                     <span className={`px-2 py-1 rounded text-[10px] font-black uppercase ${t.prioridad === 'URGENT' ? 'bg-red-100 text-red-600' :
-                        t.prioridad === 'HIGH' ? 'bg-orange-100 text-orange-600' :
-                          'bg-blue-100 text-blue-600'
+                      t.prioridad === 'HIGH' ? 'bg-orange-100 text-orange-600' :
+                        'bg-blue-100 text-blue-600'
                       }`}>
                       {t.prioridad}
                     </span>
                   </td>
                   <td className="px-6 py-4 text-center">
                     <span className={`px-2 py-1 rounded-full text-[10px] font-black uppercase border ${t.status === 'OPEN' ? 'bg-green-100 text-green-600 border-green-200' :
-                        'bg-slate-100 text-slate-500 border-slate-200'
+                      'bg-slate-100 text-slate-500 border-slate-200'
                       }`}>
                       {t.status}
                     </span>
@@ -683,55 +703,184 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
         </div>
       )}
 
-      {/* PASSWORD RESET MODAL */}
-      {isResetModalOpen && storeToReset && (
+      {/* EDIT STORE MODAL */}
+      {isEditModalOpen && storeToEdit && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-sm p-8 shadow-2xl scale-100 animate-in zoom-in-95 duration-200 border border-slate-200 dark:border-slate-800">
-            <div className="text-center mb-6">
-              <div className="w-12 h-12 bg-red-100 dark:bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-4 text-red-500">
-                <ShieldCheck size={28} />
+          <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-md p-8 shadow-2xl scale-100 animate-in zoom-in-95 duration-200 border border-slate-200 dark:border-slate-800">
+            {/* Header */}
+            <div className="flex justify-between items-start mb-6">
+              <div>
+                <h3 className="text-xl font-black text-slate-900 dark:text-white">Editar Tienda</h3>
+                <p className="text-xs font-bold text-slate-400 mt-1">{storeToEdit.name}</p>
               </div>
-              <h3 className="text-xl font-black text-slate-900 dark:text-white">Resetear Contraseña</h3>
-              <p className="text-sm font-bold text-slate-500 mt-1 px-4">
-                Estás cambiando la contraseña maestra de <span className="text-slate-900 dark:text-white">{storeToReset.name}</span>
-              </p>
+              <button
+                onClick={() => {
+                  setIsEditModalOpen(false);
+                  setStoreToEdit(null);
+                  setEditFormData({ name: '', ownerName: '', email: '', newPassword: '' });
+                }}
+                className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full text-slate-400 transition-colors"
+                type="button"
+                aria-label="Cerrar modal"
+              >
+                <X size={20} />
+              </button>
             </div>
 
-            <div className="space-y-4">
-              <div className="space-y-1">
-                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Nueva Contraseña</label>
-                <input
-                  type="password"
-                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-red-500 outline-none transition-all"
-                  placeholder="Ingrese nueva contraseña"
-                  value={resetPasswordValue}
-                  onChange={(e) => setResetPasswordValue(e.target.value)}
-                />
-              </div>
+            {/* Tabs */}
+            <div className="flex gap-2 mb-6 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
+              <button
+                onClick={() => setEditTab('info')}
+                className={`flex-1 px-4 py-2 rounded-lg text-xs font-black transition-all ${editTab === 'info'
+                    ? 'bg-white dark:bg-slate-700 text-brand-blue shadow-sm'
+                    : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+              >
+                INFORMACIÓN GENERAL
+              </button>
+              <button
+                onClick={() => setEditTab('security')}
+                className={`flex-1 px-4 py-2 rounded-lg text-xs font-black transition-all ${editTab === 'security'
+                    ? 'bg-white dark:bg-slate-700 text-brand-blue shadow-sm'
+                    : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+              >
+                SEGURIDAD
+              </button>
+            </div>
 
-              <div className="flex gap-2">
-                <Button variant="secondary" fullWidth onClick={() => { setIsResetModalOpen(false); setResetPasswordValue(''); setStoreToReset(null); }} className="h-12">
+            {/* Tab Content */}
+            <div className="space-y-4">
+              {editTab === 'info' ? (
+                <>
+                  {/* Store Name */}
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">
+                      Nombre de la Tienda
+                    </label>
+                    <input
+                      type="text"
+                      className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-brand-blue outline-none transition-all"
+                      placeholder="Ej. Sucursal Centro"
+                      value={editFormData.name}
+                      onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                    />
+                  </div>
+
+                  {/* Owner Name */}
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">
+                      Nombre del Encargado
+                    </label>
+                    <input
+                      type="text"
+                      className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-brand-blue outline-none transition-all"
+                      placeholder="Ej. Juan Pérez"
+                      value={editFormData.ownerName}
+                      onChange={(e) => setEditFormData({ ...editFormData, ownerName: e.target.value })}
+                    />
+                  </div>
+
+                  {/* Email */}
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">
+                      Correo Electrónico (Usuario)
+                    </label>
+                    <input
+                      type="email"
+                      className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-brand-blue outline-none transition-all"
+                      placeholder="admin@tienda.com"
+                      value={editFormData.email}
+                      onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
+                    />
+                    <p className="text-[10px] text-slate-400 ml-1 mt-1">Dejar vacío para mantener el actual</p>
+                  </div>
+                </>
+              ) : (
+                <>
+                  {/* Password */}
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">
+                      Nueva Contraseña
+                    </label>
+                    <input
+                      type="password"
+                      className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-brand-blue outline-none transition-all"
+                      placeholder="Dejar vacío para no cambiar"
+                      value={editFormData.newPassword}
+                      onChange={(e) => setEditFormData({ ...editFormData, newPassword: e.target.value })}
+                    />
+                    <p className="text-[10px] text-slate-400 ml-1 mt-1">Solo completar si deseas cambiar la contraseña</p>
+                  </div>
+
+                  <div className="bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-xl p-4">
+                    <div className="flex items-start gap-3">
+                      <AlertCircle size={18} className="text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+                      <div>
+                        <p className="text-xs font-bold text-amber-900 dark:text-amber-200">Cambio de Contraseña</p>
+                        <p className="text-[10px] text-amber-700 dark:text-amber-300 mt-1">
+                          Al cambiar la contraseña, el administrador de la tienda deberá usar la nueva contraseña en su próximo inicio de sesión.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex gap-2 pt-2">
+                <Button
+                  variant="secondary"
+                  fullWidth
+                  onClick={() => {
+                    setIsEditModalOpen(false);
+                    setStoreToEdit(null);
+                    setEditFormData({ name: '', ownerName: '', email: '', newPassword: '' });
+                  }}
+                  className="h-12"
+                >
                   CANCELAR
                 </Button>
                 <Button
                   type="button"
                   variant="primary"
                   fullWidth
-                  className="bg-red-500 hover:bg-red-600 text-white h-12 shadow-lg shadow-red-500/20"
+                  className="bg-brand-blue hover:bg-blue-600 text-white h-12 shadow-lg shadow-brand-blue/20"
                   onClick={async () => {
-                    if (!resetPasswordValue) return alert('Ingrese una contraseña');
                     try {
-                      await authAPI.adminResetPassword(storeToReset.id, resetPasswordValue);
-                      alert('✅ Contraseña actualizada con éxito');
-                      setIsResetModalOpen(false);
-                      setResetPasswordValue('');
-                      setStoreToReset(null);
+                      // Prepare updates object (only send non-empty fields)
+                      const updates: any = {};
+                      if (editFormData.name && editFormData.name !== storeToEdit.name) {
+                        updates.name = editFormData.name;
+                      }
+                      if (editFormData.ownerName && editFormData.ownerName !== storeToEdit.owner) {
+                        updates.ownerName = editFormData.ownerName;
+                      }
+                      if (editFormData.email) {
+                        updates.email = editFormData.email;
+                      }
+                      if (editFormData.newPassword) {
+                        updates.newPassword = editFormData.newPassword;
+                      }
+
+                      // Check if there are any updates
+                      if (Object.keys(updates).length === 0) {
+                        alert('⚠️ No hay cambios para guardar');
+                        return;
+                      }
+
+                      await authAPI.adminUpdateStore(storeToEdit.id, updates);
+                      alert('✅ Tienda actualizada exitosamente');
+                      setIsEditModalOpen(false);
+                      setStoreToEdit(null);
+                      setEditFormData({ name: '', ownerName: '', email: '', newPassword: '' });
+                      fetchStores(); // Refresh stores list
                     } catch (e: any) {
-                      alert('Error: ' + e.message);
+                      alert('❌ Error: ' + e.message);
                     }
                   }}
                 >
-                  CONFIRMAR CAMBIO
+                  GUARDAR CAMBIOS
                 </Button>
               </div>
             </div>
