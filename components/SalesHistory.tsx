@@ -122,7 +122,7 @@ const SalesHistory: React.FC = () => {
         </div>
       </div>
 
-      <div className="card-premium overflow-hidden border-t-2 border-t-brand-pink/20 shadow-lg">
+      <div className="card-premium overflow-x-auto md:overflow-visible border-t-2 border-t-brand-pink/20 shadow-lg">
         <div className="table-scroll-container">
           <table className="min-w-full divide-y divide-brand-border">
             <thead className="bg-pink-50/50 dark:bg-pink-950/20">

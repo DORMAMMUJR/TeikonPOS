@@ -31,19 +31,34 @@ export const SaleTicket: React.FC<SaleTicketProps> = ({
   storeInfo,
   footerMessage = "¡Gracias por su compra!",
   ticketId,
-  folio
+  folio,
+  onClose
 }) => {
 
-  // Auto-imprimir al cargar
+  // Auto-imprimir solo cuando se solicita desde POS, no desde Historial
   useEffect(() => {
-    const timer = setTimeout(() => {
-      window.print();
-    }, 500);
-    return () => clearTimeout(timer);
-  }, []);
+    // Solo auto-imprimir si no hay función onClose (modo POS)
+    // Si hay onClose, es modo vista previa (Historial)
+    if (!onClose) {
+      const timer = setTimeout(() => {
+        window.print();
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [onClose]);
 
   return (
-    <div id="printable-ticket" className="p-4 bg-white text-black font-mono text-sm max-w-[300px] mx-auto">
+    <div id="printable-ticket" className="p-4 bg-white text-black font-mono text-sm max-w-[300px] mx-auto relative">
+      {/* Close button - hidden on print */}
+      {onClose && (
+        <button
+          onClick={onClose}
+          className="absolute top-2 right-2 w-8 h-8 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors print:hidden flex items-center justify-center text-lg font-bold shadow-lg"
+          aria-label="Cerrar"
+        >
+          ×
+        </button>
+      )}
       {/* Encabezado */}
       <div className="text-center mb-4">
         <h2 className="text-xl font-bold uppercase">{storeInfo.name}</h2>
@@ -72,16 +87,19 @@ export const SaleTicket: React.FC<SaleTicketProps> = ({
                   {item.quantity || item.qty || 1}
                 </td>
                 <td className="py-1 align-top">
-                  {item.name}
+                  {/* Handle both productName (SaleDetail) and name (CartItem) */}
+                  {item.productName || item.name}
                   {/* Si hay precio unitario diferente al total */}
                   {(item.quantity > 1) && (
                     <div className="text-[10px] text-gray-500">
-                      @ ${item.price || item.salePrice}
+                      {/* Handle both unitPrice (SaleDetail) and price/salePrice (CartItem) */}
+                      @ ${item.unitPrice || item.price || item.salePrice || 0}
                     </div>
                   )}
                 </td>
                 <td className="py-1 text-right align-top">
-                  ${((item.price || item.salePrice) * (item.quantity || item.qty || 1)).toFixed(2)}
+                  {/* Safe calculation with fallback to 0 */}
+                  ${((item.unitPrice || item.price || item.salePrice || 0) * (item.quantity || item.qty || 1)).toFixed(2)}
                 </td>
               </tr>
             ))}
