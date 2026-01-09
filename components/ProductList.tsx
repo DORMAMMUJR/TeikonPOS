@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useStore } from '../context/StoreContext';
 import { Product } from "@/Product";
 import {
-  Search, Plus, Edit2, Trash2, Package, AlertTriangle, X,
+  Search, Plus, Edit2, Archive, Package, AlertTriangle, X,
   DollarSign, PieChart, ImageIcon, TrendingUp, Edit, Upload
 } from 'lucide-react';
 // Asegúrate de que esta ruta sea correcta según tu proyecto
@@ -23,10 +23,10 @@ const ProductList: React.FC<ProductListProps> = ({ products: propProducts, targe
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Partial<Product>>({});
 
-  const handleDelete = async (e: React.MouseEvent, id: string) => {
+  const handleDelete = async (e: React.MouseEvent, product: Product) => {
     e.stopPropagation();
-    if (confirm('¿Estás seguro de que deseas eliminar este producto?')) {
-      await deleteProduct(id);
+    if (confirm('¿Estás seguro de que deseas ARCHIVAR este producto? Dejará de estar visible para la venta, pero se mantendrá en el historial.')) {
+      await updateProduct({ ...product, isActive: false });
     }
   };
 
@@ -56,8 +56,13 @@ const ProductList: React.FC<ProductListProps> = ({ products: propProducts, targe
     });
 
     // 3. Bloqueo total si existe duplicado
+    // 3. Bloqueo total si existe duplicado
     if (existe) {
-      alert("⛔ EL SKU " + inputSku + " YA EXISTE EN EL PRODUCTO: " + existe.name);
+      const skuInput = document.getElementById('sku-input') as HTMLInputElement;
+      if (skuInput) {
+        skuInput.setCustomValidity(`⛔ EL SKU YA EXISTE EN: ${existe.name}`);
+        skuInput.reportValidity();
+      }
       return;
     }
 
@@ -149,6 +154,12 @@ const ProductList: React.FC<ProductListProps> = ({ products: propProducts, targe
   const calculatedMargin = editingProduct.salePrice && editingProduct.salePrice > 0
     ? (calculatedProfit / editingProduct.salePrice) * 100
     : 0;
+
+  // 1. LÓGICA (Extraer Categorías Únicas)
+  const uniqueCategories = useMemo(() => Array.from(new Set(products
+    .map(p => p.category?.trim().toUpperCase())
+    .filter(Boolean) as string[]
+  )).sort(), [products]);
 
   return (
     <div className="space-y-6">
@@ -367,12 +378,12 @@ const ProductList: React.FC<ProductListProps> = ({ products: propProducts, targe
                             Editar
                           </button>
                           <button
-                            onClick={(e) => handleDelete(e, p.id)}
-                            className="flex items-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-xs font-bold uppercase transition-all active:scale-95 shadow-sm hover:shadow-md"
-                            aria-label={`Eliminar ${p.name}`}
+                            onClick={(e) => handleDelete(e, p)}
+                            className="flex items-center gap-2 px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded-lg text-xs font-bold uppercase transition-all active:scale-95 shadow-sm hover:shadow-md"
+                            aria-label={`Archivar ${p.name}`}
                           >
-                            <Trash2 size={14} />
-                            Borrar
+                            <Archive size={14} />
+                            ARCHIVAR
                           </button>
                         </div>
                       </td>
@@ -408,11 +419,29 @@ const ProductList: React.FC<ProductListProps> = ({ products: propProducts, targe
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1">
               <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">SKU</label>
-              <input required className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-xs font-bold focus:border-orange-500 outline-none uppercase" value={editingProduct.sku || ''} onChange={e => setEditingProduct(prev => ({ ...prev, sku: e.target.value }))} />
+              <input
+                id="sku-input"
+                required
+                className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-xs font-bold focus:border-orange-500 outline-none uppercase"
+                value={editingProduct.sku || ''}
+                onChange={e => setEditingProduct(prev => ({ ...prev, sku: e.target.value }))}
+                onInput={(e) => e.currentTarget.setCustomValidity('')}
+              />
             </div>
             <div className="space-y-1">
               <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Categoría</label>
-              <input className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-xs font-bold focus:border-orange-500 outline-none uppercase" value={editingProduct.category || ''} onChange={e => setEditingProduct(prev => ({ ...prev, category: e.target.value }))} />
+              <input
+                list="categories-list"
+                className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-xs font-bold focus:border-orange-500 outline-none uppercase"
+                value={editingProduct.category || ''}
+                onChange={e => setEditingProduct(prev => ({ ...prev, category: e.target.value.toUpperCase() }))}
+                style={{ textTransform: 'uppercase' }}
+              />
+              <datalist id="categories-list">
+                {uniqueCategories.map(cat => (
+                  <option key={cat} value={cat} />
+                ))}
+              </datalist>
             </div>
           </div>
 

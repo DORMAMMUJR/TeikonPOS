@@ -338,27 +338,117 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
         )}
       </div>
 
+      {/* MOBILE: Cards View (visible on mobile, hidden on md+) */}
+      <div className="block md:hidden space-y-3">
+        {isLoading ? (
+          <div className="p-8 text-center text-slate-400 text-xs font-bold">Cargando tiendas...</div>
+        ) : filteredStores.length === 0 ? (
+          <div className="p-8 text-center text-slate-400 text-xs font-bold">No se encontraron tiendas.</div>
+        ) : (
+          filteredStores.map(store => (
+            <div
+              key={store.id}
+              onClick={() => setSelectedStore(store)}
+              className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-4 active:scale-[0.98] transition-all"
+            >
+              {/* Horizontal Layout */}
+              <div className="flex items-center gap-4">
+                {/* Left: Store Avatar with Status Indicator */}
+                <div className="relative shrink-0">
+                  <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-brand-blue to-cyan-500 flex items-center justify-center text-white font-black text-lg shadow-lg shadow-brand-blue/20">
+                    {store.name.substring(0, 2).toUpperCase()}
+                  </div>
+                  {/* Status Indicator - Always Active (green) */}
+                  <div className="absolute -top-1 -right-1 w-5 h-5 bg-emerald-500 border-2 border-white dark:border-slate-900 rounded-full"></div>
+                </div>
+
+                {/* Center: Store Info */}
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-bold text-base text-slate-900 dark:text-white truncate">
+                    {store.name}
+                  </h3>
+                  <div className="flex items-center gap-2 text-xs text-slate-500 mt-1">
+                    <User size={12} />
+                    <span className="truncate">{store.ownerName}</span>
+                  </div>
+                  <p className="text-[10px] text-slate-400 mt-1">
+                    ID: {store.id.substring(0, 8)}...
+                  </p>
+                </div>
+
+                {/* Right: Action Button */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedStore(store);
+                  }}
+                  className="flex items-center justify-center w-12 h-12 bg-brand-blue hover:bg-blue-600 text-white rounded-xl transition-all active:scale-95 shadow-sm shrink-0"
+                  aria-label={`Gestionar ${store.name}`}
+                >
+                  <ChevronLeft className="rotate-180" size={18} />
+                </button>
+              </div>
+
+              {/* Action Buttons Row (Mobile) */}
+              <div className="flex gap-2 mt-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setStoreToEdit(store);
+                    setEditFormData({
+                      name: store.name,
+                      ownerName: store.ownerName,
+                      email: '',
+                      newPassword: ''
+                    });
+                    setEditTab('security');
+                    setIsEditModalOpen(true);
+                  }}
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-amber-50 dark:bg-amber-950/20 text-amber-600 dark:text-amber-400 rounded-xl text-xs font-bold uppercase transition-all active:scale-95 min-h-[44px]"
+                >
+                  <Zap size={14} /> RESET
+                </button>
+                {currentUser?.role === 'SUPER_ADMIN' && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setStoreToDelete(store);
+                      setIsDeleteModalOpen(true);
+                    }}
+                    className="flex items-center justify-center w-12 h-12 bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 rounded-xl transition-all active:scale-95"
+                    aria-label="Eliminar tienda"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                )}
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
       {/* DESKTOP: Stores Table (hidden on mobile, visible on md+) */}
       <div className="hidden md:block bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
         <table className="w-full">
-          <thead className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-700">
+          <thead className="bg-slate-50 dark:bg-slate-900/50 border-b-2 border-slate-200 dark:border-slate-700">
             <tr>
               <th className="px-6 py-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-500">Tienda</th>
               <th className="px-6 py-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-500">Propietario</th>
+              <th className="px-6 py-4 text-center text-[10px] font-black uppercase tracking-widest text-slate-500">Estado</th>
               <th className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest text-slate-500">Acciones</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
             {isLoading ? (
-              <tr><td colSpan={3} className="p-8 text-center text-slate-400 text-xs font-bold">Cargando datos del ecosistema...</td></tr>
+              <tr><td colSpan={4} className="p-8 text-center text-slate-400 text-xs font-bold">Cargando datos del ecosistema...</td></tr>
             ) : filteredStores.length === 0 ? (
-              <tr><td colSpan={3} className="p-8 text-center text-slate-400 text-xs font-bold">No se encontraron tiendas registradas.</td></tr>
+              <tr><td colSpan={4} className="p-8 text-center text-slate-400 text-xs font-bold">No se encontraron tiendas registradas.</td></tr>
             ) : (
               filteredStores.map(store => (
                 <tr key={store.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors group cursor-pointer" onClick={() => setSelectedStore(store)}>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-blue to-cyan-500 flex items-center justify-center text-white font-black text-xs shadow-lg shadow-brand-blue/20">
+                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-brand-blue to-cyan-500 flex items-center justify-center text-white font-black text-sm shadow-lg shadow-brand-blue/20 shrink-0">
                         {store.name.substring(0, 2).toUpperCase()}
                       </div>
                       <div>
@@ -369,7 +459,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2">
-                      <div className="p-1.5 bg-slate-100 dark:bg-slate-700 rounded-full text-slate-500">
+                      <div className="p-1.5 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-500">
                         <User size={12} />
                       </div>
                       <div>
@@ -382,11 +472,15 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                       </div>
                     </div>
                   </td>
+                  <td className="px-6 py-4 text-center">
+                    <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/50 rounded-full">
+                      <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+                      <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-400">Activa</span>
+                    </div>
+                  </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex items-center justify-end gap-2" onClick={e => e.stopPropagation()}>
-                      <Button
-                        variant="secondary"
-                        className="bg-blue-50 text-brand-blue hover:bg-blue-100 border-blue-100 min-h-[44px]"
+                      <button
                         onClick={(e) => {
                           e.stopPropagation();
                           setStoreToEdit(store);
@@ -399,26 +493,45 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                           setEditTab('info');
                           setIsEditModalOpen(true);
                         }}
+                        className="flex items-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-950/20 text-brand-blue hover:bg-blue-100 dark:hover:bg-blue-950/30 border border-blue-200 dark:border-blue-900/50 rounded-lg text-xs font-bold uppercase transition-all active:scale-95 shadow-sm hover:shadow-md"
                       >
-                        <Edit2 size={14} className="mr-1" /> EDITAR
-                      </Button>
-
+                        <Edit2 size={14} /> EDITAR
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setStoreToEdit(store);
+                          setEditFormData({
+                            name: store.name,
+                            ownerName: store.ownerName,
+                            email: '',
+                            newPassword: ''
+                          });
+                          setEditTab('security');
+                          setIsEditModalOpen(true);
+                        }}
+                        className="flex items-center gap-2 px-4 py-2 bg-amber-50 dark:bg-amber-950/20 text-amber-600 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 rounded-lg text-xs font-bold uppercase transition-all active:scale-95 shadow-sm hover:shadow-md"
+                      >
+                        <Zap size={14} /> RESET
+                      </button>
                       {currentUser?.role === 'SUPER_ADMIN' && (
-                        <Button
-                          variant="secondary"
-                          className="bg-red-50 text-red-600 hover:bg-red-100 border-red-100 min-h-[44px]"
+                        <button
                           onClick={(e) => {
                             e.stopPropagation();
                             setStoreToDelete(store);
                             setIsDeleteModalOpen(true);
                           }}
+                          className="flex items-center gap-2 px-4 py-2 bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-950/30 border border-red-200 dark:border-red-900/50 rounded-lg text-xs font-bold uppercase transition-all active:scale-95 shadow-sm hover:shadow-md"
                         >
-                          <X size={14} className="mr-1" /> ELIMINAR
-                        </Button>
+                          <Trash2 size={14} /> ELIMINAR
+                        </button>
                       )}
-                      <Button variant="secondary" className="group-hover:bg-white group-hover:shadow-sm min-h-[44px]" onClick={() => setSelectedStore(store)}>
-                        GESTIONAR <ChevronLeft className="rotate-180 ml-1" size={12} />
-                      </Button>
+                      <button
+                        onClick={() => setSelectedStore(store)}
+                        className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-bold uppercase transition-all active:scale-95 shadow-sm hover:shadow-md group-hover:border-brand-blue"
+                      >
+                        GESTIONAR <ChevronLeft className="rotate-180" size={12} />
+                      </button>
                     </div>
                   </td>
                 </tr>

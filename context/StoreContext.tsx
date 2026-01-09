@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { Sale, FinancialSettings, Role, User, CashSession, CartItem, SaleResult, SaleDetail, PendingSale } from '../types';
 import { Product } from "@/Product";
-import { productsAPI, salesAPI, dashboardAPI, authAPI, setAuthToken, clearAuthToken, getCurrentUserFromToken } from '../utils/api';
+import { productsAPI, salesAPI, dashboardAPI, authAPI, setAuthToken, clearAuthToken, getCurrentUserFromToken, API_URL, getHeaders } from '../utils/api';
 import { addPendingSale, getPendingSales, clearPendingSales } from '../utils/offlineSync';
 
 interface StoreContextType {
@@ -71,30 +71,64 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     return () => clearInterval(interval);
   }, []);
 
-  // Restore cash session from localStorage on mount
+  // Session Recovery: Restore cash session from backend on mount
   useEffect(() => {
-    if (!currentUser) return;
+    if (!currentUser || !isOnline) return;
 
-    const savedSession = localStorage.getItem('cashSession');
-    if (savedSession) {
+    const recoverSession = async () => {
       try {
-        const session: CashSession = JSON.parse(savedSession);
+        console.log('🔄 Attempting to recover active shift from backend...');
 
-        // Validate session belongs to current user and is still open
-        if (session.ownerId === currentUser.id && session.status === 'OPEN') {
-          console.log('✅ Restored cash session from localStorage:', session.id);
-          setAllSessions([session]);
-        } else {
-          // Invalid session, clear it
-          console.warn('⚠️ Invalid session in localStorage, clearing...');
+        const response = await fetch(`${API_URL} /api/shifts / current ? storeId = ${currentUser.storeId} `, {
+          headers: getHeaders()
+        });
+
+        // 204 No Content means no active shift
+        if (response.status === 204) {
+          console.log('ℹ️ No active shift found on backend');
           localStorage.removeItem('cashSession');
+          setAllSessions([]);
+          return;
         }
-      } catch (e) {
-        console.error('❌ Error parsing saved session:', e);
+
+        if (!response.ok) {
+          console.warn('⚠️ Failed to recover session from backend');
+          localStorage.removeItem('cashSession');
+          return;
+        }
+
+        const backendShift = await response.json();
+
+        // Map backend shift to frontend CashSession format
+        const session: CashSession = {
+          id: backendShift.id,
+          startTime: backendShift.startTime,
+          startBalance: parseFloat(backendShift.initialAmount),
+          expectedBalance: parseFloat(backendShift.initialAmount),
+          cashSales: parseFloat(backendShift.cashSales || 0),
+          refunds: 0,
+          status: backendShift.status as 'OPEN' | 'CLOSED',
+          ownerId: currentUser.id
+        };
+
+        if (session.status === 'OPEN') {
+          console.log('✅ Recovered active shift from backend:', session.id);
+          setAllSessions([session]);
+          localStorage.setItem('cashSession', JSON.stringify(session));
+        } else {
+          console.log('ℹ️ Backend shift is not OPEN, clearing local state');
+          localStorage.removeItem('cashSession');
+          setAllSessions([]);
+        }
+      } catch (error) {
+        console.error('❌ Error recovering session from backend:', error);
         localStorage.removeItem('cashSession');
+        setAllSessions([]);
       }
-    }
-  }, [currentUser]);
+    };
+
+    recoverSession();
+  }, [currentUser, isOnline]);
 
   // Initial Data Fetch
   const syncData = useCallback(async () => {
@@ -251,42 +285,109 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   };
 
   const openSession = async (startBalance: number) => {
-    // TODO: Implement API call for opening session (CashShift)
-    // Mocking strictly local for now as CashShift API integration wasn't explicitly detailed in the prompt request for this specific context method, 
-    // but ideally this should hit the API.
-    // For robustness, I'll keep local state update for now to unblock the UI flow.
-    const newSession: CashSession = {
-      id: crypto.randomUUID(),
-      startTime: new Date().toISOString(),
-      startBalance,
-      expectedBalance: startBalance,
-      cashSales: 0,
-      refunds: 0,
-      status: 'OPEN',
-      ownerId: currentUser?.id || 'unknown'
-    };
-    setAllSessions(prev => [...prev, newSession]);
+    if (!currentUser) {
+      console.error('❌ Cannot open session: No user logged in');
+      throw new Error('Usuario no autenticado');
+    }
 
-    // Save to localStorage for persistence across reloads
-    localStorage.setItem('cashSession', JSON.stringify(newSession));
-    console.log('💾 Cash session saved to localStorage:', newSession.id);
+    try {
+      console.log('🔵 Opening cash shift via API...');
+
+      const response = await fetch(`${API_URL} /api/shifts / start`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify({
+          storeId: currentUser.storeId,
+          initialAmount: startBalance,
+          openedBy: currentUser.username
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Error al abrir turno de caja');
+      }
+
+      const backendShift = await response.json();
+
+      // Map backend response to frontend CashSession format
+      const newSession: CashSession = {
+        id: backendShift.id,
+        startTime: backendShift.startTime,
+        startBalance: parseFloat(backendShift.initialAmount),
+        expectedBalance: parseFloat(backendShift.initialAmount),
+        cashSales: 0,
+        refunds: 0,
+        status: 'OPEN',
+        ownerId: currentUser.id
+      };
+
+      // Update local state
+      setAllSessions(prev => [...prev, newSession]);
+
+      // Save to localStorage for offline fallback
+      localStorage.setItem('cashSession', JSON.stringify(newSession));
+
+      console.log('✅ Cash shift opened successfully:', newSession.id);
+    } catch (error: any) {
+      console.error('❌ Error opening cash shift:', error);
+      throw error;
+    }
   };
 
   const closeSession = async (endBalanceReal: number) => {
-    if (!currentSession) return;
-    // TODO: Implement API call
-    const expected = currentSession.startBalance + currentSession.cashSales - currentSession.refunds;
-    setAllSessions(prev => prev.map(s => s.id === currentSession.id ? {
-      ...s,
-      status: 'CLOSED',
-      endTime: new Date().toISOString(),
-      expectedBalance: expected,
-      endBalanceReal
-    } : s));
+    if (!currentSession) {
+      console.error('❌ Cannot close session: No active session');
+      return;
+    }
 
-    // Clear from localStorage
-    localStorage.removeItem('cashSession');
-    console.log('🗑️ Cash session cleared from localStorage');
+    if (!currentUser) {
+      console.error('❌ Cannot close session: No user logged in');
+      throw new Error('Usuario no autenticado');
+    }
+
+    try {
+      console.log('🔵 Closing cash shift via API...');
+
+      const expected = currentSession.startBalance + currentSession.cashSales - currentSession.refunds;
+
+      const response = await fetch(`${API_URL} /api/shifts / end`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify({
+          storeId: currentUser.storeId,
+          finalAmount: endBalanceReal,
+          expectedAmount: expected,
+          notes: '' // Can be extended to accept notes parameter
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Error al cerrar turno de caja');
+      }
+
+      const closedShift = await response.json();
+
+      console.log('✅ Cash shift closed successfully:', closedShift.id);
+      console.log(`   Expected: $${expected}, Real: $${endBalanceReal}, Difference: $${closedShift.difference} `);
+
+      // Update local state to reflect closed status
+      setAllSessions(prev => prev.map(s => s.id === currentSession.id ? {
+        ...s,
+        status: 'CLOSED',
+        endTime: closedShift.endTime,
+        expectedBalance: expected,
+        endBalanceReal
+      } : s));
+
+      // Clear from localStorage
+      localStorage.removeItem('cashSession');
+      console.log('🗑️ Cash session cleared from localStorage');
+    } catch (error: any) {
+      console.error('❌ Error closing cash shift:', error);
+      throw error;
+    }
   };
 
   const calculateTotalInventoryValue = () => {
@@ -452,7 +553,7 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       }
     } catch (e: any) {
       console.error('Error creating product:', e);
-      alert(`Error al crear producto: ${e.message || 'Error desconocido'}`);
+      alert(`Error al crear producto: ${e.message || 'Error desconocido'} `);
     }
   };
 

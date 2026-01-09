@@ -114,6 +114,69 @@
       animation: fade-in-up 0.5s ease-out forwards;
     }
 
+    @keyframes fade-in {
+      from {
+        opacity: 0;
+      }
+
+      to {
+        opacity: 1;
+      }
+    }
+
+    .animate-fade-in {
+      animation: fade-in 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    }
+
+    /* Table Scroll Container Styles */
+    .table-scroll-container {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      /* Smooth scrolling on iOS */
+      scroll-behavior: smooth;
+      /* Smooth scrolling behavior */
+    }
+
+    .table-scroll-container::-webkit-scrollbar {
+      height: 6px;
+    }
+
+    .table-scroll-container::-webkit-scrollbar-track {
+      background: rgba(0, 0, 0, 0.05);
+      border-radius: 10px;
+    }
+
+    .table-scroll-container::-webkit-scrollbar-thumb {
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 10px;
+      transition: background 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .dark .table-scroll-container::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .dark .table-scroll-container::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    .table-scroll-container::-webkit-scrollbar-thumb:hover {
+      background: rgba(0, 0, 0, 0.3);
+      transition: background 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .dark .table-scroll-container::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.3);
+      transition: background 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* Mobile-only horizontal scroll */
+    @media (min-width: 768px) {
+      .table-scroll-container {
+        overflow-x: visible;
+      }
+    }
+
     input[type="number"]::-webkit-inner-spin-button,
     input[type="number"]::-webkit-outer-spin-button {
       -webkit-appearance: none;
@@ -183,7 +246,7 @@
   }
 }
 </script>
-  <script type="module" crossorigin src="/assets/index-bpQ_I9lE.js"></script>
+  <script type="module" crossorigin src="/assets/index-BfWswYpj.js"></script>
 </head>
 
 <body class="bg-brand-bg text-brand-text">
