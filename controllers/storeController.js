@@ -91,19 +91,32 @@ export const getStores = async (req, res) => {
 
         const stores = await Store.findAll({
             attributes: ['id', 'nombre', 'usuario', 'telefono', 'direccion', 'createdAt'],
+            include: [{
+                model: User,
+                as: 'users',
+                attributes: ['fullName'],
+                where: { role: 'ADMIN' },
+                required: false  // LEFT JOIN in case no admin user exists
+            }],
             order: [['createdAt', 'DESC']]
         });
 
         // Map to frontend expectation
-        const mappedStores = stores.map(s => ({
-            id: s.id,
-            name: s.nombre,
-            owner: s.usuario,
-            phone: s.telefono || 'N/A',
-            plan: 'Premium',
-            status: 'active',
-            lastActive: new Date(s.createdAt).toLocaleDateString()
-        }));
+        const mappedStores = stores.map(s => {
+            // Get the admin user's fullName (first ADMIN user if multiple exist)
+            const adminUser = s.users && s.users.length > 0 ? s.users[0] : null;
+
+            return {
+                id: s.id,
+                name: s.nombre,
+                ownerName: adminUser?.fullName || 'N/A',  // Owner's full name
+                ownerEmail: s.usuario,  // Email/username for login
+                phone: s.telefono || 'N/A',
+                plan: 'Premium',
+                status: 'active',
+                lastActive: new Date(s.createdAt).toLocaleDateString()
+            };
+        });
 
         res.json(mappedStores);
     } catch (error) {

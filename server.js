@@ -312,6 +312,95 @@ app.post('/api/admin/update-store', authenticateToken, async (req, res) => {
     }
 });
 
+// GET /api/admin/fix-store-users - Repair endpoint: Create missing ADMIN users for stores
+app.get('/api/admin/fix-store-users', authenticateToken, async (req, res) => {
+    try {
+        if (req.role !== 'SUPER_ADMIN') {
+            return res.status(403).json({ error: 'Acceso denegado' });
+        }
+
+        console.log('🔧 Starting store users repair process...');
+
+        // 1. Get all stores
+        const stores = await Store.findAll({
+            attributes: ['id', 'nombre', 'usuario', 'password']
+        });
+
+        const report = {
+            totalStores: stores.length,
+            storesFixed: [],
+            storesAlreadyOk: [],
+            errors: []
+        };
+
+        // 2. Check each store for ADMIN user
+        for (const store of stores) {
+            try {
+                // Check if ADMIN user exists for this store
+                const adminUser = await User.findOne({
+                    where: {
+                        storeId: store.id,
+                        role: 'ADMIN'
+                    }
+                });
+
+                if (!adminUser) {
+                    // No ADMIN user found - create one
+                    console.log(`⚠️ Store "${store.nombre}" has no ADMIN user. Creating...`);
+
+                    const newUser = await User.create({
+                        username: store.usuario, // Use store's email
+                        password: store.password, // Use store's hashed password
+                        role: 'ADMIN',
+                        storeId: store.id,
+                        fullName: 'Usuario Recuperado' // Default name
+                    });
+
+                    report.storesFixed.push({
+                        storeId: store.id,
+                        storeName: store.nombre,
+                        createdUser: {
+                            id: newUser.id,
+                            username: newUser.username,
+                            fullName: newUser.fullName
+                        }
+                    });
+
+                    console.log(`✅ Created ADMIN user for "${store.nombre}"`);
+                } else {
+                    // ADMIN user exists
+                    report.storesAlreadyOk.push({
+                        storeId: store.id,
+                        storeName: store.nombre,
+                        adminUser: {
+                            id: adminUser.id,
+                            username: adminUser.username,
+                            fullName: adminUser.fullName || 'NULL'
+                        }
+                    });
+                }
+            } catch (error) {
+                console.error(`❌ Error processing store "${store.nombre}":`, error);
+                report.errors.push({
+                    storeId: store.id,
+                    storeName: store.nombre,
+                    error: error.message
+                });
+            }
+        }
+
+        console.log(`🎉 Repair process completed. Fixed: ${report.storesFixed.length}, Already OK: ${report.storesAlreadyOk.length}, Errors: ${report.errors.length}`);
+
+        res.json({
+            message: 'Proceso de reparación completado',
+            report
+        });
+    } catch (error) {
+        console.error('Error en proceso de reparación:', error);
+        res.status(500).json({ error: 'Error interno en proceso de reparación' });
+    }
+});
+
 // GET /api/admin/global-sales - Global Sales Activity (SOLO SUPER_ADMIN)
 app.get('/api/admin/global-sales', authenticateToken, async (req, res) => {
     try {

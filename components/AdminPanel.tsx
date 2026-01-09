@@ -16,7 +16,8 @@ import StoreOperations from './StoreOperations';
 interface StoreData {
   id: string;
   name: string;
-  owner: string;
+  ownerName: string;   // Owner's full name
+  ownerEmail: string;  // Email/username for login
   phone: string;
   lastActive: string;
 }
@@ -126,7 +127,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
   // --- HELPERS ---
   const filteredStores = stores.filter(s =>
     s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    s.owner.toLowerCase().includes(searchTerm.toLowerCase())
+    s.ownerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    s.ownerEmail.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   // --- RENDER HELPERS ---
@@ -148,7 +150,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
             <div>
               <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase">{selectedStore.name}</h2>
               <div className="flex items-center gap-2 text-slate-500 text-sm font-bold">
-                <User size={14} /> <span>{selectedStore.owner}</span>
+                <User size={14} /> <span>{selectedStore.ownerName}</span>
                 <span className="mx-1">•</span>
                 <ShieldCheck size={14} /> <span>Modo Super Admin</span>
               </div>
@@ -290,9 +292,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                   <h3 className="font-bold text-sm text-slate-900 dark:text-white truncate">
                     {store.name}
                   </h3>
-                  <div className="flex items-center gap-2 text-slate-500 text-xs">
-                    <User size={12} />
-                    <span className="truncate">{store.owner}</span>
+                  <div className="text-xs">
+                    <p className="font-bold text-slate-900 dark:text-white">{store.ownerName}</p>
+                    <p className="text-[10px] text-slate-400 truncate">{store.ownerEmail}</p>
                   </div>
                 </div>
               </div>
@@ -305,7 +307,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                     setStoreToEdit(store);
                     setEditFormData({
                       name: store.name,
-                      ownerName: store.owner,
+                      ownerName: store.ownerName,
                       email: '',
                       newPassword: ''
                     });
@@ -367,10 +369,17 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2">
-                      <div className="p-1.5 bg-slate-100 rounded-full text-slate-500">
+                      <div className="p-1.5 bg-slate-100 dark:bg-slate-700 rounded-full text-slate-500">
                         <User size={12} />
                       </div>
-                      <span className="text-xs font-bold text-slate-600 dark:text-slate-300">{store.owner}</span>
+                      <div>
+                        <p className="text-xs font-bold text-slate-900 dark:text-white">
+                          {store.ownerName}
+                        </p>
+                        <p className="text-[10px] text-slate-400">
+                          {store.ownerEmail}
+                        </p>
+                      </div>
                     </div>
                   </td>
                   <td className="px-6 py-4 text-right">
@@ -383,7 +392,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                           setStoreToEdit(store);
                           setEditFormData({
                             name: store.name,
-                            ownerName: store.owner,
+                            ownerName: store.ownerName,
                             email: '',
                             newPassword: ''
                           });
@@ -732,8 +741,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
               <button
                 onClick={() => setEditTab('info')}
                 className={`flex-1 px-4 py-2 rounded-lg text-xs font-black transition-all ${editTab === 'info'
-                    ? 'bg-white dark:bg-slate-700 text-brand-blue shadow-sm'
-                    : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                  ? 'bg-white dark:bg-slate-700 text-brand-blue shadow-sm'
+                  : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
                   }`}
               >
                 INFORMACIÓN GENERAL
@@ -741,8 +750,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
               <button
                 onClick={() => setEditTab('security')}
                 className={`flex-1 px-4 py-2 rounded-lg text-xs font-black transition-all ${editTab === 'security'
-                    ? 'bg-white dark:bg-slate-700 text-brand-blue shadow-sm'
-                    : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                  ? 'bg-white dark:bg-slate-700 text-brand-blue shadow-sm'
+                  : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
                   }`}
               >
                 SEGURIDAD
@@ -853,7 +862,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                       if (editFormData.name && editFormData.name !== storeToEdit.name) {
                         updates.name = editFormData.name;
                       }
-                      if (editFormData.ownerName && editFormData.ownerName !== storeToEdit.owner) {
+                      if (editFormData.ownerName && editFormData.ownerName !== storeToEdit.ownerName) {
                         updates.ownerName = editFormData.ownerName;
                       }
                       if (editFormData.email) {
