@@ -1,5 +1,5 @@
 import { Op } from 'sequelize';
-import { Sale, Product, StoreConfig, sequelize } from '../models.js';
+import { Sale, Product, StoreConfig, GoalHistory, sequelize } from '../models.js';
 
 export const getDashboardSummary = async (req, res) => {
     try {
@@ -52,9 +52,30 @@ export const getDashboardSummary = async (req, res) => {
 
         const investment = parseFloat(productsInvestment[0]?.totalInvestment || 0);
 
-        // --- 4. Get Store Configuration (Operational Costs) ---
-        const config = await StoreConfig.findOne({ where: { storeId } });
-        const monthlyOperationalCost = config ? parseFloat(config.breakEvenGoal || 0) : 0;
+        // --- 4. Get Monthly Goal (Historical or Current) ---
+        const now = new Date();
+        const currentMonth = now.getMonth() + 1; // 1-12
+        const currentYear = now.getFullYear();
+
+        // Try to get historical goal for current month
+        const goalRecord = await GoalHistory.findOne({
+            where: {
+                storeId,
+                month: currentMonth,
+                year: currentYear
+            }
+        });
+
+        // Fallback to current config if no historical goal exists
+        let monthlyOperationalCost = 0;
+        if (goalRecord) {
+            monthlyOperationalCost = parseFloat(goalRecord.amount || 0);
+            console.log(`📊 Using historical goal for ${currentMonth}/${currentYear}: $${monthlyOperationalCost}`);
+        } else {
+            const config = await StoreConfig.findOne({ where: { storeId } });
+            monthlyOperationalCost = config ? parseFloat(config.breakEvenGoal || 0) : 0;
+            console.log(`📊 No historical goal found, using current config: $${monthlyOperationalCost}`);
+        }
 
         // Calculate Daily Operational Cost portion
         const dailyOperationalCost = monthlyOperationalCost / 30;
@@ -75,7 +96,10 @@ export const getDashboardSummary = async (req, res) => {
             netProfit,
             investment,
             dailyTarget,
-            dailyOperationalCost
+            dailyOperationalCost,
+            monthlyGoal: monthlyOperationalCost, // Added for frontend reference
+            goalMonth: currentMonth,
+            goalYear: currentYear
         });
 
     } catch (error) {

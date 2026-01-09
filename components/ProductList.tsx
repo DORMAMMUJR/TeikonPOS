@@ -41,12 +41,38 @@ const ProductList: React.FC<ProductListProps> = ({ products: propProducts, targe
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingProduct.sku || !editingProduct.name) return;
+
+    // --- INICIO DE VALIDACIÓN DE SKU (INFALIBLE) ---
+
+    // 1. Normaliza el SKU input (Safety first: asegurar string)
+    const rawInput = editingProduct.sku;
+    const inputSku = String(rawInput || '').trim().toUpperCase();
+
+    // 2. Busca en el array products (la lista visible)
+    const existe = products.find(p => {
+      // Aseguramos que comparamos strings, por si viene un número de la DB
+      const pSku = String(p.sku || '').trim().toUpperCase();
+      return pSku === inputSku && p.id !== editingProduct.id;
+    });
+
+    // 3. Bloqueo total si existe duplicado
+    if (existe) {
+      alert("⛔ EL SKU " + inputSku + " YA EXISTE EN EL PRODUCTO: " + existe.name);
+      return;
+    }
+
+    // --- FIN DE VALIDACIÓN DE SKU ---
+
+    if (!editingProduct.name) {
+      alert("El Nombre es obligatorio.");
+      return;
+    }
 
     const purchaseCost = parseFloat((editingProduct.costPrice || 0).toString());
     const sellingPrice = parseFloat((editingProduct.salePrice || 0).toString());
     const currentStock = parseInt((editingProduct.stock || 0).toString());
 
+    // --- 2. VALIDACIÓN FINANCIERA ---
     if (isNaN(purchaseCost) || isNaN(sellingPrice) || isNaN(currentStock)) {
       alert("Los valores numéricos ingresados no son válidos.");
       return;
@@ -57,12 +83,15 @@ const ProductList: React.FC<ProductListProps> = ({ products: propProducts, targe
       return;
     }
 
+    // --- 3. ESTANDARIZACIÓN ---
+    const finalSKU = inputSku;
+    const finalName = (editingProduct.name || '').toUpperCase();
     const unitProfit = sellingPrice - purchaseCost;
 
     const productData = {
-      sku: editingProduct.sku,
-      name: editingProduct.name,
-      category: editingProduct.category || '',
+      sku: finalSKU,
+      name: finalName,
+      category: (editingProduct.category || '').toUpperCase(),
       stock: currentStock,
       costPrice: purchaseCost,
       salePrice: sellingPrice,
