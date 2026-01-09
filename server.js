@@ -36,7 +36,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const app = express();
-const PORT = process.env.PORT || 80
+const PORT = process.env.PORT || 8080
 // ==========================================
 // CONFIGURACIÓN DE PROXY (SEENODE)
 // ==========================================
@@ -67,7 +67,7 @@ console.log(`🔐 JWT Expiration configurado a: ${JWT_EXPIRATION}`);
 // Configuración mejorada para producción en Seenode
 const allowedOrigins = [
     'http://localhost:5173',
-    'http://localhost:3000',
+    'http://localhost:8080',
     process.env.PRODUCTION_URL
 ].filter(Boolean); // Eliminar valores undefined
 
