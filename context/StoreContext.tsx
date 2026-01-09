@@ -595,18 +595,34 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const cancelSale = async (saleId: string) => {
     try {
       if (isOnline) {
-        // Call API to cancel
-        // await salesAPI.cancel(saleId); // Need to implement this in API util if not existing
+        // Call backend API to cancel sale (restores stock and updates DB)
+        const response = await fetch(`${API_URL}/api/sales/${saleId}/cancel`, {
+          method: 'POST',
+          headers: getHeaders()
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Error al cancelar venta');
+        }
+
+        const result = await response.json();
+        console.log('✅ Venta cancelada:', result);
+
+        // Update local state after successful backend cancellation
+        setSales(prev => prev.map(s => s.id === saleId ? { ...s, status: 'CANCELLED' } : s));
+
+        // Refresh products to reflect restored stock
+        await syncData();
+
+        alert('✅ Venta cancelada exitosamente. El inventario ha sido restaurado.');
+      } else {
+        // Offline mode - cannot cancel sales without backend
+        alert('⚠️ No se pueden cancelar ventas en modo offline. Conéctate a internet e intenta nuevamente.');
       }
-      // Local update
-      const sale = sales.find(s => s.id === saleId);
-      if (!sale) return;
-
-      setSales(prev => prev.map(s => s.id === saleId ? { ...s, status: 'CANCELLED' } : s));
-
-      // Revert stock logic... (Simplified for now)
-    } catch (e) {
-      console.error(e);
+    } catch (e: any) {
+      console.error('Error al cancelar venta:', e);
+      alert(`❌ Error al cancelar venta: ${e.message || 'Error desconocido'}`);
     }
   };
 

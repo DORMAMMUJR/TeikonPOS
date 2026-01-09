@@ -1266,6 +1266,81 @@ app.put('/api/ventas/:id/cancelar', authenticateToken, async (req, res) => {
     }
 });
 
+// POST /api/sales/:id/cancel - Cancel Sale (English endpoint with role protection)
+app.post('/api/sales/:id/cancel', authenticateToken, async (req, res) => {
+    try {
+        // Role-based access control: Only ADMIN and SUPER_ADMIN can cancel sales
+        if (req.role !== 'ADMIN' && req.role !== 'SUPER_ADMIN') {
+            return res.status(403).json({ error: 'Acceso denegado. Solo administradores pueden cancelar ventas.' });
+        }
+
+        // Build where clause with store isolation for non-SUPER_ADMIN users
+        const where = { id: req.params.id };
+        if (req.role !== 'SUPER_ADMIN') {
+            where.storeId = req.storeId;
+        }
+
+        const sale = await Sale.findOne({ where });
+
+        if (!sale) {
+            return res.status(404).json({ error: 'Venta no encontrada' });
+        }
+
+        if (sale.status === 'CANCELLED') {
+            return res.status(400).json({ error: 'La venta ya está cancelada' });
+        }
+
+        // Log the cancellation action
+        console.log(`🔴 CANCELACIÓN DE VENTA: ID ${sale.id.substring(0, 8)} por ${req.usuario} (${req.role})`);
+
+        // Transactional stock restoration
+        await sequelize.transaction(async (t) => {
+            // Update sale status
+            await sale.update({ status: 'CANCELLED' }, { transaction: t });
+
+            // Restore stock for each item
+            for (const item of sale.items) {
+                const product = await Product.findByPk(item.productId, {
+                    lock: t.LOCK.UPDATE,
+                    transaction: t
+                });
+
+                if (product) {
+                    const stockAnterior = product.stock;
+                    const stockNuevo = stockAnterior + item.cantidad;
+
+                    await product.update({ stock: stockNuevo }, { transaction: t });
+
+                    // Create audit trail in stock movements
+                    await StockMovement.create({
+                        productId: item.productId,
+                        storeId: sale.storeId,
+                        tipo: 'RETURN',
+                        cantidad: item.cantidad,
+                        stockAnterior,
+                        stockNuevo,
+                        motivo: `Cancelación venta #${sale.id.substring(0, 8)} por ${req.usuario}`,
+                        referenciaId: sale.id,
+                        registradoPor: req.usuario
+                    }, { transaction: t });
+
+                    console.log(`  ✅ Stock restaurado: ${product.nombre} +${item.cantidad} (${stockAnterior} → ${stockNuevo})`);
+                }
+            }
+        });
+
+        res.json({
+            message: 'Venta cancelada exitosamente',
+            saleId: sale.id,
+            itemsRestored: sale.items.length
+        });
+    } catch (error) {
+        console.error('Error al cancelar venta:', error);
+        res.status(500).json({ error: 'Error al cancelar venta' });
+    }
+});
+
+
 // ==========================================
 // ENDPOINTS DE DASHBOARD Y ANALÍTICAS
 // ==========================================
