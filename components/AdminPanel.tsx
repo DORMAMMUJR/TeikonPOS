@@ -391,23 +391,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
 
               {/* Action Buttons Row (Mobile) */}
               <div className="flex gap-2 mt-3 pt-3 border-t border-slate-100 dark:border-slate-800">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setStoreToEdit(store);
-                    setEditFormData({
-                      name: store.name,
-                      ownerName: store.ownerName,
-                      email: '',
-                      newPassword: ''
-                    });
-                    setEditTab('security');
-                    setIsEditModalOpen(true);
-                  }}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-amber-50 dark:bg-amber-950/20 text-amber-600 dark:text-amber-400 rounded-xl text-xs font-bold uppercase transition-all active:scale-95 min-h-[44px]"
-                >
-                  <Zap size={14} /> RESET
-                </button>
+
                 {currentUser?.role === 'SUPER_ADMIN' && (
                   <button
                     onClick={(e) => {
@@ -497,23 +481,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                       >
                         <Edit2 size={14} /> EDITAR
                       </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setStoreToEdit(store);
-                          setEditFormData({
-                            name: store.name,
-                            ownerName: store.ownerName,
-                            email: '',
-                            newPassword: ''
-                          });
-                          setEditTab('security');
-                          setIsEditModalOpen(true);
-                        }}
-                        className="flex items-center gap-2 px-4 py-2 bg-amber-50 dark:bg-amber-950/20 text-amber-600 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 rounded-lg text-xs font-bold uppercase transition-all active:scale-95 shadow-sm hover:shadow-md"
-                      >
-                        <Zap size={14} /> RESET
-                      </button>
+
                       {currentUser?.role === 'SUPER_ADMIN' && (
                         <button
                           onClick={(e) => {
