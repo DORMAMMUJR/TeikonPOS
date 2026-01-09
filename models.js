@@ -819,6 +819,63 @@ Store.hasOne(StoreConfig, { foreignKey: 'storeId', as: 'config', onDelete: 'CASC
 StoreConfig.belongsTo(Store, { foreignKey: 'storeId', as: 'store' });
 
 // ==========================================
+// MODELO: GoalHistory (Historial de Metas Mensuales)
+// ==========================================
+const GoalHistory = sequelize.define('GoalHistory', {
+    id: {
+        type: DataTypes.UUID,
+        defaultValue: DataTypes.UUIDV4,
+        primaryKey: true
+    },
+    storeId: {
+        type: DataTypes.UUID,
+        allowNull: false,
+        references: {
+            model: 'stores',
+            key: 'id'
+        },
+        field: 'store_id'
+    },
+    amount: {
+        type: DataTypes.DECIMAL(10, 2),
+        allowNull: false,
+        comment: 'Monthly sales goal amount'
+    },
+    month: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        validate: {
+            min: 1,
+            max: 12
+        },
+        comment: 'Month (1-12)'
+    },
+    year: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        comment: 'Year (e.g., 2026)'
+    }
+}, {
+    tableName: 'goal_history',
+    timestamps: true,
+    updatedAt: false,
+    indexes: [
+        {
+            unique: true,
+            fields: ['store_id', 'month', 'year'],
+            name: 'unique_store_month_year'
+        },
+        {
+            fields: ['store_id']
+        }
+    ]
+});
+
+// Store -> GoalHistory (1:N)
+Store.hasMany(GoalHistory, { foreignKey: 'storeId', as: 'goalHistory', onDelete: 'CASCADE' });
+GoalHistory.belongsTo(Store, { foreignKey: 'storeId', as: 'store' });
+
+// ==========================================
 // EXPORTAR
 // ==========================================
 export {
@@ -836,5 +893,6 @@ export {
     Client,
     Ticket,
     StoreConfig,
-    CashSession
+    CashSession,
+    GoalHistory
 };

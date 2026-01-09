@@ -28,7 +28,8 @@ import {
     CashShift,
     Client,
     Ticket,
-    StoreConfig
+    StoreConfig,
+    GoalHistory
 } from './models.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -398,6 +399,163 @@ app.get('/api/admin/fix-store-users', authenticateToken, async (req, res) => {
     } catch (error) {
         console.error('Error en proceso de reparación:', error);
         res.status(500).json({ error: 'Error interno en proceso de reparación' });
+    }
+});
+
+// PUT /api/stores/:id/goal - Update monthly sales goal with history tracking
+app.put('/api/stores/:id/goal', authenticateToken, async (req, res) => {
+    try {
+        const { id: storeId } = req.params;
+        const { amount } = req.body;
+
+        // Validate input
+        if (!amount || isNaN(amount) || amount < 0) {
+            return res.status(400).json({ error: 'Monto de meta inválido' });
+        }
+
+        // Check permissions (SUPER_ADMIN or store owner)
+        if (req.role !== 'SUPER_ADMIN' && req.storeId !== storeId) {
+            return res.status(403).json({ error: 'Acceso denegado' });
+        }
+
+        // Get or create store config
+        let config = await StoreConfig.findOne({ where: { storeId } });
+
+        if (!config) {
+            config = await StoreConfig.create({
+                storeId,
+                breakEvenGoal: amount,
+                theme: 'light'
+            });
+        } else {
+            // Update current goal
+            config.breakEvenGoal = amount;
+            await config.save();
+        }
+
+        // Get current month and year
+        const now = new Date();
+        const currentMonth = now.getMonth() + 1; // 1-12
+        const currentYear = now.getFullYear();
+
+        // Upsert goal history
+        const [goalRecord, created] = await GoalHistory.findOrCreate({
+            where: {
+                storeId,
+                month: currentMonth,
+                year: currentYear
+            },
+            defaults: {
+                amount
+            }
+        });
+
+        // If record exists, update it
+        if (!created) {
+            goalRecord.amount = amount;
+            await goalRecord.save();
+        }
+
+        console.log(`📊 Goal ${created ? 'created' : 'updated'} for ${currentMonth}/${currentYear}: $${amount}`);
+
+        res.json({
+            message: 'Meta actualizada exitosamente',
+            goal: {
+                amount,
+                month: currentMonth,
+                year: currentYear,
+                isNew: created
+            }
+        });
+    } catch (error) {
+        console.error('Error al actualizar meta:', error);
+        res.status(500).json({ error: 'Error interno al actualizar meta' });
+    }
+});
+
+// GET /api/stores/:id/goal-history - Get goal history for a store
+app.get('/api/stores/:id/goal-history', authenticateToken, async (req, res) => {
+    try {
+        const { id: storeId } = req.params;
+        const { year } = req.query;
+
+        // Check permissions
+        if (req.role !== 'SUPER_ADMIN' && req.storeId !== storeId) {
+            return res.status(403).json({ error: 'Acceso denegado' });
+        }
+
+        const where = { storeId };
+        if (year) {
+            where.year = parseInt(year);
+        }
+
+        const history = await GoalHistory.findAll({
+            where,
+            order: [['year', 'DESC'], ['month', 'DESC']]
+        });
+
+        res.json(history);
+    } catch (error) {
+        console.error('Error al obtener historial de metas:', error);
+        res.status(500).json({ error: 'Error interno al obtener historial' });
+    }
+});
+
+// GET /api/admin/migrate-goals - Migrate existing goals to history (one-time)
+app.get('/api/admin/migrate-goals', authenticateToken, async (req, res) => {
+    try {
+        if (req.role !== 'SUPER_ADMIN') {
+            return res.status(403).json({ error: 'Acceso denegado' });
+        }
+
+        console.log('🔄 Starting goal migration...');
+
+        const configs = await StoreConfig.findAll({
+            where: {
+                breakEvenGoal: {
+                    [Op.gt]: 0
+                }
+            }
+        });
+
+        const now = new Date();
+        const currentMonth = now.getMonth() + 1;
+        const currentYear = now.getFullYear();
+
+        let migrated = 0;
+        let skipped = 0;
+
+        for (const config of configs) {
+            const [goalRecord, created] = await GoalHistory.findOrCreate({
+                where: {
+                    storeId: config.storeId,
+                    month: currentMonth,
+                    year: currentYear
+                },
+                defaults: {
+                    amount: config.breakEvenGoal
+                }
+            });
+
+            if (created) {
+                migrated++;
+                console.log(`✅ Migrated goal for store ${config.storeId}: $${config.breakEvenGoal}`);
+            } else {
+                skipped++;
+            }
+        }
+
+        console.log(`🎉 Migration completed. Migrated: ${migrated}, Skipped: ${skipped}`);
+
+        res.json({
+            message: 'Migración completada',
+            migrated,
+            skipped,
+            total: configs.length
+        });
+    } catch (error) {
+        console.error('Error en migración de metas:', error);
+        res.status(500).json({ error: 'Error interno en migración' });
     }
 });
 
