@@ -37,6 +37,13 @@ const __dirname = dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 8080
+
+// Middleware de Logging (Debug)
+app.use((req, res, next) => {
+    console.log(`➡️ ${req.method} ${req.path}`);
+    next();
+});
+
 // ==========================================
 // CONFIGURACIÓN DE PROXY (SEENODE)
 // ==========================================

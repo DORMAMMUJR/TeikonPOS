@@ -79,7 +79,7 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       try {
         console.log('🔄 Attempting to recover active shift from backend...');
 
-        const response = await fetch(`${API_URL} /api/shifts / current ? storeId = ${currentUser.storeId} `, {
+        const response = await fetch(`${API_URL}/api/shifts/current?storeId=${currentUser.storeId}`, {
           headers: getHeaders()
         });
 
@@ -293,7 +293,7 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     try {
       console.log('🔵 Opening cash shift via API...');
 
-      const response = await fetch(`${API_URL} /api/shifts / start`, {
+      const response = await fetch(`${API_URL}/api/shifts/start`, {
         method: 'POST',
         headers: getHeaders(),
         body: JSON.stringify({
@@ -351,7 +351,7 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
       const expected = currentSession.startBalance + currentSession.cashSales - currentSession.refunds;
 
-      const response = await fetch(`${API_URL} /api/shifts / end`, {
+      const response = await fetch(`${API_URL}/api/shifts/end`, {
         method: 'POST',
         headers: getHeaders(),
         body: JSON.stringify({
