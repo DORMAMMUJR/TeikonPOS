@@ -778,17 +778,23 @@ app.post('/api/auth/request-password-reset', async (req, res) => {
     }
 });
 
-// ==========================================
-// ENDPOINTS DE PRODUCTOS
-// ==========================================
-
-// GET /api/productos - Listar productos de la store
+// GET /api/productos - Listar productos de la store (con agrupación por categoría)
 app.get('/api/productos', authenticateToken, async (req, res) => {
     try {
         const where = { activo: true };
 
-        // Si no es SUPER_ADMIN, filtrar por storeId
+        // AISLAMIENTO MULTI-TENANT ESTRICTO
+        // Si no es SUPER_ADMIN, filtrar OBLIGATORIAMENTE por storeId
         if (req.role !== 'SUPER_ADMIN') {
+            // Validación adicional: Verificar que el usuario tenga un storeId asignado
+            if (!req.storeId) {
+                console.error('❌ Usuario sin storeId intentando acceder a inventario');
+                return res.status(403).json({
+                    error: 'Acceso denegado: Usuario sin tienda asignada',
+                    grouped: {},
+                    flat: []
+                });
+            }
             where.storeId = req.storeId;
         }
 
@@ -797,22 +803,46 @@ app.get('/api/productos', authenticateToken, async (req, res) => {
         const limit = parseInt(req.query.limit) || 50; // Default limit 50 to prevent OOM
         const offset = (page - 1) * limit;
 
+        // CONSULTA OPTIMIZADA: Ordenar por categoría primero, luego por nombre
         const { count, rows } = await Product.findAndCountAll({
             where,
-            order: [['nombre', 'ASC']],
+            order: [
+                ['categoria', 'ASC'],  // Agrupar por categoría
+                ['nombre', 'ASC']       // Ordenar alfabéticamente dentro de cada categoría
+            ],
             limit,
             offset
         });
 
+        // POST-PROCESAMIENTO: Agrupar productos por categoría
+        const grouped = {};
+        rows.forEach(product => {
+            // Sanitizar categoría: Si es null, undefined o vacío, usar "General"
+            const categoria = (product.categoria && product.categoria.trim() !== '')
+                ? product.categoria.trim()
+                : 'General';
+
+            if (!grouped[categoria]) {
+                grouped[categoria] = [];
+            }
+            grouped[categoria].push(product);
+        });
+
+        // Respuesta con estructura dual: agrupada y plana (compatibilidad)
         res.json({
-            data: rows,
+            data: rows,              // Lista plana (compatibilidad con frontend existente)
+            grouped: grouped,        // Estructura agrupada por categoría
             total: count,
             page,
             totalPages: Math.ceil(count / limit)
         });
     } catch (error) {
         console.error('Error al obtener productos:', error);
-        res.status(500).json({ error: 'Error al obtener productos' });
+        res.status(500).json({
+            error: 'Error al obtener productos',
+            grouped: {},
+            flat: []
+        });
     }
 });
 
