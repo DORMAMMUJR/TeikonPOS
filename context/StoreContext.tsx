@@ -3,6 +3,7 @@ import { Sale, FinancialSettings, Role, User, CashSession, CartItem, SaleResult,
 import { Product } from "@/Product";
 import { productsAPI, salesAPI, dashboardAPI, authAPI, setAuthToken, clearAuthToken, getCurrentUserFromToken, API_URL, getHeaders } from '../utils/api';
 import { addPendingSale, getPendingSales, clearPendingSales } from '../utils/offlineSync';
+import { mapShiftToSession, mapBackendProduct, mapProductToBackend, validateStoreId, getStoreId } from '../utils/dataMappers';
 
 interface StoreContextType {
   products: Product[];
@@ -200,28 +201,12 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
           const data = await response.json();
           console.log('📦 Session Found:', data);
 
-          // Validate required fields
-          if (!data.id) {
-            console.error('❌ Invalid session data: missing ID');
-            setAllSessions([]);
-            localStorage.removeItem('cashSession');
-            return;
-          }
-
-          const session: CashSession = {
-            id: data.id,
-            startTime: data.start_time || data.startTime || new Date().toISOString(),
-            startBalance: parseFloat(data.initial_amount || data.initialAmount || 0),
-            expectedBalance: parseFloat(data.expected_amount || data.expectedAmount || data.initial_amount || data.initialAmount || 0),
-            cashSales: parseFloat(data.cash_sales || data.cashSales || 0),
-            refunds: 0,
-            status: 'OPEN',
-            ownerId: userId || data.opened_by
-          };
+          // Use standardized mapper
+          const session = mapShiftToSession(data, userId);
 
           console.log('✅ Active session restored:', session.id);
           setAllSessions([session]);
-          safeSetLocalStorage('cashSession', JSON.stringify(session), true); // Critical data
+          localStorage.setItem('cashSession', JSON.stringify(session));
           lastCheckedStoreId.current = storeId || null;
 
         } else if (response.status === 204 || response.status === 404) {
@@ -329,16 +314,9 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         fetchWithTimeout(salesAPI.getAll())
       ]);
 
-      const mappedProducts = Array.isArray(fetchedProducts) ? fetchedProducts.map((p: any) => ({
-        ...p,
-        name: p.nombre || p.name || 'Sin Nombre',
-        category: p.categoria || p.category || 'General',
-        image: p.imagen || p.image,
-        costPrice: Number(p.costPrice || 0),
-        salePrice: Number(p.salePrice || 0),
-        // Bidirectional mapping: backend 'activo' <-> frontend 'isActive'
-        isActive: p.activo !== undefined ? p.activo : (p.isActive !== undefined ? p.isActive : true)
-      })) : [];
+      const mappedProducts = Array.isArray(fetchedProducts)
+        ? fetchedProducts.map(mapBackendProduct)
+        : [];
 
       setProducts(mappedProducts as Product[]);
       setSales(fetchedSales);
@@ -489,15 +467,9 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
       const fetchedProducts = await productsAPI.getAll();
 
-      const mappedProducts = Array.isArray(fetchedProducts) ? fetchedProducts.map((p: any) => ({
-        ...p,
-        name: p.nombre || p.name || 'Sin Nombre',
-        category: p.categoria || p.category || 'General',
-        image: p.imagen || p.image,
-        costPrice: Number(p.costPrice || 0),
-        salePrice: Number(p.salePrice || 0),
-        isActive: p.activo !== undefined ? p.activo : (p.isActive !== undefined ? p.isActive : true)
-      })) : [];
+      const mappedProducts = Array.isArray(fetchedProducts)
+        ? fetchedProducts.map(mapBackendProduct)
+        : [];
 
       // Update state without loading indicator
       setProducts(mappedProducts as Product[]);
@@ -682,7 +654,7 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
               };
 
               setAllSessions([session]);
-              safeSetLocalStorage('cashSession', JSON.stringify(session), true); // Critical data
+              localStorage.setItem('cashSession', JSON.stringify(session));
               console.log('✅ Recovered existing shift:', session.id);
               console.log('   You can continue working with the existing shift');
               return; // Exit successfully
@@ -706,32 +678,19 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       const backendShift = await response.json();
       console.log('📦 Backend shift response:', backendShift);
 
-      // Validate response data
-      if (!backendShift.id) {
-        throw new Error('Invalid shift data: missing ID');
-      }
-
-      // CRITICAL FIX: Map PostgreSQL column names correctly
-      // Backend returns: start_time, initial_amount (snake_case)
-      // Frontend expects: startTime, initialAmount (camelCase)
-      const newSession: CashSession = {
-        id: backendShift.id,
-        startTime: backendShift.start_time || backendShift.startTime || new Date().toISOString(),
-        startBalance: parseFloat(backendShift.initial_amount || backendShift.initialAmount || startBalance),
-        expectedBalance: parseFloat(backendShift.expected_amount || backendShift.expectedAmount || backendShift.initial_amount || backendShift.initialAmount || startBalance),
-        cashSales: 0,
-        refunds: 0,
-        status: 'OPEN',
-        ownerId: currentUser.id
-      };
-
+      // Use standardized mapper
+      const newSession = mapShiftToSession(backendShift, currentUser.id);
       console.log('✅ Mapped session object:', newSession);
 
       // Update local state
       setAllSessions(prev => [...prev, newSession]);
 
       // Save to localStorage for offline fallback (with quota protection)
-      safeSetLocalStorage('cashSession', JSON.stringify(newSession), true); // Critical data
+      try {
+        localStorage.setItem('cashSession', JSON.stringify(newSession));
+      } catch (storageError) {
+        console.warn('⚠️ Failed to save session to localStorage:', storageError);
+      }
 
       console.log('✅ Cash shift opened successfully:', newSession.id);
       console.log('   Session saved to state and localStorage');
@@ -914,7 +873,11 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         // Sync updated session to localStorage (with quota protection)
         const updatedSession = updatedSessions.find(s => s.id === currentSession.id);
         if (updatedSession) {
-          safeSetLocalStorage('cashSession', JSON.stringify(updatedSession), true); // Critical data
+          try {
+            localStorage.setItem('cashSession', JSON.stringify(updatedSession));
+          } catch (storageError) {
+            console.warn('⚠️ Failed to save session to localStorage:', storageError);
+          }
         }
       }
 
@@ -932,48 +895,33 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
   const addProduct = async (productData: Omit<Product, 'ownerId' | 'id'>, activeStoreId?: string) => {
     if (!currentUser) return;
+
     try {
       if (isOnline) {
-        // Map frontend field names (English) to backend API names (Spanish)
-        const productPayload: any = {
-          sku: productData.sku,
-          nombre: productData.name,
-          categoria: productData.category || '',
-          costPrice: productData.costPrice,
-          salePrice: productData.salePrice,
-          stock: productData.stock || 0,
-          minStock: productData.minStock || 0,
-          taxRate: productData.taxRate || 0,
-          imagen: productData.image,
-          // Bidirectional mapping: frontend 'isActive' -> backend 'activo'
-          activo: productData.isActive !== undefined ? productData.isActive : true,
-          storeId: activeStoreId || (currentUser.role === 'SUPER_ADMIN'
-            ? (productData as any).storeId
-            : currentUser.storeId)
-        };
+        // Get storeId with fallback
+        const storeId = activeStoreId || getStoreId(currentUser);
+
+        // Validate storeId exists
+        validateStoreId(storeId, 'crear producto');
+
+        // Use standardized mapper
+        const productPayload = mapProductToBackend(productData, storeId!);
 
         // DEBUG: Log payload before sending
         console.log('📦 Payload:', JSON.stringify(productPayload, null, 2));
         console.log('👤 User:', currentUser.username, 'Role:', currentUser.role);
         console.log('🏪 StoreId:', productPayload.storeId);
 
-        // Validate storeId is present
-        if (!productPayload.storeId) {
-          console.error('❌ ERROR: storeId is null');
-          alert('Error: Debe seleccionar una tienda para crear el producto.');
-          throw new Error('Store ID is required to create products');
-        }
-
         const newProduct = await productsAPI.create(productPayload);
         console.log('✅ Product created:', newProduct);
-        setProducts(prev => [...prev, newProduct]);
+        setProducts(prev => [...prev, mapBackendProduct(newProduct)]);
       } else {
         console.warn('Cannot add products while offline');
         alert('No se pueden agregar productos sin conexión a internet.');
       }
     } catch (e: any) {
       console.error('Error creating product:', e);
-      alert(`Error al crear producto: ${e.message || 'Error desconocido'} `);
+      alert(`Error al crear producto: ${e.message || 'Error desconocido'}`);
     }
   };
 
@@ -981,14 +929,8 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const updateProduct = async (updated: Product) => {
     try {
       if (isOnline) {
-        // Map frontend field names to backend field names
-        const updatePayload: any = {
-          ...updated,
-          nombre: updated.name,
-          categoria: updated.category,
-          imagen: updated.image,
-          activo: updated.isActive
-        };
+        // Use standardized mapper
+        const updatePayload = mapProductToBackend(updated);
 
         await productsAPI.update(updated.id, updatePayload);
         setProducts(prev => prev.map(p => p.id === updated.id ? updated : p));

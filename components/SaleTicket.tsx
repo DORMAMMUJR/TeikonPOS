@@ -15,7 +15,6 @@ interface SaleTicketProps {
     phone?: string;
   };
   footerMessage?: string;
-  ticketId?: string;
   folio?: string;
   paymentMethod?: string;
   sellerId?: string;
@@ -30,8 +29,9 @@ export const SaleTicket: React.FC<SaleTicketProps> = ({
   date,
   storeInfo,
   footerMessage = "¡Gracias por su compra!",
-  ticketId,
   folio,
+  paymentMethod,
+  sellerId,
   onClose
 }) => {
 
@@ -66,7 +66,9 @@ export const SaleTicket: React.FC<SaleTicketProps> = ({
         {storeInfo.phone && <p className="text-xs">Tel: {storeInfo.phone}</p>}
         <div className="border-b-2 border-dashed border-black my-2"></div>
         <p className="text-xs text-left">Fecha: {date}</p>
-        {(ticketId || folio) && <p className="text-xs text-left">Ticket #: {ticketId || folio}</p>}
+        {folio && <p className="text-xs text-left">Ticket #: {folio}</p>}
+        {sellerId && <p className="text-xs text-left">Vendedor: {sellerId}</p>}
+        {paymentMethod && <p className="text-xs text-left">Método: {paymentMethod}</p>}
       </div>
 
       {/* Lista de Items */}
@@ -132,6 +134,18 @@ export const SaleTicket: React.FC<SaleTicketProps> = ({
         <p>{footerMessage}</p>
         <p className="mt-2 text-[10px] text-gray-400">Sistema TeikonPOS</p>
       </div>
+
+      {/* Botón de cerrar (solo visible en pantalla, no en impresión) */}
+      {onClose && (
+        <div className="text-center mt-4 print:hidden">
+          <button
+            onClick={onClose}
+            className="px-6 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors text-sm font-bold"
+          >
+            CERRAR
+          </button>
+        </div>
+      )}
 
       {/* Estilos específicos para impresión */}
       <style>{`
