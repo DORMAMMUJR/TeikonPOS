@@ -10,6 +10,27 @@ import dotenv from 'dotenv';
 // Cargar variables de entorno
 dotenv.config();
 
+// ==========================================
+// 🔌 CONEXIÓN BASE DE DATOS (PostgreSQL)
+// ==========================================
+import pg from 'pg';
+const { Pool } = pg;
+
+const pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: {
+        rejectUnauthorized: false // Necesario para Render/Supabase
+    }
+});
+
+// Prueba de conexión al iniciar
+pool.connect()
+    .then(() => console.log('✅ Conectado a PostgreSQL exitosamente'))
+    .catch(err => console.error('❌ Error de conexión a BD:', err));
+
+// ==========================================
+
+
 // Importar controladores
 import { getDashboardSummary } from './controllers/dashboardController.js';
 import { getCashCloseDetails } from './controllers/salesController.js';
