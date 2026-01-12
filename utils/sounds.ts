@@ -70,6 +70,34 @@ export const playError = () => {
 };
 
 /**
+ * Play warning sound when product has no stock
+ * Frequency: 400Hz, Duration: 150ms (mid-range = warning)
+ */
+export const playStockError = () => {
+    try {
+        const ctx = getAudioContext();
+        const oscillator = ctx.createOscillator();
+        const gainNode = ctx.createGain();
+
+        oscillator.connect(gainNode);
+        gainNode.connect(ctx.destination);
+
+        oscillator.frequency.value = 400; // 400Hz - mid frequency for warning
+        oscillator.type = 'triangle'; // Softer than error, harsher than success
+
+        gainNode.gain.setValueAtTime(0.25, ctx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15);
+
+        oscillator.start(ctx.currentTime);
+        oscillator.stop(ctx.currentTime + 0.15);
+
+        console.log('🔊 WARNING - Sin stock disponible');
+    } catch (error) {
+        console.warn('Audio playback failed:', error);
+    }
+};
+
+/**
  * Alternative: Use HTML5 Audio with preloaded files
  * Uncomment and use if you prefer audio files over synthesized sounds
  */

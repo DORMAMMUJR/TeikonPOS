@@ -78,11 +78,19 @@ const QuickSale: React.FC = () => {
     }, [cart]);
 
     /**
-     * Handle product not found
+     * Handle product not found with granular error feedback
      */
-    const handleProductNotFound = useCallback((sku: string) => {
-        console.log('Product not found:', sku);
-        // You can show a toast notification here
+    const handleProductNotFound = useCallback((sku: string, errorType?: 'NOT_FOUND' | 'OUT_OF_STOCK') => {
+        console.log(`Product error: ${errorType} for SKU ${sku}`);
+
+        // Optional: Show toast notification or alert based on error type
+        if (errorType === 'OUT_OF_STOCK') {
+            console.warn(`⚠️ Product ${sku} found but has no stock available`);
+            // You can show a toast notification here
+        } else {
+            console.warn(`❌ Product ${sku} not found in database`);
+            // You can show a different toast notification here
+        }
     }, []);
 
     /**
@@ -190,8 +198,8 @@ const QuickSale: React.FC = () => {
                             <div
                                 key={item.productId}
                                 className={`flex items-center justify-between p-4 rounded-xl border-2 transition-all duration-300 ${flashItemId === item.productId
-                                        ? 'border-green-500 bg-green-50 dark:bg-green-950/20 animate-pulse'
-                                        : 'border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50'
+                                    ? 'border-green-500 bg-green-50 dark:bg-green-950/20 animate-pulse'
+                                    : 'border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50'
                                     }`}
                             >
                                 {/* Product Info */}

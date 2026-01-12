@@ -1,25 +1,26 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Product } from '@/Product';
 import { useStore } from '../context/StoreContext';
-import { playBeep, playError } from '../utils/sounds';
-import { Scan, Loader2, CheckCircle2, XCircle } from 'lucide-react';
+import { playBeep, playError, playStockError } from '../utils/sounds';
+import { Scan, Loader2, CheckCircle2, XCircle, AlertTriangle } from 'lucide-react';
 
 interface BarcodeScannerProps {
     onProductFound: (product: Product) => void;
-    onProductNotFound?: (sku: string) => void;
+    onProductNotFound?: (sku: string, errorType?: 'NOT_FOUND' | 'OUT_OF_STOCK') => void;
     disabled?: boolean;
     className?: string;
 }
 
 type ScanStatus = 'idle' | 'scanning' | 'success' | 'error';
+type ErrorType = 'NOT_FOUND' | 'OUT_OF_STOCK' | null;
 
 /**
  * BarcodeScanner Component
  * 
  * Optimized barcode scanner with:
- * - Global keyboard listener for scanner input detection
+ * - Fast consecutive scans (300ms throttle)
+ * - Granular error feedback (SKU not found vs Out of stock)
  * - Auto-focus management
- * - Debouncing to prevent duplicate searches
  * - Visual and audio feedback
  * - Multi-tenant SKU search
  */
@@ -32,6 +33,7 @@ const BarcodeScanner: React.FC<BarcodeScannerProps> = ({
     const { searchProductBySKU } = useStore();
     const [inputValue, setInputValue] = useState('');
     const [status, setStatus] = useState<ScanStatus>('idle');
+    const [errorType, setErrorType] = useState<ErrorType>(null);
     const [lastScannedSKU, setLastScannedSKU] = useState<string>('');
     const [scanCount, setScanCount] = useState(0);
 
@@ -68,20 +70,21 @@ const BarcodeScanner: React.FC<BarcodeScannerProps> = ({
 
     /**
      * Search product by SKU
-     * Optimized with debouncing and duplicate prevention
+     * Optimized with 300ms throttle and granular error detection
      */
     const searchProduct = useCallback(async (sku: string) => {
         if (!sku || sku.trim() === '' || disabled) return;
 
         const normalizedSKU = sku.trim().toUpperCase();
 
-        // Prevent duplicate searches
-        if (normalizedSKU === lastScannedSKU && Date.now() - lastKeypressRef.current < 1000) {
+        // IMPROVED: Reduced throttle from 1000ms to 300ms for faster consecutive scans
+        if (normalizedSKU === lastScannedSKU && Date.now() - lastKeypressRef.current < 300) {
             console.log('⏭️ Skipping duplicate scan:', normalizedSKU);
             return;
         }
 
         setStatus('scanning');
+        setErrorType(null);
         setLastScannedSKU(normalizedSKU);
 
         try {
@@ -89,38 +92,57 @@ const BarcodeScanner: React.FC<BarcodeScannerProps> = ({
             const product = await searchProductBySKU(normalizedSKU);
 
             if (product) {
-                console.log('✅ Product found:', product.name);
-                setStatus('success');
-                setScanCount(prev => prev + 1);
-                playBeep();
-                onProductFound(product);
+                // IMPROVED: Check stock availability
+                if (product.stock <= 0) {
+                    console.log('⚠️ Product found but out of stock:', product.name);
+                    setStatus('error');
+                    setErrorType('OUT_OF_STOCK');
+                    playStockError();
+                    onProductNotFound?.(normalizedSKU, 'OUT_OF_STOCK');
 
-                // Reset to idle after animation
-                setTimeout(() => {
-                    setStatus('idle');
-                    setInputValue('');
-                }, 500);
+                    setTimeout(() => {
+                        setStatus('idle');
+                        setInputValue('');
+                        setErrorType(null);
+                    }, 1500);
+                } else {
+                    console.log('✅ Product found:', product.name);
+                    setStatus('success');
+                    setScanCount(prev => prev + 1);
+                    playBeep();
+                    onProductFound(product);
+
+                    // Reset to idle after animation
+                    setTimeout(() => {
+                        setStatus('idle');
+                        setInputValue('');
+                    }, 500);
+                }
             } else {
                 console.log('❌ Product not found:', normalizedSKU);
                 setStatus('error');
+                setErrorType('NOT_FOUND');
                 playError();
-                onProductNotFound?.(normalizedSKU);
+                onProductNotFound?.(normalizedSKU, 'NOT_FOUND');
 
                 // Reset to idle after showing error
                 setTimeout(() => {
                     setStatus('idle');
                     setInputValue('');
+                    setErrorType(null);
                 }, 1500);
             }
         } catch (error) {
             console.error('Error searching product:', error);
             setStatus('error');
+            setErrorType('NOT_FOUND');
             playError();
-            onProductNotFound?.(normalizedSKU);
+            onProductNotFound?.(normalizedSKU, 'NOT_FOUND');
 
             setTimeout(() => {
                 setStatus('idle');
                 setInputValue('');
+                setErrorType(null);
             }, 1500);
         }
     }, [searchProductBySKU, onProductFound, onProductNotFound, disabled, lastScannedSKU]);
@@ -205,6 +227,15 @@ const BarcodeScanner: React.FC<BarcodeScannerProps> = ({
                     borderColor: 'border-green-500'
                 };
             case 'error':
+                // Different colors for different error types
+                if (errorType === 'OUT_OF_STOCK') {
+                    return {
+                        icon: <AlertTriangle size={20} />,
+                        color: 'text-yellow-600',
+                        bgColor: 'bg-yellow-50 dark:bg-yellow-950/20',
+                        borderColor: 'border-yellow-500'
+                    };
+                }
                 return {
                     icon: <XCircle size={20} />,
                     color: 'text-red-500',
@@ -256,18 +287,25 @@ const BarcodeScanner: React.FC<BarcodeScannerProps> = ({
                 )}
             </div>
 
-            {/* Status Messages */}
-            {status === 'error' && (
+            {/* IMPROVED: Granular Error Messages */}
+            {status === 'error' && errorType === 'NOT_FOUND' && (
                 <div className="mt-2 text-xs font-bold text-red-500 flex items-center gap-2">
                     <XCircle size={14} />
-                    <span>Producto no encontrado: {lastScannedSKU}</span>
+                    <span>❌ SKU no encontrado: {lastScannedSKU}</span>
+                </div>
+            )}
+
+            {status === 'error' && errorType === 'OUT_OF_STOCK' && (
+                <div className="mt-2 text-xs font-bold text-yellow-600 dark:text-yellow-500 flex items-center gap-2">
+                    <AlertTriangle size={14} />
+                    <span>⚠️ Sin stock disponible: {lastScannedSKU}</span>
                 </div>
             )}
 
             {status === 'success' && (
                 <div className="mt-2 text-xs font-bold text-green-500 flex items-center gap-2 animate-pulse">
                     <CheckCircle2 size={14} />
-                    <span>¡Producto agregado!</span>
+                    <span>✅ ¡Producto agregado!</span>
                 </div>
             )}
 

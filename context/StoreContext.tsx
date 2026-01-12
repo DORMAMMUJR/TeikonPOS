@@ -247,9 +247,66 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     }
   }, [currentUser, isOnline]);
 
+  /**
+   * IMPROVED: Background sync - Silent data refresh without blocking UI
+   * Updates product cache every 30 seconds for fresh prices and stock
+   */
+  const syncDataSilently = useCallback(async () => {
+    if (!currentUser || !isOnline) return;
+
+    try {
+      console.log('🔄 Background sync: Refreshing product data...');
+
+      const fetchedProducts = await productsAPI.getAll();
+
+      const mappedProducts = Array.isArray(fetchedProducts) ? fetchedProducts.map((p: any) => ({
+        ...p,
+        name: p.nombre || p.name || 'Sin Nombre',
+        category: p.categoria || p.category || 'General',
+        image: p.imagen || p.image,
+        costPrice: Number(p.costPrice || 0),
+        salePrice: Number(p.salePrice || 0),
+        isActive: p.activo !== undefined ? p.activo : (p.isActive !== undefined ? p.isActive : true)
+      })) : [];
+
+      // Update state without loading indicator
+      setProducts(mappedProducts as Product[]);
+
+      // Update cache
+      try {
+        localStorage.setItem('cachedProducts', JSON.stringify(mappedProducts));
+        console.log('✅ Background sync: Products updated and cached');
+      } catch (cacheError) {
+        console.warn('⚠️ Background sync: Failed to cache data:', cacheError);
+      }
+
+    } catch (error) {
+      console.warn('⚠️ Background sync failed (will retry):', error);
+      // Don't show error to user - this is a silent background operation
+    }
+  }, [currentUser, isOnline]);
+
+  // Initial sync on mount
   useEffect(() => {
     syncData();
   }, [syncData]);
+
+  // IMPROVED: Background sync every 30 seconds
+  useEffect(() => {
+    if (!currentUser || !isOnline) return;
+
+    // Start background sync after initial load
+    const interval = setInterval(() => {
+      syncDataSilently();
+    }, 30000); // 30 seconds
+
+    console.log('🔄 Background sync enabled (every 30s)');
+
+    return () => {
+      clearInterval(interval);
+      console.log('🛑 Background sync disabled');
+    };
+  }, [currentUser, isOnline, syncDataSilently]);
 
   // Function to update current user profile locally
   const updateCurrentUser = (userData: Partial<User>) => {
