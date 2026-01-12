@@ -2954,35 +2954,49 @@ const startServer = async () => {
         /**
          * GET /api/shifts/current
          * Purpose: Retrieve the currently active cash shift for a store
-         * Query Parameters: ?storeId=<uuid>
-         * Response: 200 OK with shift details | 204 No Content | 400 Bad Request
+         * Query Parameters: ?storeId=<uuid> (optional for SUPER_ADMIN)
+         * Response: 200 OK with shift details | 204 No Content | 500 Internal Error
          */
         app.get('/api/shifts/current', authenticateToken, async (req, res) => {
             try {
-                const { storeId } = req.query;
+                const { storeId: queryStoreId } = req.query;
 
-                // 1. Validate storeId parameter
-                if (!storeId) {
+                // IMPROVED: Security logic for storeId
+                // Caso 1: SUPER_ADMIN con storeId en query → usar ese storeId
+                // Caso 2: Usuario normal → SIEMPRE usar req.storeId (del token)
+                // Caso 3: SUPER_ADMIN sin queryStoreId → usar req.storeId
+                const targetStoreId = (req.role === 'SUPER_ADMIN' && queryStoreId)
+                    ? queryStoreId
+                    : req.storeId;
+
+                if (!targetStoreId) {
+                    console.error('❌ No storeId available for shift lookup');
                     return res.status(400).json({
-                        error: 'El parámetro storeId es requerido'
+                        error: 'No se pudo determinar la tienda para buscar el turno'
                     });
                 }
 
-                // 2. Find OPEN shift for this store
+                console.log(`🔍 Looking for OPEN shift in store: ${targetStoreId}`);
+
+                // Find OPEN shift for this store
                 const currentShift = await CashShift.findOne({
                     where: {
-                        storeId,
+                        storeId: targetStoreId,
                         status: 'OPEN'
                     },
                     order: [['apertura', 'DESC']] // Get most recent if multiple exist
                 });
 
-                // 3. Return 204 No Content if no open shift found
+                // CRITICAL: Return 204 No Content if no open shift found
+                // This tells the frontend to show "Abrir Caja" button
                 if (!currentShift) {
+                    console.log(`ℹ️ No open shift found for store ${targetStoreId}`);
                     return res.status(204).send();
                 }
 
-                // 4. Return current shift details
+                console.log(`✅ Found open shift: ${currentShift.id}`);
+
+                // Return current shift details
                 res.status(200).json({
                     id: currentShift.id,
                     storeId: currentShift.storeId,
@@ -2990,10 +3004,10 @@ const startServer = async () => {
                     initialAmount: parseFloat(currentShift.montoInicial),
                     startTime: currentShift.apertura,
                     status: currentShift.status,
-                    cashSales: parseFloat(currentShift.ventasEfectivo),
-                    cardSales: parseFloat(currentShift.ventasTarjeta),
-                    transferSales: parseFloat(currentShift.ventasTransferencia),
-                    expenses: parseFloat(currentShift.gastos),
+                    cashSales: parseFloat(currentShift.ventasEfectivo || 0),
+                    cardSales: parseFloat(currentShift.ventasTarjeta || 0),
+                    transferSales: parseFloat(currentShift.ventasTransferencia || 0),
+                    expenses: parseFloat(currentShift.gastos || 0),
                     createdAt: currentShift.createdAt
                 });
 
