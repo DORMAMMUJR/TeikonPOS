@@ -10,7 +10,7 @@ interface StoreGuardProps {
 }
 
 const StoreGuard = ({ children }: StoreGuardProps) => {
-    const { currentUser, currentSession, openSession, isRecoveringSession } = useStore();
+    const { currentUser, currentSession, openSession, isRecoveringSession, isOpeningSession } = useStore();
     const [openingBalance, setOpeningBalance] = useState('');
 
     // IMPROVED: SUPER_ADMIN bypasses ALL checks (onboarding + session)
@@ -62,7 +62,8 @@ const StoreGuard = ({ children }: StoreGuardProps) => {
                             <input
                                 type="number"
                                 autoFocus
-                                className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 cut-corner p-6 pl-14 text-4xl font-black text-slate-900 dark:text-white outline-none focus:border-brand-purple transition-all shadow-inner"
+                                disabled={isOpeningSession}
+                                className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 cut-corner p-6 pl-14 text-4xl font-black text-slate-900 dark:text-white outline-none focus:border-brand-purple transition-all shadow-inner disabled:opacity-50 disabled:cursor-not-allowed"
                                 placeholder="0.00"
                                 value={openingBalance}
                                 onChange={e => setOpeningBalance(e.target.value)}
@@ -71,10 +72,11 @@ const StoreGuard = ({ children }: StoreGuardProps) => {
                         <Button
                             fullWidth
                             variant="primary"
-                            className="py-5 bg-slate-900 dark:bg-white text-white dark:text-black hover:opacity-90"
+                            disabled={isOpeningSession}
+                            className="py-5 bg-slate-900 dark:bg-white text-white dark:text-black hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
                             onClick={() => openSession(parseFloat(openingBalance) || 0)}
                         >
-                            Iniciar Operaciones
+                            {isOpeningSession ? 'Iniciando...' : 'Iniciar Operaciones'}
                         </Button>
                         <p className="text-[8px] font-black text-brand-muted uppercase tracking-[0.4em]">SISTEMA TEIKON v2.9.1 SECURE</p>
                     </div>

@@ -15,6 +15,7 @@ interface StoreContextType {
   isOnline: boolean;
   isLoading: boolean;
   isRecoveringSession: boolean; // NEW: Prevents showing modal before recovery completes
+  isOpeningSession: boolean; // NEW: Loading state for session opening
   error: string | null;
 
   login: (token: string) => void;
@@ -48,6 +49,7 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [isLoading, setIsLoading] = useState(false);
   const [isRecoveringSession, setIsRecoveringSession] = useState(true); // Start as true to prevent premature modal
+  const [isOpeningSessionState, setIsOpeningSessionState] = useState(false); // Loading state for UI
   const [error, setError] = useState<string | null>(null);
 
   const currentSession = allSessions.find(s => s.status === 'OPEN') || null;
@@ -415,6 +417,7 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
     try {
       isOpeningSession.current = true; // Lock to prevent duplicates
+      setIsOpeningSessionState(true); // Show loading UI
 
       console.log('🔵 Opening cash shift via API...');
       console.log('   Store ID:', currentUser.storeId);
@@ -467,8 +470,9 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       console.error('❌ Error opening cash shift:', error);
       throw error;
     } finally {
-      // Release lock after operation completes (success or failure)
+      // CRITICAL: Always release lock and hide loading, even on error
       isOpeningSession.current = false;
+      setIsOpeningSessionState(false);
     }
   };
 
@@ -876,7 +880,7 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
   return (
     <StoreContext.Provider value={{
-      products, sales, allSessions, settings, currentUser, currentUserRole: currentUser?.role, currentSession, isOnline, isLoading, isRecoveringSession, error,
+      products, sales, allSessions, settings, currentUser, currentUserRole: currentUser?.role, currentSession, isOnline, isLoading, isRecoveringSession, isOpeningSession: isOpeningSessionState, error,
       login, logout, updateCurrentUser, openSession, closeSession, addProduct, updateProduct, deleteProduct, processSaleAndContributeToGoal, cancelSale, updateSettings, getDashboardStats, calculateTotalInventoryValue, syncData, searchProductBySKU
     }}>
       {children}
