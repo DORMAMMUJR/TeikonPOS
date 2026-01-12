@@ -367,8 +367,11 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
     // 4. Resetear estados de React
     setCurrentUser(null);
-    setActiveSession(null);
-    // ... otros reseteos
+    setProducts([]);
+    setSales([]);
+    setAllSessions([]); // ✅ CORRECTO: setAllSessions existe, setActiveSession NO
+
+    console.log('🚪 Logout: All data cleared');
   };
 
   const openSession = async (startBalance: number) => {
