@@ -112,6 +112,21 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   // DEBOUNCE FIX: Prevent duplicate POST requests when opening session
   const isOpeningSession = useRef(false);
 
+  /**
+   * Helper: Check if a session is from today
+   * Used to determine if cached session is still valid for current day
+   */
+  const isSessionFromToday = (session: CashSession): boolean => {
+    try {
+      const sessionDate = new Date(session.startTime);
+      const today = new Date();
+      return sessionDate.toDateString() === today.toDateString();
+    } catch (error) {
+      console.warn('⚠️ Failed to parse session date:', error);
+      return false;
+    }
+  };
+
   // Session Recovery: Restore cash session from backend on mount
   // OPTIMIZED: Uses primitive dependencies to prevent infinite loops
   useEffect(() => {
@@ -204,7 +219,23 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
           // Use standardized mapper
           const session = mapShiftToSession(data, userId);
 
-          console.log('✅ Active session restored:', session.id);
+          // CRITICAL: Check if session is from today
+          if (!isSessionFromToday(session)) {
+            console.log('🗑️ Backend session is from previous day, clearing...');
+            console.log('   Session date:', new Date(session.startTime).toDateString());
+            console.log('   Today:', new Date().toDateString());
+
+            // Clear old session from localStorage
+            localStorage.removeItem('cashSession');
+            setAllSessions([]);
+            lastCheckedStoreId.current = storeId || null;
+
+            // Note: We don't close it on backend here, just clear frontend
+            // The backend should handle old sessions appropriately
+            return;
+          }
+
+          console.log('✅ Active session restored (from today):', session.id);
           setAllSessions([session]);
           localStorage.setItem('cashSession', JSON.stringify(session));
           lastCheckedStoreId.current = storeId || null;
@@ -255,10 +286,17 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
           const cachedSession = localStorage.getItem('cashSession');
           if (cachedSession) {
             const parsed = JSON.parse(cachedSession);
-            console.log('📦 Loaded session from localStorage fallback:', parsed.id);
-            setAllSessions([parsed]);
-            lastCheckedStoreId.current = storeId || null;
-            return;
+
+            // CRITICAL: Check if session is from today
+            if (isSessionFromToday(parsed)) {
+              console.log('📦 Loaded session from localStorage fallback (today):', parsed.id);
+              setAllSessions([parsed]);
+              lastCheckedStoreId.current = storeId || null;
+              return;
+            } else {
+              console.log('🗑️ Cached session is from previous day, clearing...');
+              localStorage.removeItem('cashSession');
+            }
           }
         } catch (cacheError) {
           console.warn('⚠️ Could not load cached session:', cacheError);
