@@ -13,18 +13,20 @@ const StoreGuard = ({ children }: StoreGuardProps) => {
     const { currentUser, currentSession, openSession } = useStore();
     const [openingBalance, setOpeningBalance] = useState('');
 
-    // Bypass checks for Super Admin (just in case they land here)
-    if ((currentUser as any).role === 'SUPER_ADMIN') {
-        return <Navigate to="/admin/stores" replace />;
+    // IMPROVED: SUPER_ADMIN bypasses ALL checks (onboarding + session)
+    // They can access the system without opening a shift
+    if (currentUser?.role === 'SUPER_ADMIN') {
+        console.log('👑 SUPER_ADMIN detected in StoreGuard - Granting full access');
+        return <>{children}</>;
     }
 
-    // Check Onboarding
+    // Check Onboarding (only for ADMIN/USER)
     const isStoreConfigured = currentUser?.storeName && currentUser.storeName.trim() !== '';
     if (!isStoreConfigured) {
         return <InitialConfig />;
     }
 
-    // Check Session
+    // Check Session (only for ADMIN/USER)
     if (!currentSession) {
         return (
             <div className="min-h-screen bg-brand-bg flex items-center justify-center p-4">
