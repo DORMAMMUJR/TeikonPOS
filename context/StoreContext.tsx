@@ -354,14 +354,21 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   };
 
   const logout = () => {
-    clearAuthToken(); // This now also clears sessionStorage
-    setCurrentUser(null);
-    setProducts([]);
-    setSales([]);
+    // 1. Borrar Token y Usuario
+    localStorage.removeItem('token');
+    localStorage.removeItem('currentUser');
 
-    // Clear cash session from localStorage
+    // 2. IMPORTANTE: Borrar datos de la sesión de caja vieja
     localStorage.removeItem('cashSession');
-    console.log('🚪 Logout: Cash session cleared from localStorage');
+    localStorage.removeItem('activeSession');
+
+    // 3. Borrar preferencias
+    localStorage.removeItem('selectedStore');
+
+    // 4. Resetear estados de React
+    setCurrentUser(null);
+    setActiveSession(null);
+    // ... otros reseteos
   };
 
   const openSession = async (startBalance: number) => {
