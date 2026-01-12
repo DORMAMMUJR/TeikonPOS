@@ -1136,12 +1136,22 @@ app.get('/api/sales/cash-close', authenticateToken, getCashCloseDetails);
 // GET /api/ventas - Listar ventas
 app.get('/api/ventas', authenticateToken, async (req, res) => {
     try {
-        const { status, startDate, endDate } = req.query;
+        const { status, startDate, endDate, storeId: queryStoreId } = req.query;
         const where = {};
 
-        // Aislamiento de tiendas: Solo filtrar por storeId si NO es SUPER_ADMIN
-        if (req.role !== 'SUPER_ADMIN') {
+        // IMPROVED: Aislamiento Multi-Tenant con soporte para Super Admin
+        // Caso 1: SUPER_ADMIN con storeId en query → Filtrar por esa tienda específica
+        if (req.role === 'SUPER_ADMIN' && queryStoreId) {
+            console.log(`🔍 SUPER_ADMIN viewing sales for store: ${queryStoreId}`);
+            where.storeId = queryStoreId;
+        }
+        // Caso 2: Usuario normal → SIEMPRE filtrar por su propia tienda (SEGURIDAD)
+        else if (req.role !== 'SUPER_ADMIN') {
             where.storeId = req.storeId;
+        }
+        // Caso 3: SUPER_ADMIN sin queryStoreId → Ver TODAS las ventas
+        else {
+            console.log('🌐 SUPER_ADMIN viewing ALL sales (no storeId filter)');
         }
 
         if (status) where.status = status;

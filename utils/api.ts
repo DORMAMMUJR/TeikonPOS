@@ -339,8 +339,16 @@ export const storesAPI = {
 // ==========================================
 
 export const salesAPI = {
-    getAll: async () => {
-        const response = await safeFetch(`${API_URL}/api/ventas`, {
+    getAll: async (options?: { storeId?: string }) => {
+        // Build URL with optional storeId filter
+        let url = `${API_URL}/api/ventas`;
+
+        // IMPROVED: Add storeId filter if provided (for Super Admin viewing specific store)
+        if (options?.storeId) {
+            url += `?storeId=${options.storeId}`;
+        }
+
+        const response = await safeFetch(url, {
             headers: getHeaders()
         });
         const data = await response.json();

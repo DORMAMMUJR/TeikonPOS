@@ -4,15 +4,48 @@ import { Search, Printer, X, Calendar, FileText, History as HistoryIcon } from '
 import { Modal, Button, TeikonWordmark } from '../src/components/ui';
 import { SaleTicket } from './SaleTicket';
 import { Sale } from '../types';
-import { isTokenValid } from '../utils/api';
+import { isTokenValid, salesAPI } from '../utils/api';
 import { Share2, Check } from 'lucide-react'; // Adding missing icons
 
-const SalesHistory: React.FC = () => {
-  const { sales, cancelSale, currentUser } = useStore();
+interface SalesHistoryProps {
+  targetStoreId?: string; // IMPROVED: Add prop for AdminPanel filtering
+}
+
+const SalesHistory: React.FC<SalesHistoryProps> = ({ targetStoreId }) => {
+  const { sales: contextSales, cancelSale, currentUser } = useStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [showTodayOnly, setShowTodayOnly] = useState(true);
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
   const [copied, setCopied] = useState(false);
+
+  // IMPROVED: Local state for store-specific sales
+  const [storeSales, setStoreSales] = useState<Sale[]>([]);
+  const [isLoadingStore, setIsLoadingStore] = useState(false);
+
+  // IMPROVED: Fetch sales for specific store when targetStoreId is provided
+  useEffect(() => {
+    if (targetStoreId) {
+      const fetchStoreSales = async () => {
+        setIsLoadingStore(true);
+        try {
+          console.log(`📊 Fetching sales for store: ${targetStoreId}`);
+          const fetchedSales = await salesAPI.getAll({ storeId: targetStoreId });
+          setStoreSales(fetchedSales);
+          console.log(`✅ Loaded ${fetchedSales.length} sales for store`);
+        } catch (error) {
+          console.error('Error fetching store sales:', error);
+          setStoreSales([]);
+        } finally {
+          setIsLoadingStore(false);
+        }
+      };
+
+      fetchStoreSales();
+    }
+  }, [targetStoreId]);
+
+  // Use store-specific sales if targetStoreId is provided, otherwise use context sales
+  const sales = targetStoreId ? storeSales : contextSales;
 
   const filteredSales = sales
     .filter(s => {

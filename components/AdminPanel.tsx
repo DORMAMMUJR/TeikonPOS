@@ -202,7 +202,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
 
           {detailTab === 'sales' && (
             <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 shadow-sm border border-slate-200 dark:border-slate-700 animate-fade-in-up">
-              <SalesHistory />
+              <SalesHistory targetStoreId={selectedStore.id} />
             </div>
           )}
 
