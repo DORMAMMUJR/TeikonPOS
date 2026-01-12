@@ -38,6 +38,43 @@ interface StoreContextType {
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
 
 export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  /**
+   * HELPER: Safe localStorage setter with QuotaExceededError protection
+   * Automatically clears old cache if quota is exceeded and retries with minimal data
+   */
+  const safeSetLocalStorage = (key: string, value: string, isCritical: boolean = false): boolean => {
+    try {
+      localStorage.setItem(key, value);
+      return true;
+    } catch (error: any) {
+      if (error.name === 'QuotaExceededError' || error.code === 22) {
+        console.error(`❌ Storage quota exceeded while saving '${key}'`);
+
+        if (isCritical) {
+          // For critical data (like cashSession), clear non-critical cache and retry
+          console.warn('   Clearing non-critical cache to save critical data...');
+          try {
+            localStorage.removeItem('cachedProducts');
+            localStorage.removeItem('cachedSales');
+            localStorage.setItem(key, value);
+            console.log(`✅ Critical data '${key}' saved after clearing cache`);
+            return true;
+          } catch (retryError) {
+            console.error(`❌ Failed to save '${key}' even after clearing cache`);
+            return false;
+          }
+        } else {
+          // For non-critical data, just log and continue
+          console.warn(`   Skipping non-critical data '${key}' due to quota`);
+          return false;
+        }
+      } else {
+        console.error(`❌ Unexpected error saving '${key}':`, error);
+        return false;
+      }
+    }
+  };
+
   // Derive currentUser from JWT token instead of storing in state
   // This ensures each tab has its own isolated session
   const [currentUser, setCurrentUser] = useState<User | null>(() => getCurrentUserFromToken());
@@ -136,15 +173,24 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       try {
         console.log(`🔄 Recovering active shift for store: ${storeId}`);
 
+        // Add timeout protection (10 seconds)
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+
         const response = await fetch(`${API_URL}/api/shifts/current?storeId=${storeId}`, {
-          headers: getHeaders()
+          headers: getHeaders(),
+          signal: controller.signal
         });
 
+        clearTimeout(timeoutId);
+
         if (response.ok) {
-          // Check if response is JSON
+          // CRITICAL: Check Content-Type BEFORE parsing JSON
           const contentType = response.headers.get('content-type');
           if (!contentType || !contentType.includes('application/json')) {
-            console.warn('⚠️ Server returned non-JSON response, assuming no active shift');
+            console.warn('⚠️ Server returned non-JSON response (likely HTML error page)');
+            console.warn('   Content-Type:', contentType);
+            console.warn('   Assuming no active shift exists');
             setAllSessions([]);
             localStorage.removeItem('cashSession');
             lastCheckedStoreId.current = storeId || null;
@@ -154,9 +200,17 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
           const data = await response.json();
           console.log('📦 Session Found:', data);
 
+          // Validate required fields
+          if (!data.id) {
+            console.error('❌ Invalid session data: missing ID');
+            setAllSessions([]);
+            localStorage.removeItem('cashSession');
+            return;
+          }
+
           const session: CashSession = {
             id: data.id,
-            startTime: data.start_time || data.startTime,
+            startTime: data.start_time || data.startTime || new Date().toISOString(),
             startBalance: parseFloat(data.initial_amount || data.initialAmount || 0),
             expectedBalance: parseFloat(data.expected_amount || data.expectedAmount || data.initial_amount || data.initialAmount || 0),
             cashSales: parseFloat(data.cash_sales || data.cashSales || 0),
@@ -167,7 +221,7 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
           console.log('✅ Active session restored:', session.id);
           setAllSessions([session]);
-          localStorage.setItem('cashSession', JSON.stringify(session));
+          safeSetLocalStorage('cashSession', JSON.stringify(session), true); // Critical data
           lastCheckedStoreId.current = storeId || null;
 
         } else if (response.status === 204 || response.status === 404) {
@@ -176,14 +230,55 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
           localStorage.removeItem('cashSession');
           lastCheckedStoreId.current = storeId || null;
         } else {
+          // Handle other error status codes
           console.error(`❌ Session check failed with status: ${response.status}`);
+
+          // Try to parse error message if JSON
+          const contentType = response.headers.get('content-type');
+          if (contentType?.includes('application/json')) {
+            try {
+              const errorData = await response.json();
+              console.error('   Error details:', errorData);
+            } catch (e) {
+              console.warn('   Could not parse error response');
+            }
+          }
+
           // Clear session on error to allow fresh start
           setAllSessions([]);
           localStorage.removeItem('cashSession');
+          lastCheckedStoreId.current = storeId || null;
         }
 
-      } catch (error) {
-        console.error('❌ Network/Server error checking session:', error);
+      } catch (error: any) {
+        // Handle different error types
+        if (error.name === 'AbortError') {
+          console.error('❌ Session recovery timeout (10s exceeded)');
+          console.warn('   Backend may be slow or unreachable');
+        } else if (error instanceof TypeError && error.message.includes('fetch')) {
+          console.error('❌ Network error: Cannot reach backend');
+          console.warn('   Check if server is running and accessible');
+        } else if (error instanceof SyntaxError) {
+          console.error('❌ JSON parse error: Backend returned invalid data');
+          console.warn('   Backend may have returned HTML instead of JSON');
+        } else {
+          console.error('❌ Unexpected error checking session:', error);
+        }
+
+        // Try to fallback to localStorage if available
+        try {
+          const cachedSession = localStorage.getItem('cashSession');
+          if (cachedSession) {
+            const parsed = JSON.parse(cachedSession);
+            console.log('📦 Loaded session from localStorage fallback:', parsed.id);
+            setAllSessions([parsed]);
+            lastCheckedStoreId.current = storeId || null;
+            return;
+          }
+        } catch (cacheError) {
+          console.warn('⚠️ Could not load cached session:', cacheError);
+        }
+
         // Clear session on error to allow fresh start
         setAllSessions([]);
         localStorage.removeItem('cashSession');
@@ -251,7 +346,7 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
       // Cache data for offline fallback (only essential data to avoid quota issues)
       try {
-        // Only cache essential product fields (exclude images and large data)
+        // OPTIMIZATION: Only cache essential product fields (exclude images and large data)
         const essentialProducts = mappedProducts.map((p: any) => ({
           id: p.id,
           name: p.name,
@@ -261,24 +356,67 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
           salePrice: p.salePrice,
           stock: p.stock,
           isActive: p.isActive
+          // Removed: image, ownerId, timestamps to save space
         }));
 
+        // Only cache last 30 sales (reduced from 50)
+        const recentSales = fetchedSales.slice(-30);
+
+        // Calculate approximate size before storing
+        const productsSize = JSON.stringify(essentialProducts).length;
+        const salesSize = JSON.stringify(recentSales).length;
+        const totalSize = productsSize + salesSize;
+
+        console.log(`💾 Caching data: ${(totalSize / 1024).toFixed(2)} KB`);
+
+        // Warn if approaching 1MB (localStorage limit is typically 5-10MB)
+        if (totalSize > 1000000) {
+          console.warn('⚠️ Cache size exceeds 1MB, consider reducing data');
+        }
+
         localStorage.setItem('cachedProducts', JSON.stringify(essentialProducts));
-        localStorage.setItem('cachedSales', JSON.stringify(fetchedSales.slice(-50))); // Only last 50 sales
-        console.log('💾 Data cached successfully for offline use');
+        localStorage.setItem('cachedSales', JSON.stringify(recentSales));
+        console.log('✅ Data cached successfully for offline use');
+
       } catch (cacheError: any) {
-        // If still quota exceeded, clear old cache and try again
-        if (cacheError.name === 'QuotaExceededError') {
-          console.warn('⚠️ Storage quota exceeded, clearing old cache...');
+        // Handle QuotaExceededError specifically
+        if (cacheError.name === 'QuotaExceededError' || cacheError.code === 22) {
+          console.error('❌ Storage quota exceeded!');
+          console.warn('   Clearing old cache and retrying with minimal data...');
+
           try {
-            localStorage.removeItem('cachedProducts');
-            localStorage.removeItem('cachedSales');
-            console.log('✅ Old cache cleared');
-          } catch (e) {
-            console.error('❌ Failed to clear cache:', e);
+            // Clear ALL non-essential localStorage items
+            const keysToRemove = ['cachedProducts', 'cachedSales', 'pendingSales'];
+            keysToRemove.forEach(key => {
+              try {
+                localStorage.removeItem(key);
+                console.log(`   Removed: ${key}`);
+              } catch (e) {
+                console.warn(`   Failed to remove ${key}`);
+              }
+            });
+
+            // Retry with MINIMAL data (only top 10 products and 5 sales)
+            const minimalProducts = mappedProducts.slice(0, 10).map((p: any) => ({
+              id: p.id,
+              name: p.name,
+              sku: p.sku,
+              salePrice: p.salePrice,
+              stock: p.stock
+            }));
+
+            const minimalSales = fetchedSales.slice(-5);
+
+            localStorage.setItem('cachedProducts', JSON.stringify(minimalProducts));
+            localStorage.setItem('cachedSales', JSON.stringify(minimalSales));
+            console.log('✅ Minimal cache saved successfully');
+
+          } catch (retryError) {
+            console.error('❌ Failed to save even minimal cache:', retryError);
+            console.warn('   App will work online-only until cache is cleared manually');
           }
         } else {
-          console.warn('⚠️ Failed to cache data:', cacheError);
+          console.warn('⚠️ Failed to cache data (non-quota error):', cacheError);
         }
       }
 
@@ -376,13 +514,10 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
           stock: p.stock,
           isActive: p.isActive
         }));
-        localStorage.setItem('cachedProducts', JSON.stringify(essentialProducts));
+        safeSetLocalStorage('cachedProducts', JSON.stringify(essentialProducts), false); // Non-critical cache
         console.log('✅ Background sync: Products updated and cached');
       } catch (cacheError: any) {
-        if (cacheError.name === 'QuotaExceededError') {
-          localStorage.removeItem('cachedProducts');
-        }
-        console.warn('⚠️ Background sync: Failed to cache data:', cacheError);
+        console.warn('⚠️ Background sync: Failed to process data:', cacheError);
       }
 
     } catch (error) {
@@ -477,6 +612,10 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       console.log('   Store ID:', currentUser.storeId);
       console.log('   Initial amount:', startBalance);
 
+      // Add timeout protection (15 seconds for POST operations)
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
+
       const response = await fetch(`${API_URL}/api/shifts/start`, {
         method: 'POST',
         headers: getHeaders(),
@@ -484,45 +623,93 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
           storeId: currentUser.storeId,
           initialAmount: startBalance,
           openedBy: currentUser.username
-        })
+        }),
+        signal: controller.signal
       });
 
+      clearTimeout(timeoutId);
+
       if (!response.ok) {
-        const errorData = await response.json();
+        // Check if response is JSON before parsing
+        const contentType = response.headers.get('content-type');
+        let errorData: any = {};
+
+        if (contentType?.includes('application/json')) {
+          try {
+            errorData = await response.json();
+          } catch (e) {
+            console.error('❌ Failed to parse error response as JSON');
+            throw new Error(`Error del servidor (HTTP ${response.status})`);
+          }
+        } else {
+          console.error('❌ Server returned non-JSON error response');
+          throw new Error(`Error del servidor: Respuesta inválida (HTTP ${response.status})`);
+        }
+
         console.error('❌ Server error:', errorData);
 
-        // Special handling for "shift already exists" error
-        if (errorData.error && errorData.error.includes('Ya existe un turno')) {
-          // Try to recover the existing shift
-          const existingShiftResponse = await fetch(`${API_URL}/api/shifts/current?storeId=${currentUser.storeId}`, {
-            headers: getHeaders()
-          });
+        // Special handling for "shift already exists" error (409 Conflict or specific message)
+        if (response.status === 409 || (errorData.error && errorData.error.includes('Ya existe un turno'))) {
+          console.log('⚠️ Shift already exists, attempting to recover...');
 
-          if (existingShiftResponse.ok) {
-            const existingShift = await existingShiftResponse.json();
-            const session: CashSession = {
-              id: existingShift.id,
-              startTime: existingShift.start_time || existingShift.startTime,
-              startBalance: parseFloat(existingShift.initial_amount || existingShift.initialAmount || 0),
-              expectedBalance: parseFloat(existingShift.expected_amount || existingShift.expectedAmount || 0),
-              cashSales: parseFloat(existingShift.cash_sales || existingShift.cashSales || 0),
-              refunds: 0,
-              status: 'OPEN',
-              ownerId: currentUser.id
-            };
+          try {
+            // Try to recover the existing shift
+            const existingShiftResponse = await fetch(`${API_URL}/api/shifts/current?storeId=${currentUser.storeId}`, {
+              headers: getHeaders()
+            });
 
-            setAllSessions([session]);
-            localStorage.setItem('cashSession', JSON.stringify(session));
-            console.log('✅ Recovered existing shift:', session.id);
-            return; // Exit successfully
+            if (existingShiftResponse.ok) {
+              const contentType = existingShiftResponse.headers.get('content-type');
+              if (!contentType?.includes('application/json')) {
+                throw new Error('Backend returned non-JSON response');
+              }
+
+              const existingShift = await existingShiftResponse.json();
+
+              if (!existingShift.id) {
+                throw new Error('Invalid shift data received');
+              }
+
+              const session: CashSession = {
+                id: existingShift.id,
+                startTime: existingShift.start_time || existingShift.startTime || new Date().toISOString(),
+                startBalance: parseFloat(existingShift.initial_amount || existingShift.initialAmount || 0),
+                expectedBalance: parseFloat(existingShift.expected_amount || existingShift.expectedAmount || 0),
+                cashSales: parseFloat(existingShift.cash_sales || existingShift.cashSales || 0),
+                refunds: 0,
+                status: 'OPEN',
+                ownerId: currentUser.id
+              };
+
+              setAllSessions([session]);
+              safeSetLocalStorage('cashSession', JSON.stringify(session), true); // Critical data
+              console.log('✅ Recovered existing shift:', session.id);
+              console.log('   You can continue working with the existing shift');
+              return; // Exit successfully
+            }
+          } catch (recoveryError: any) {
+            console.error('❌ Failed to recover existing shift:', recoveryError);
+            throw new Error('Ya existe un turno abierto pero no se pudo recuperar. Contacta al administrador.');
           }
         }
 
-        throw new Error(errorData.error || 'Error al abrir turno de caja');
+        // Throw user-friendly error message
+        throw new Error(errorData.error || errorData.message || 'Error al abrir turno de caja');
+      }
+
+      // Parse successful response
+      const contentType = response.headers.get('content-type');
+      if (!contentType?.includes('application/json')) {
+        throw new Error('Backend returned non-JSON response');
       }
 
       const backendShift = await response.json();
       console.log('📦 Backend shift response:', backendShift);
+
+      // Validate response data
+      if (!backendShift.id) {
+        throw new Error('Invalid shift data: missing ID');
+      }
 
       // CRITICAL FIX: Map PostgreSQL column names correctly
       // Backend returns: start_time, initial_amount (snake_case)
@@ -543,14 +730,24 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       // Update local state
       setAllSessions(prev => [...prev, newSession]);
 
-      // Save to localStorage for offline fallback
-      localStorage.setItem('cashSession', JSON.stringify(newSession));
+      // Save to localStorage for offline fallback (with quota protection)
+      safeSetLocalStorage('cashSession', JSON.stringify(newSession), true); // Critical data
 
       console.log('✅ Cash shift opened successfully:', newSession.id);
       console.log('   Session saved to state and localStorage');
+
     } catch (error: any) {
-      console.error('❌ Error opening cash shift:', error);
-      throw error;
+      // Handle different error types with user-friendly messages
+      if (error.name === 'AbortError') {
+        console.error('❌ Session opening timeout (15s exceeded)');
+        throw new Error('La operación tardó demasiado. Verifica tu conexión e intenta nuevamente.');
+      } else if (error instanceof TypeError && error.message.includes('fetch')) {
+        console.error('❌ Network error opening session:', error);
+        throw new Error('No se pudo conectar al servidor. Verifica tu conexión a internet.');
+      } else {
+        console.error('❌ Error opening cash shift:', error);
+        throw error; // Re-throw with original message
+      }
     } finally {
       // CRITICAL: Always release lock and hide loading, even on error
       isOpeningSession.current = false;
@@ -714,10 +911,10 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         );
         setAllSessions(updatedSessions);
 
-        // Sync updated session to localStorage
+        // Sync updated session to localStorage (with quota protection)
         const updatedSession = updatedSessions.find(s => s.id === currentSession.id);
         if (updatedSession) {
-          localStorage.setItem('cashSession', JSON.stringify(updatedSession));
+          safeSetLocalStorage('cashSession', JSON.stringify(updatedSession), true); // Critical data
         }
       }
 
