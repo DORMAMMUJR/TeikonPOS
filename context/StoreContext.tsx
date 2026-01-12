@@ -75,93 +75,102 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   }, []);
 
   // Session Recovery: Restore cash session from backend on mount
-  useEffect(() => {
-    if (!currentUser || !isOnline) return;
+  const checkActiveSession = useCallback(async () => {
+    if (!isOnline) {
+      setIsRecoveringSession(false);
+      return;
+    }
 
-    const recoverSession = async () => {
-      setIsRecoveringSession(true); // Start recovery
-      try {
-        // IMPROVED: SUPER_ADMIN doesn't need an active shift to use the system
-        // They can view everything in read-only/audit mode
-        if (currentUser.role === 'SUPER_ADMIN') {
-          console.log('👑 SUPER_ADMIN detected - Skipping shift requirement');
-          console.log('   Access granted in audit mode (no shift needed)');
-          localStorage.removeItem('cashSession');
-          setAllSessions([]);
-          setIsRecoveringSession(false); // Recovery complete
-          return;
+    // Recuperación Inteligente del Store ID
+    // 1. Intentar desde currentUser (si ya cargó)
+    let storeId = currentUser?.storeId;
+
+    // 2. Fallback: Intentar desde localStorage (para casos de F5/Reload)
+    if (!storeId) {
+      const stored = localStorage.getItem('selectedStore');
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          // Manejar si se guardó como objeto JSON completo o solo el ID string
+          storeId = typeof parsed === 'object' ? (parsed.id || parsed.storeId) : parsed;
+        } catch {
+          storeId = stored;
         }
+      }
+    }
 
-        // CRITICAL FIX: Always send storeId to backend
-        const storeId = currentUser.storeId;
-        if (!storeId) {
-          console.error('❌ No storeId available for session recovery');
-          setIsRecoveringSession(false); // Recovery complete (failed)
-          return;
-        }
+    // Si aún no hay storeId y no es SUPER_ADMIN, no podemos verificar sesión
+    if (!storeId && currentUser?.role !== 'SUPER_ADMIN') {
+      console.warn('⚠️ No storeId available for session recovery. Waiting for user/store selection.');
+      setIsRecoveringSession(false);
+      return;
+    }
 
-        console.log(`🔄 Attempting to recover active shift for store: ${storeId}`);
+    // START RECOVERY
+    setIsRecoveringSession(true);
 
-        const response = await fetch(`${API_URL}/api/shifts/current?storeId=${storeId}`, {
-          headers: getHeaders()
-        });
+    try {
+      // SUPER_ADMIN bypass: No requiere turno abierto
+      if (currentUser?.role === 'SUPER_ADMIN') {
+        console.log('👑 SUPER_ADMIN detected - Skipping active shift requirement');
+        setIsRecoveringSession(false);
+        return;
+      }
 
-        // 204 No Content means no active shift
-        if (response.status === 204) {
-          console.log('ℹ️ No active shift found on backend - User needs to open shift');
-          localStorage.removeItem('cashSession');
-          setAllSessions([]);
-          setIsRecoveringSession(false); // Recovery complete
-          return;
-        }
+      console.log(`🔄 Recovering active shift for store: ${storeId}`);
 
-        if (!response.ok) {
-          console.warn('⚠️ Failed to recover session from backend:', response.status);
-          localStorage.removeItem('cashSession');
-          setIsRecoveringSession(false); // Recovery complete (failed)
-          return;
-        }
+      // Petición al Backend
+      const response = await fetch(`${API_URL}/api/shifts/current?storeId=${storeId}`, {
+        headers: getHeaders()
+      });
 
-        const backendShift = await response.json();
-        console.log('📦 Backend shift data:', backendShift);
+      // Manejo de Respuesta
+      if (response.ok) {
+        // 200 OK - Turno encontrado
+        const data = await response.json();
+        console.log('📦 Session Found:', data);
 
-        // CRITICAL FIX: Map PostgreSQL column names correctly
-        // Backend returns: start_time, initial_amount, opened_by (snake_case)
-        // Frontend expects: startTime, initialAmount, openedBy (camelCase)
+        // Mapeo Inteligente (Snake Case -> Camel Case)
         const session: CashSession = {
-          id: backendShift.id,
-          startTime: backendShift.start_time || backendShift.startTime, // Support both formats
-          startBalance: parseFloat(backendShift.initial_amount || backendShift.initialAmount || 0),
-          expectedBalance: parseFloat(backendShift.expected_amount || backendShift.expectedAmount || backendShift.initial_amount || backendShift.initialAmount || 0),
-          cashSales: parseFloat(backendShift.cash_sales || backendShift.cashSales || 0),
+          id: data.id,
+          startTime: data.start_time || data.startTime,
+          startBalance: parseFloat(data.initial_amount || data.initialAmount || 0),
+          expectedBalance: parseFloat(data.expected_amount || data.expectedAmount || data.initial_amount || data.initialAmount || 0),
+          cashSales: parseFloat(data.cash_sales || data.cashSales || 0),
           refunds: 0,
-          status: backendShift.status as 'OPEN' | 'CLOSED',
-          ownerId: currentUser.id
+          status: 'OPEN', // Asumimos OPEN si viene de /current
+          ownerId: currentUser?.id || data.opened_by
         };
 
-        if (session.status === 'OPEN') {
-          console.log('✅ Recovered active shift from backend:', session.id);
-          console.log('   Start time:', session.startTime);
-          console.log('   Initial balance:', session.startBalance);
-          console.log('   🎉 SESSION RESTORED - User will go directly to dashboard');
-          setAllSessions([session]);
-          localStorage.setItem('cashSession', JSON.stringify(session));
-        } else {
-          console.log('ℹ️ Backend shift is not OPEN, clearing local state');
-          localStorage.removeItem('cashSession');
-          setAllSessions([]);
-        }
-      } catch (error) {
-        console.error('❌ Error recovering session from backend:', error);
-        localStorage.removeItem('cashSession');
-        setAllSessions([]);
-      } finally {
-        setIsRecoveringSession(false); // Always complete recovery
-      }
-    };
+        // UI Logic: Turno encontrado
+        console.log('✅ Active session restored:', session.id);
+        setAllSessions([session]); // setActiveSession(data) equivalent
+        localStorage.setItem('cashSession', JSON.stringify(session));
 
-    recoverSession();
+      } else if (response.status === 204 || response.status === 404) {
+        // 204/404 - No hay turno activo
+        console.log('ℹ️ No active session found (User must open shift)');
+        setAllSessions([]); // setActiveSession(null)
+        localStorage.removeItem('cashSession');
+        // Implicitamente setShowStartShiftModal(true) al no haber sesión
+      } else {
+        // 500 u otros errores
+        console.error(`❌ Session check failed with status: ${response.status}`);
+        // CRÍTICO: NO cerrar sesión (Fix "Sesión Expirada")
+        // Solamente loguear el error y permitir reintentar o manejar estado error
+      }
+
+    } catch (error) {
+      console.error('❌ Network/Server error checking session:', error);
+      // CRÍTICO: NO cerrar sesión ante error de red
+    } finally {
+      setIsRecoveringSession(false);
+    }
   }, [currentUser, isOnline]);
+
+  useEffect(() => {
+    checkActiveSession();
+  }, [checkActiveSession]);
 
   // Initial Data Fetch
   const syncData = useCallback(async () => {
