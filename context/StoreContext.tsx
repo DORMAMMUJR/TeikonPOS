@@ -180,7 +180,8 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     checkSession();
 
     // CRITICAL: Only depend on PRIMITIVE values, not objects
-  }, [currentUser?.id, currentUser?.storeId, currentUser?.role, isOnline, currentSession]);
+    // NOTE: currentSession removed from deps to prevent infinite loop (it derives from allSessions which we update)
+  }, [currentUser?.id, currentUser?.storeId, currentUser?.role, isOnline]);
 
   // Initial Data Fetch
   const syncData = useCallback(async () => {
