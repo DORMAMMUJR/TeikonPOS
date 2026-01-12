@@ -10,7 +10,7 @@ interface StoreGuardProps {
 }
 
 const StoreGuard = ({ children }: StoreGuardProps) => {
-    const { currentUser, currentSession, openSession } = useStore();
+    const { currentUser, currentSession, openSession, isRecoveringSession } = useStore();
     const [openingBalance, setOpeningBalance] = useState('');
 
     // IMPROVED: SUPER_ADMIN bypasses ALL checks (onboarding + session)
@@ -24,6 +24,19 @@ const StoreGuard = ({ children }: StoreGuardProps) => {
     const isStoreConfigured = currentUser?.storeName && currentUser.storeName.trim() !== '';
     if (!isStoreConfigured) {
         return <InitialConfig />;
+    }
+
+    // CRITICAL FIX: Wait for session recovery before showing modal
+    // This prevents the "amnesia" bug where the system forgets the open shift on reload
+    if (isRecoveringSession) {
+        return (
+            <div className="min-h-screen bg-brand-bg flex items-center justify-center">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-purple mx-auto mb-4"></div>
+                    <p className="text-sm text-brand-muted">Verificando sesión...</p>
+                </div>
+            </div>
+        );
     }
 
     // Check Session (only for ADMIN/USER)

@@ -14,6 +14,7 @@ interface StoreContextType {
   currentSession: CashSession | null;
   isOnline: boolean;
   isLoading: boolean;
+  isRecoveringSession: boolean; // NEW: Prevents showing modal before recovery completes
   error: string | null;
 
   login: (token: string) => void;
@@ -46,6 +47,7 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const [settings, setSettings] = useState<FinancialSettings>({ monthlyFixedCosts: 10000 });
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [isLoading, setIsLoading] = useState(false);
+  const [isRecoveringSession, setIsRecoveringSession] = useState(true); // Start as true to prevent premature modal
   const [error, setError] = useState<string | null>(null);
 
   const currentSession = allSessions.find(s => s.status === 'OPEN') || null;
@@ -77,6 +79,7 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     if (!currentUser || !isOnline) return;
 
     const recoverSession = async () => {
+      setIsRecoveringSession(true); // Start recovery
       try {
         // IMPROVED: SUPER_ADMIN doesn't need an active shift to use the system
         // They can view everything in read-only/audit mode
@@ -85,6 +88,7 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
           console.log('   Access granted in audit mode (no shift needed)');
           localStorage.removeItem('cashSession');
           setAllSessions([]);
+          setIsRecoveringSession(false); // Recovery complete
           return;
         }
 
@@ -92,6 +96,7 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         const storeId = currentUser.storeId;
         if (!storeId) {
           console.error('❌ No storeId available for session recovery');
+          setIsRecoveringSession(false); // Recovery complete (failed)
           return;
         }
 
@@ -103,15 +108,17 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
         // 204 No Content means no active shift
         if (response.status === 204) {
-          console.log('ℹ️ No active shift found on backend');
+          console.log('ℹ️ No active shift found on backend - User needs to open shift');
           localStorage.removeItem('cashSession');
           setAllSessions([]);
+          setIsRecoveringSession(false); // Recovery complete
           return;
         }
 
         if (!response.ok) {
           console.warn('⚠️ Failed to recover session from backend:', response.status);
           localStorage.removeItem('cashSession');
+          setIsRecoveringSession(false); // Recovery complete (failed)
           return;
         }
 
@@ -136,6 +143,7 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
           console.log('✅ Recovered active shift from backend:', session.id);
           console.log('   Start time:', session.startTime);
           console.log('   Initial balance:', session.startBalance);
+          console.log('   🎉 SESSION RESTORED - User will go directly to dashboard');
           setAllSessions([session]);
           localStorage.setItem('cashSession', JSON.stringify(session));
         } else {
@@ -147,6 +155,8 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         console.error('❌ Error recovering session from backend:', error);
         localStorage.removeItem('cashSession');
         setAllSessions([]);
+      } finally {
+        setIsRecoveringSession(false); // Always complete recovery
       }
     };
 
@@ -838,7 +848,7 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
   return (
     <StoreContext.Provider value={{
-      products, sales, allSessions, settings, currentUser, currentUserRole: currentUser?.role, currentSession, isOnline, isLoading, error,
+      products, sales, allSessions, settings, currentUser, currentUserRole: currentUser?.role, currentSession, isOnline, isLoading, isRecoveringSession, error,
       login, logout, updateCurrentUser, openSession, closeSession, addProduct, updateProduct, deleteProduct, processSaleAndContributeToGoal, cancelSale, updateSettings, getDashboardStats, calculateTotalInventoryValue, syncData, searchProductBySKU
     }}>
       {children}
