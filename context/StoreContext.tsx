@@ -78,6 +78,16 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
     const recoverSession = async () => {
       try {
+        // IMPROVED: SUPER_ADMIN doesn't need an active shift to use the system
+        // They can view everything in read-only/audit mode
+        if (currentUser.role === 'SUPER_ADMIN') {
+          console.log('👑 SUPER_ADMIN detected - Skipping shift requirement');
+          console.log('   Access granted in audit mode (no shift needed)');
+          localStorage.removeItem('cashSession');
+          setAllSessions([]);
+          return;
+        }
+
         console.log('🔄 Attempting to recover active shift from backend...');
 
         const response = await fetch(`${API_URL}/api/shifts/current?storeId=${currentUser.storeId}`, {
