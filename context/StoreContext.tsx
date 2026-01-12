@@ -141,6 +141,16 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         });
 
         if (response.ok) {
+          // Check if response is JSON
+          const contentType = response.headers.get('content-type');
+          if (!contentType || !contentType.includes('application/json')) {
+            console.warn('⚠️ Server returned non-JSON response, assuming no active shift');
+            setAllSessions([]);
+            localStorage.removeItem('cashSession');
+            lastCheckedStoreId.current = storeId || null;
+            return;
+          }
+
           const data = await response.json();
           console.log('📦 Session Found:', data);
 
@@ -167,10 +177,16 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
           lastCheckedStoreId.current = storeId || null;
         } else {
           console.error(`❌ Session check failed with status: ${response.status}`);
+          // Clear session on error to allow fresh start
+          setAllSessions([]);
+          localStorage.removeItem('cashSession');
         }
 
       } catch (error) {
         console.error('❌ Network/Server error checking session:', error);
+        // Clear session on error to allow fresh start
+        setAllSessions([]);
+        localStorage.removeItem('cashSession');
       } finally {
         setIsRecoveringSession(false);
         sessionCheckInProgress.current = false;
@@ -233,13 +249,37 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       setSales(fetchedSales);
       setIsLoading(false);
 
-      // Cache data for offline fallback
+      // Cache data for offline fallback (only essential data to avoid quota issues)
       try {
-        localStorage.setItem('cachedProducts', JSON.stringify(mappedProducts));
-        localStorage.setItem('cachedSales', JSON.stringify(fetchedSales));
+        // Only cache essential product fields (exclude images and large data)
+        const essentialProducts = mappedProducts.map((p: any) => ({
+          id: p.id,
+          name: p.name,
+          category: p.category,
+          sku: p.sku,
+          costPrice: p.costPrice,
+          salePrice: p.salePrice,
+          stock: p.stock,
+          isActive: p.isActive
+        }));
+
+        localStorage.setItem('cachedProducts', JSON.stringify(essentialProducts));
+        localStorage.setItem('cachedSales', JSON.stringify(fetchedSales.slice(-50))); // Only last 50 sales
         console.log('💾 Data cached successfully for offline use');
-      } catch (cacheError) {
-        console.warn('⚠️ Failed to cache data:', cacheError);
+      } catch (cacheError: any) {
+        // If still quota exceeded, clear old cache and try again
+        if (cacheError.name === 'QuotaExceededError') {
+          console.warn('⚠️ Storage quota exceeded, clearing old cache...');
+          try {
+            localStorage.removeItem('cachedProducts');
+            localStorage.removeItem('cachedSales');
+            console.log('✅ Old cache cleared');
+          } catch (e) {
+            console.error('❌ Failed to clear cache:', e);
+          }
+        } else {
+          console.warn('⚠️ Failed to cache data:', cacheError);
+        }
       }
 
       console.log('✅ Data synced successfully from SaaS server');
@@ -324,11 +364,24 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       // Update state without loading indicator
       setProducts(mappedProducts as Product[]);
 
-      // Update cache
+      // Update cache silently (only essential data to avoid quota issues)
       try {
-        localStorage.setItem('cachedProducts', JSON.stringify(mappedProducts));
+        const essentialProducts = mappedProducts.map((p: any) => ({
+          id: p.id,
+          name: p.name,
+          category: p.category,
+          sku: p.sku,
+          costPrice: p.costPrice,
+          salePrice: p.salePrice,
+          stock: p.stock,
+          isActive: p.isActive
+        }));
+        localStorage.setItem('cachedProducts', JSON.stringify(essentialProducts));
         console.log('✅ Background sync: Products updated and cached');
-      } catch (cacheError) {
+      } catch (cacheError: any) {
+        if (cacheError.name === 'QuotaExceededError') {
+          localStorage.removeItem('cachedProducts');
+        }
         console.warn('⚠️ Background sync: Failed to cache data:', cacheError);
       }
 
@@ -437,6 +490,34 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       if (!response.ok) {
         const errorData = await response.json();
         console.error('❌ Server error:', errorData);
+
+        // Special handling for "shift already exists" error
+        if (errorData.error && errorData.error.includes('Ya existe un turno')) {
+          // Try to recover the existing shift
+          const existingShiftResponse = await fetch(`${API_URL}/api/shifts/current?storeId=${currentUser.storeId}`, {
+            headers: getHeaders()
+          });
+
+          if (existingShiftResponse.ok) {
+            const existingShift = await existingShiftResponse.json();
+            const session: CashSession = {
+              id: existingShift.id,
+              startTime: existingShift.start_time || existingShift.startTime,
+              startBalance: parseFloat(existingShift.initial_amount || existingShift.initialAmount || 0),
+              expectedBalance: parseFloat(existingShift.expected_amount || existingShift.expectedAmount || 0),
+              cashSales: parseFloat(existingShift.cash_sales || existingShift.cashSales || 0),
+              refunds: 0,
+              status: 'OPEN',
+              ownerId: currentUser.id
+            };
+
+            setAllSessions([session]);
+            localStorage.setItem('cashSession', JSON.stringify(session));
+            console.log('✅ Recovered existing shift:', session.id);
+            return; // Exit successfully
+          }
+        }
+
         throw new Error(errorData.error || 'Error al abrir turno de caja');
       }
 
