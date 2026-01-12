@@ -372,6 +372,8 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
     try {
       console.log('🔵 Opening cash shift via API...');
+      console.log('   Store ID:', currentUser.storeId);
+      console.log('   Initial amount:', startBalance);
 
       const response = await fetch(`${API_URL}/api/shifts/start`, {
         method: 'POST',
@@ -385,22 +387,28 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
       if (!response.ok) {
         const errorData = await response.json();
+        console.error('❌ Server error:', errorData);
         throw new Error(errorData.error || 'Error al abrir turno de caja');
       }
 
       const backendShift = await response.json();
+      console.log('📦 Backend shift response:', backendShift);
 
-      // Map backend response to frontend CashSession format
+      // CRITICAL FIX: Map PostgreSQL column names correctly
+      // Backend returns: start_time, initial_amount (snake_case)
+      // Frontend expects: startTime, initialAmount (camelCase)
       const newSession: CashSession = {
         id: backendShift.id,
-        startTime: backendShift.startTime,
-        startBalance: parseFloat(backendShift.initialAmount),
-        expectedBalance: parseFloat(backendShift.initialAmount),
+        startTime: backendShift.start_time || backendShift.startTime || new Date().toISOString(),
+        startBalance: parseFloat(backendShift.initial_amount || backendShift.initialAmount || startBalance),
+        expectedBalance: parseFloat(backendShift.expected_amount || backendShift.expectedAmount || backendShift.initial_amount || backendShift.initialAmount || startBalance),
         cashSales: 0,
         refunds: 0,
         status: 'OPEN',
         ownerId: currentUser.id
       };
+
+      console.log('✅ Mapped session object:', newSession);
 
       // Update local state
       setAllSessions(prev => [...prev, newSession]);
@@ -409,6 +417,7 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       localStorage.setItem('cashSession', JSON.stringify(newSession));
 
       console.log('✅ Cash shift opened successfully:', newSession.id);
+      console.log('   Session saved to state and localStorage');
     } catch (error: any) {
       console.error('❌ Error opening cash shift:', error);
       throw error;
