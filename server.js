@@ -783,9 +783,16 @@ app.get('/api/productos', authenticateToken, async (req, res) => {
     try {
         const where = { activo: true };
 
-        // AISLAMIENTO MULTI-TENANT ESTRICTO
-        // Si no es SUPER_ADMIN, filtrar OBLIGATORIAMENTE por storeId
-        if (req.role !== 'SUPER_ADMIN') {
+        // IMPROVED: Aislamiento Multi-Tenant con soporte para Super Admin
+        const { storeId: queryStoreId } = req.query;
+
+        // Caso 1: SUPER_ADMIN con storeId en query → Filtrar por esa tienda específica
+        if (req.role === 'SUPER_ADMIN' && queryStoreId) {
+            console.log(`🔍 SUPER_ADMIN viewing products for store: ${queryStoreId}`);
+            where.storeId = queryStoreId;
+        }
+        // Caso 2: Usuario normal → SIEMPRE filtrar por su propia tienda (SEGURIDAD)
+        else if (req.role !== 'SUPER_ADMIN') {
             // Validación adicional: Verificar que el usuario tenga un storeId asignado
             if (!req.storeId) {
                 console.error('❌ Usuario sin storeId intentando acceder a inventario');
@@ -796,6 +803,10 @@ app.get('/api/productos', authenticateToken, async (req, res) => {
                 });
             }
             where.storeId = req.storeId;
+        }
+        // Caso 3: SUPER_ADMIN sin queryStoreId → Ver TODOS los productos (útil para vista global)
+        else {
+            console.log('🌐 SUPER_ADMIN viewing ALL products (no storeId filter)');
         }
 
         // Pagination parameters

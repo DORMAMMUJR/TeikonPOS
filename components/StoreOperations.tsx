@@ -7,9 +7,10 @@ import { getAuthToken, API_URL } from '../utils/api';
 
 export interface StoreOperationsProps {
     storeId: string;
+    mode?: 'cash' | 'settings'; // IMPROVED: Add mode prop
 }
 
-const StoreOperations: React.FC<StoreOperationsProps> = ({ storeId }) => {
+const StoreOperations: React.FC<StoreOperationsProps> = ({ storeId, mode = 'cash' }) => {
     const [goal, setGoal] = useState<string>('');
     const [summary, setSummary] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(false);
@@ -17,9 +18,13 @@ const StoreOperations: React.FC<StoreOperationsProps> = ({ storeId }) => {
 
     // Load Initial Data
     useEffect(() => {
-        loadConfig();
-        loadSummary();
-    }, [storeId]);
+        if (mode === 'settings') {
+            loadConfig();
+        }
+        if (mode === 'cash') {
+            loadSummary();
+        }
+    }, [storeId, mode]);
 
     const getHeaders = () => ({
         'Authorization': `Bearer ${getAuthToken()}`,
@@ -75,46 +80,54 @@ const StoreOperations: React.FC<StoreOperationsProps> = ({ storeId }) => {
         }
     };
 
-    return (
-        <div className="space-y-6 animate-fade-in-up">
-            {/* SECCIÓN 1: CONFIGURACIÓN DE META */}
-            <div className="card-premium p-6 md:p-8 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[2rem]">
-                <div className="flex items-start justify-between mb-6">
-                    <div className="flex gap-4">
-                        <div className="p-3 rounded-2xl bg-indigo-500/10 text-indigo-500">
-                            <Target size={24} />
-                        </div>
-                        <div>
-                            <h3 className="text-lg font-black uppercase tracking-tight text-slate-900 dark:text-white">Configuración de Meta</h3>
-                            <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Define el punto de equilibrio mensual para esta tienda.</p>
+    // IMPROVED: Render only the section based on mode
+    if (mode === 'settings') {
+        return (
+            <div className="space-y-6 animate-fade-in-up">
+                {/* SECCIÓN: CONFIGURACIÓN DE META */}
+                <div className="card-premium p-6 md:p-8 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[2rem]">
+                    <div className="flex items-start justify-between mb-6">
+                        <div className="flex gap-4">
+                            <div className="p-3 rounded-2xl bg-indigo-500/10 text-indigo-500">
+                                <Target size={24} />
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-black uppercase tracking-tight text-slate-900 dark:text-white">Configuración de Meta</h3>
+                                <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Define el punto de equilibrio mensual para esta tienda.</p>
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <div className="flex gap-4 items-end max-w-md">
-                    <div className="w-full">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1 mb-1 block">Meta Mensual ($)</label>
-                        <input
-                            type="number"
-                            value={goal}
-                            onChange={e => setGoal(e.target.value)}
-                            className="w-full text-xl font-bold p-4 bg-slate-50 dark:bg-black/20 border-2 border-slate-100 dark:border-slate-700 rounded-2xl focus:border-indigo-500 outline-none transition-colors"
-                            placeholder="0.00"
-                        />
+                    <div className="flex gap-4 items-end max-w-md">
+                        <div className="w-full">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1 mb-1 block">Meta Mensual ($)</label>
+                            <input
+                                type="number"
+                                value={goal}
+                                onChange={e => setGoal(e.target.value)}
+                                className="w-full text-xl font-bold p-4 bg-slate-50 dark:bg-black/20 border-2 border-slate-100 dark:border-slate-700 rounded-2xl focus:border-indigo-500 outline-none transition-colors"
+                                placeholder="0.00"
+                            />
+                        </div>
+                        <Button
+                            variant="primary"
+                            onClick={savedGoal}
+                            disabled={isSaving}
+                            icon={Save}
+                            className="h-[60px] px-6"
+                        >
+                            {isSaving ? '...' : 'GUARDAR'}
+                        </Button>
                     </div>
-                    <Button
-                        variant="primary"
-                        onClick={savedGoal}
-                        disabled={isSaving}
-                        icon={Save}
-                        className="h-[60px] px-6"
-                    >
-                        {isSaving ? '...' : 'GUARDAR'}
-                    </Button>
                 </div>
             </div>
+        );
+    }
 
-            {/* SECCIÓN 2: CORTE DE CAJA (CASH CLOSE) */}
+    // mode === 'cash'
+    return (
+        <div className="space-y-6 animate-fade-in-up">
+            {/* SECCIÓN: CORTE DE CAJA (CASH CLOSE) */}
             <div className="card-premium p-6 md:p-8 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[2rem] relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl pointer-events-none" />
 

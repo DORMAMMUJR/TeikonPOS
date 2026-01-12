@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Store, TrendingUp, ShieldCheck, Search, Plus, User,
   ChevronLeft, AlertCircle, CheckCircle, Zap, X, Lock, Eye, EyeOff, Building,
-  LayoutDashboard, Package, LogOut, Ticket, DollarSign, Trash2, RefreshCw, Edit2
+  LayoutDashboard, Package, LogOut, Ticket, DollarSign, Trash2, RefreshCw, Edit2, Settings
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../context/StoreContext';
@@ -33,7 +33,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
   // States
   const [activeView, setActiveView] = useState<'stores' | 'tickets'>('stores');
   const [selectedStore, setSelectedStore] = useState<StoreData | null>(null);
-  const [detailTab, setDetailTab] = useState<'dashboard' | 'products' | 'sales' | 'operations'>('dashboard');
+  const [detailTab, setDetailTab] = useState<'dashboard' | 'products' | 'sales' | 'finanzas' | 'configuracion'>('dashboard');
 
   // Stores Data
   const [stores, setStores] = useState<StoreData[]>([]);
@@ -162,7 +162,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
               { id: 'dashboard', icon: LayoutDashboard, label: 'DASHBOARD' },
               { id: 'products', icon: Package, label: 'PRODUCTOS' },
               { id: 'sales', icon: TrendingUp, label: 'VENTAS' },
-              { id: 'operations', icon: Zap, label: 'OPERACIONES' }
+              { id: 'finanzas', icon: DollarSign, label: 'FINANZAS' },
+              { id: 'configuracion', icon: Settings, label: 'CONFIGURACIÓN' }
             ].map(tab => (
               <button
                 key={tab.id}
@@ -205,8 +206,18 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
             </div>
           )}
 
-          {detailTab === 'operations' && (
-            <StoreOperations storeId={selectedStore.id} />
+          {detailTab === 'finanzas' && (
+            <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 shadow-sm border border-slate-200 dark:border-slate-700 animate-fade-in-up">
+              <h3 className="text-sm font-black text-slate-500 uppercase tracking-widest mb-4">Operaciones de Caja</h3>
+              <StoreOperations storeId={selectedStore.id} mode="cash" />
+            </div>
+          )}
+
+          {detailTab === 'configuracion' && (
+            <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 shadow-sm border border-slate-200 dark:border-slate-700 animate-fade-in-up">
+              <h3 className="text-sm font-black text-slate-500 uppercase tracking-widest mb-4">Configuración de Tienda</h3>
+              <StoreOperations storeId={selectedStore.id} mode="settings" />
+            </div>
           )}
         </div>
       </div>

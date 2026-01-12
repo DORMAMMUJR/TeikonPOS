@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useStore } from '../context/StoreContext';
 import { Product } from "@/Product";
 import {
@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 // Asegúrate de que esta ruta sea correcta según tu proyecto
 import { Button, Modal } from '../src/components/ui';
+import { productsAPI } from '../utils/api';
 
 interface ProductListProps {
   targetStoreId?: string;
@@ -16,8 +17,46 @@ interface ProductListProps {
 const ProductList: React.FC<ProductListProps> = ({ products: propProducts, targetStoreId }) => {
   const { products: contextProducts, addProduct, updateProduct, deleteProduct, calculateTotalInventoryValue, currentUser } = useStore();
 
-  // 2. Lógica de selección de productos (Props o Contexto)
-  const products = propProducts || contextProducts || [];
+  // IMPROVED: Local state for store-specific products
+  const [storeProducts, setStoreProducts] = useState<Product[]>([]);
+  const [isLoadingStore, setIsLoadingStore] = useState(false);
+
+  // IMPROVED: Fetch products for specific store when targetStoreId is provided
+  useEffect(() => {
+    if (targetStoreId) {
+      const fetchStoreProducts = async () => {
+        setIsLoadingStore(true);
+        try {
+          console.log(`📦 Fetching products for store: ${targetStoreId}`);
+          const fetchedProducts = await productsAPI.getAll({ storeId: targetStoreId });
+
+          // Map backend fields to frontend format
+          const mappedProducts = fetchedProducts.map((p: any) => ({
+            ...p,
+            name: p.nombre || p.name || 'Sin Nombre',
+            category: p.categoria || p.category || 'General',
+            image: p.imagen || p.image,
+            costPrice: Number(p.costPrice || 0),
+            salePrice: Number(p.salePrice || 0),
+            isActive: p.activo !== undefined ? p.activo : (p.isActive !== undefined ? p.isActive : true)
+          }));
+
+          setStoreProducts(mappedProducts);
+          console.log(`✅ Loaded ${mappedProducts.length} products for store`);
+        } catch (error) {
+          console.error('Error fetching store products:', error);
+          setStoreProducts([]);
+        } finally {
+          setIsLoadingStore(false);
+        }
+      };
+
+      fetchStoreProducts();
+    }
+  }, [targetStoreId]);
+
+  // 2. Lógica de selección de productos (Props o Contexto o Store-specific)
+  const products = propProducts || (targetStoreId ? storeProducts : contextProducts) || [];
 
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);

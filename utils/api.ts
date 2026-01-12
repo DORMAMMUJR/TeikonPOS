@@ -225,7 +225,7 @@ export const authAPI = {
 // ==========================================
 
 export const productsAPI = {
-    getAll: async () => {
+    getAll: async (options?: { storeId?: string }) => {
         const LIMIT = 50;
         let allProducts: any[] = [];
         let page = 1;
@@ -233,8 +233,19 @@ export const productsAPI = {
 
         // Fetch first page to get total pages value
         try {
+            // Build URL with optional storeId filter
+            let baseUrl = `${API_URL}/api/productos`;
+            const queryParams = [`page=${page}`, `limit=${LIMIT}`];
+
+            // IMPROVED: Add storeId filter if provided (for Super Admin viewing specific store)
+            if (options?.storeId) {
+                queryParams.push(`storeId=${options.storeId}`);
+            }
+
+            const url = `${baseUrl}?${queryParams.join('&')}`;
+
             // Initial Request
-            const response1 = await safeFetch(`${API_URL}/api/productos?page=${page}&limit=${LIMIT}`, {
+            const response1 = await safeFetch(url, {
                 headers: getHeaders()
             });
             const data1 = await response1.json();
@@ -247,7 +258,8 @@ export const productsAPI = {
 
                 // If more pages exist, fetch them sequentially (to be kind to server) or parallel
                 while (page <= totalPages) {
-                    const res = await safeFetch(`${API_URL}/api/productos?page=${page}&limit=${LIMIT}`, {
+                    const pageUrl = `${baseUrl}?${queryParams.map(p => p.startsWith('page=') ? `page=${page}` : p).join('&')}`;
+                    const res = await safeFetch(pageUrl, {
                         headers: getHeaders()
                     });
                     const pageData = await res.json();
