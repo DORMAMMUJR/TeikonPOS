@@ -846,6 +846,71 @@ app.get('/api/productos', authenticateToken, async (req, res) => {
     }
 });
 
+// GET /api/products/search-sku/:sku - Búsqueda ultra-rápida por SKU para escáner de códigos de barras
+// Optimizado con índice de base de datos para búsquedas O(log n)
+app.get('/api/products/search-sku/:sku', authenticateToken, async (req, res) => {
+    try {
+        const { sku } = req.params;
+
+        if (!sku || sku.trim() === '') {
+            return res.status(400).json({ error: 'SKU es requerido' });
+        }
+
+        // Normalizar SKU (uppercase, trim)
+        const normalizedSKU = sku.trim().toUpperCase();
+
+        // CRITICAL: Multi-tenant filtering - ALWAYS filter by storeId
+        const where = {
+            sku: normalizedSKU,
+            activo: true
+        };
+
+        // Si no es SUPER_ADMIN, filtrar por storeId (seguridad multi-tenant)
+        if (req.role !== 'SUPER_ADMIN') {
+            where.storeId = req.storeId;
+        }
+
+        console.log(`🔍 Searching product with SKU: ${normalizedSKU} for store: ${req.storeId || 'ALL'}`);
+
+        // Búsqueda optimizada con índice (storeId, sku)
+        // Tiempo esperado: < 10ms en tablas con 10,000+ productos
+        const product = await Product.findOne({
+            where,
+            attributes: ['id', 'sku', 'nombre', 'categoria', 'costPrice', 'salePrice', 'stock', 'minStock', 'imagen', 'storeId']
+        });
+
+        if (!product) {
+            console.log(`❌ Product not found: ${normalizedSKU}`);
+            return res.status(404).json({
+                error: 'Producto no encontrado',
+                sku: normalizedSKU
+            });
+        }
+
+        console.log(`✅ Product found: ${product.nombre} (Stock: ${product.stock})`);
+
+        // Map backend fields to frontend format
+        const mappedProduct = {
+            id: product.id,
+            sku: product.sku,
+            name: product.nombre,
+            category: product.categoria,
+            costPrice: parseFloat(product.costPrice),
+            salePrice: parseFloat(product.salePrice),
+            stock: product.stock,
+            minStock: product.minStock,
+            image: product.imagen,
+            storeId: product.storeId,
+            isActive: true
+        };
+
+        res.json(mappedProduct);
+    } catch (error) {
+        console.error('Error en búsqueda por SKU:', error);
+        res.status(500).json({ error: 'Error interno al buscar producto' });
+    }
+});
+
 // POST /api/productos - Crear producto
 app.post('/api/productos', authenticateToken, async (req, res) => {
     try {

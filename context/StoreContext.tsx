@@ -30,6 +30,7 @@ interface StoreContextType {
   getDashboardStats: (period: 'day' | 'month', storeId?: string) => Promise<any>;
   calculateTotalInventoryValue: () => number;
   syncData: () => Promise<void>;
+  searchProductBySKU: (sku: string) => Promise<Product | null>;
 }
 
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
@@ -672,10 +673,75 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     };
   };
 
+  /**
+   * Search product by SKU - Optimized for barcode scanner
+   * Uses dedicated endpoint with database index for ultra-fast lookup
+   */
+  const searchProductBySKU = async (sku: string): Promise<Product | null> => {
+    if (!sku || sku.trim() === '') {
+      console.warn('searchProductBySKU: Empty SKU provided');
+      return null;
+    }
+
+    const normalizedSKU = sku.trim().toUpperCase();
+
+    try {
+      // Try online search first
+      if (isOnline) {
+        console.log(`🔍 Searching product by SKU: ${normalizedSKU}`);
+
+        const response = await fetch(`${API_URL}/api/products/search-sku/${encodeURIComponent(normalizedSKU)}`, {
+          headers: getHeaders()
+        });
+
+        if (response.status === 404) {
+          console.log(`❌ Product not found: ${normalizedSKU}`);
+          return null;
+        }
+
+        if (!response.ok) {
+          throw new Error('Error al buscar producto');
+        }
+
+        const product = await response.json();
+        console.log(`✅ Product found: ${product.name}`);
+        return product as Product;
+      } else {
+        // Offline fallback: search in cached products
+        console.log(`🔍 Offline search for SKU: ${normalizedSKU}`);
+        const product = products.find(p =>
+          p.sku?.trim().toUpperCase() === normalizedSKU && p.isActive !== false
+        );
+
+        if (product) {
+          console.log(`✅ Product found in cache: ${product.name}`);
+          return product;
+        } else {
+          console.log(`❌ Product not found in cache: ${normalizedSKU}`);
+          return null;
+        }
+      }
+    } catch (error) {
+      console.error('Error searching product by SKU:', error);
+
+      // Fallback to local search on error
+      const product = products.find(p =>
+        p.sku?.trim().toUpperCase() === normalizedSKU && p.isActive !== false
+      );
+
+      if (product) {
+        console.log(`✅ Product found in local fallback: ${product.name}`);
+        return product;
+      }
+
+      return null;
+    }
+  };
+
   return (
     <StoreContext.Provider value={{
       products, sales, allSessions, settings, currentUser, currentUserRole: currentUser?.role, currentSession, isOnline, isLoading, error,
-      login, logout, updateCurrentUser, openSession, closeSession, addProduct, updateProduct, deleteProduct, processSaleAndContributeToGoal, cancelSale, updateSettings, getDashboardStats, calculateTotalInventoryValue, syncData
+      login, logout, updateCurrentUser, openSession, closeSession, addProduct, updateProduct, deleteProduct, processSaleAndContributeToGoal, cancelSale, updateSettings, getDashboardStats, calculateTotalInventoryValue, syncData, searchProductBySKU
     }}>
       {children}
     </StoreContext.Provider>
