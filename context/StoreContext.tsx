@@ -88,9 +88,16 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
           return;
         }
 
-        console.log('🔄 Attempting to recover active shift from backend...');
+        // CRITICAL FIX: Always send storeId to backend
+        const storeId = currentUser.storeId;
+        if (!storeId) {
+          console.error('❌ No storeId available for session recovery');
+          return;
+        }
 
-        const response = await fetch(`${API_URL}/api/shifts/current?storeId=${currentUser.storeId}`, {
+        console.log(`🔄 Attempting to recover active shift for store: ${storeId}`);
+
+        const response = await fetch(`${API_URL}/api/shifts/current?storeId=${storeId}`, {
           headers: getHeaders()
         });
 
@@ -103,20 +110,23 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         }
 
         if (!response.ok) {
-          console.warn('⚠️ Failed to recover session from backend');
+          console.warn('⚠️ Failed to recover session from backend:', response.status);
           localStorage.removeItem('cashSession');
           return;
         }
 
         const backendShift = await response.json();
+        console.log('📦 Backend shift data:', backendShift);
 
-        // Map backend shift to frontend CashSession format
+        // CRITICAL FIX: Map PostgreSQL column names correctly
+        // Backend returns: start_time, initial_amount, opened_by (snake_case)
+        // Frontend expects: startTime, initialAmount, openedBy (camelCase)
         const session: CashSession = {
           id: backendShift.id,
-          startTime: backendShift.startTime,
-          startBalance: parseFloat(backendShift.initialAmount),
-          expectedBalance: parseFloat(backendShift.initialAmount),
-          cashSales: parseFloat(backendShift.cashSales || 0),
+          startTime: backendShift.start_time || backendShift.startTime, // Support both formats
+          startBalance: parseFloat(backendShift.initial_amount || backendShift.initialAmount || 0),
+          expectedBalance: parseFloat(backendShift.expected_amount || backendShift.expectedAmount || backendShift.initial_amount || backendShift.initialAmount || 0),
+          cashSales: parseFloat(backendShift.cash_sales || backendShift.cashSales || 0),
           refunds: 0,
           status: backendShift.status as 'OPEN' | 'CLOSED',
           ownerId: currentUser.id
@@ -124,6 +134,8 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
         if (session.status === 'OPEN') {
           console.log('✅ Recovered active shift from backend:', session.id);
+          console.log('   Start time:', session.startTime);
+          console.log('   Initial balance:', session.startBalance);
           setAllSessions([session]);
           localStorage.setItem('cashSession', JSON.stringify(session));
         } else {
