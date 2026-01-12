@@ -2798,6 +2798,99 @@ const startServer = async () => {
         //
         // Add new endpoints here using pool.query if needed.
 
+        // ==========================================
+        // 🏦 GESTIÓN DE CAJA (VERSIÓN ESTABLE v2.9.3)
+        // ==========================================
+
+        // 1. OBTENER TURNO ACTUAL
+        app.get('/api/shifts/current', authenticateToken, async (req, res) => {
+            try {
+                const { storeId } = req.query;
+                // Seguridad: Si es Super Admin y pide una tienda específica, usa esa. Si no, fuerza la del usuario.
+                const targetStoreId = req.role === 'SUPER_ADMIN' && storeId ? storeId : req.storeId;
+
+                // Usamos 'start_time' y 'status' (Columnas correctas de la DB)
+                const result = await pool.query(
+                    "SELECT * FROM shifts WHERE store_id = $1 AND status = 'OPEN' LIMIT 1",
+                    [targetStoreId]
+                );
+
+                if (result.rows.length === 0) {
+                    return res.status(204).send(); // 204 No Content = No hay caja abierta (Correcto)
+                }
+
+                res.json(result.rows[0]);
+            } catch (err) {
+                console.error('Error crítico al consultar turno de caja:', err);
+                res.status(500).json({ error: 'Error interno del servidor al verificar caja' });
+            }
+        });
+
+        // 2. APERTURA DE CAJA
+        app.post('/api/shifts/start', authenticateToken, async (req, res) => {
+            const { initialAmount } = req.body;
+            const storeId = req.storeId;
+            const userId = req.user.id;
+
+            try {
+                const checkOpen = await pool.query(
+                    "SELECT id FROM shifts WHERE store_id = $1 AND status = 'OPEN'",
+                    [storeId]
+                );
+
+                if (checkOpen.rows.length > 0) {
+                    return res.status(409).json({ error: 'Ya existe un turno abierto. Recarga la página.' });
+                }
+
+                const newShift = await pool.query(
+                    `INSERT INTO shifts (
+                        store_id, opened_by, initial_amount, expected_amount, status, start_time
+                    ) VALUES ($1, $2, $3, $3, 'OPEN', NOW()) RETURNING *`,
+                    [storeId, userId, initialAmount]
+                );
+
+                res.status(201).json(newShift.rows[0]);
+            } catch (err) {
+                console.error('Error al abrir turno:', err);
+                res.status(500).json({ error: 'No se pudo abrir la caja' });
+            }
+        });
+
+        // 3. CIERRE DE CAJA
+        app.post('/api/shifts/end', authenticateToken, async (req, res) => {
+            const { finalAmount, notes } = req.body;
+            const storeId = req.storeId;
+
+            try {
+                const currentShift = await pool.query(
+                    "SELECT * FROM shifts WHERE store_id = $1 AND status = 'OPEN'",
+                    [storeId]
+                );
+
+                if (currentShift.rows.length === 0) {
+                    return res.status(404).json({ error: 'No hay turno abierto para cerrar' });
+                }
+
+                const shift = currentShift.rows[0];
+                const difference = parseFloat(finalAmount) - parseFloat(shift.expected_amount);
+
+                const closedShift = await pool.query(
+                    `UPDATE shifts SET 
+                        final_amount = $1, 
+                        difference = $2, 
+                        status = 'CLOSED', 
+                        end_time = NOW(),
+                        notes = $3
+                    WHERE id = $4 RETURNING *`,
+                    [finalAmount, difference, notes, shift.id]
+                );
+
+                res.json(closedShift.rows[0]);
+            } catch (err) {
+                console.error('Error al cerrar turno:', err);
+                res.status(500).json({ error: 'Error al realizar el corte' });
+            }
+        });
 
 
         // ==========================================
