@@ -2847,20 +2847,28 @@ const startServer = async () => {
             }
         });
 
-        // 2. APERTURA DE CAJA
+        // 2. APERTURA DE CAJA (CORREGIDO v2.9.5)
         app.post('/api/shifts/start', authenticateToken, async (req, res) => {
-            const { initialAmount } = req.body;
-            const storeId = req.storeId;
-            const userId = req.user.id;
+            const { initialAmount, storeId: bodyStoreId } = req.body;
+
+            // 1. Obtener Store ID (Prioridad: Body si es Admin > Token)
+            const storeId = req.role === 'SUPER_ADMIN' && bodyStoreId ? bodyStoreId : req.storeId;
+
+            // 2. FIX CRÍTICO: Leer el ID del usuario correctamente desde el token
+            const userId = req.user.userId || req.user.id;
+
+            if (!storeId) return res.status(400).json({ error: 'Falta ID de tienda' });
+            if (!userId) return res.status(400).json({ error: 'Falta ID de usuario en token' });
 
             try {
+                // Verificar duplicados
                 const checkOpen = await pool.query(
                     "SELECT id FROM shifts WHERE store_id = $1 AND status = 'OPEN'",
                     [storeId]
                 );
 
                 if (checkOpen.rows.length > 0) {
-                    return res.status(409).json({ error: 'Ya existe un turno abierto. Recarga la página.' });
+                    return res.status(409).json({ error: 'Ya existe un turno abierto.' });
                 }
 
                 const newShift = await pool.query(
@@ -2872,8 +2880,8 @@ const startServer = async () => {
 
                 res.status(201).json(newShift.rows[0]);
             } catch (err) {
-                console.error('Error al abrir turno:', err);
-                res.status(500).json({ error: 'No se pudo abrir la caja' });
+                console.error('Error POST turno:', err);
+                res.status(500).json({ error: 'Error DB al abrir caja: ' + err.message });
             }
         });
 
