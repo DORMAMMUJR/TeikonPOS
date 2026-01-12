@@ -63,20 +63,14 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     };
   }, []);
 
-  // Refresh currentUser from token periodically to detect token changes/expiration
-  // OPTIMIZADO: Reducido de 1s a 30s para no saturar servidor SaaS en producción
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const user = getCurrentUserFromToken();
-      setCurrentUser(user);
-    }, 30000); // Check every 30 seconds (optimized for production)
-
-    return () => clearInterval(interval);
-  }, []);
+  // Token validation is handled by HTTP interceptors - no need for polling
 
   // PERFORMANCE FIX: Ref to prevent duplicate session checks
   const sessionCheckInProgress = useRef(false);
   const lastCheckedStoreId = useRef<string | null>(null);
+
+  // DEBOUNCE FIX: Prevent duplicate POST requests when opening session
+  const isOpeningSession = useRef(false);
 
   // Session Recovery: Restore cash session from backend on mount
   // OPTIMIZED: Uses primitive dependencies to prevent infinite loops
@@ -413,7 +407,15 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       throw new Error('Usuario no autenticado');
     }
 
+    // DEBOUNCE: Prevent duplicate POST requests
+    if (isOpeningSession.current) {
+      console.warn('⚠️ Session opening already in progress, ignoring duplicate request');
+      return;
+    }
+
     try {
+      isOpeningSession.current = true; // Lock to prevent duplicates
+
       console.log('🔵 Opening cash shift via API...');
       console.log('   Store ID:', currentUser.storeId);
       console.log('   Initial amount:', startBalance);
@@ -464,6 +466,9 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     } catch (error: any) {
       console.error('❌ Error opening cash shift:', error);
       throw error;
+    } finally {
+      // Release lock after operation completes (success or failure)
+      isOpeningSession.current = false;
     }
   };
 

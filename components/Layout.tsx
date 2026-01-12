@@ -44,8 +44,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => 
       }
     };
     fetchStats();
-    const interval = setInterval(fetchStats, 60000);
-    return () => clearInterval(interval);
+    // No polling needed - data updates via StoreContext background sync
   }, [getDashboardStats, sales, settings]); // Added sales and settings as dependencies
 
   // Calculate daily target from store config (break-even goal / 30)

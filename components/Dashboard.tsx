@@ -45,18 +45,10 @@ const Dashboard: React.FC<DashboardProps> = ({ storeId }) => {
     fetchStats(false); // Don't show full loading state, just refresh icon
   };
 
-  // Initial fetch + auto-refresh on sales changes + polling
+  // Initial fetch + auto-refresh on sales changes (no polling needed - handled by StoreContext)
   useEffect(() => {
     // Immediate fetch on mount
     fetchStats();
-
-    // Polling: Refresh every 60 seconds
-    const pollingInterval = setInterval(() => {
-      console.log('📊 Dashboard auto-refresh (polling)');
-      fetchStats(false); // Background refresh without loading state
-    }, 60000); // 60 seconds
-
-    return () => clearInterval(pollingInterval);
   }, [getDashboardStats, storeId, sales]); // Re-fetch when sales change
 
   const dailyFixedCost = stats?.dailyOperationalCost || 0;

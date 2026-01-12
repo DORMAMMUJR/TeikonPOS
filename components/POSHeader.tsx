@@ -26,8 +26,7 @@ const POSHeader: React.FC<POSHeaderProps> = ({
             }
         };
         fetchStats();
-        const interval = setInterval(fetchStats, 30000); // Refresh every 30s
-        return () => clearInterval(interval);
+        // No polling needed - data updates via StoreContext background sync
     }, [getDashboardStats]);
 
     // Get sales goal from localStorage or default to 10000
