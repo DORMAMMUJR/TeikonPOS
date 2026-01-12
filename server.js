@@ -2830,6 +2830,18 @@ const startServer = async () => {
                 // Seguridad: Si es Super Admin y pide una tienda específica, usa esa. Si no, fuerza la del usuario.
                 const targetStoreId = req.role === 'SUPER_ADMIN' && storeId ? storeId : req.storeId;
 
+                console.log(`🔍 CURRENT SHIFT CHECK:`, {
+                    role: req.role,
+                    tokenStoreId: req.storeId,
+                    queryStoreId: storeId,
+                    targetStoreId: targetStoreId
+                });
+
+                if (!targetStoreId) {
+                    console.error('❌ FAILED SHIFT CHECK: No Store ID');
+                    return res.status(400).json({ error: 'No se pudo identificar la tienda' });
+                }
+
                 // Usamos 'start_time' y 'status' (Columnas correctas de la DB)
                 const result = await pool.query(
                     "SELECT * FROM shifts WHERE store_id = $1 AND status = 'OPEN' LIMIT 1",
@@ -2853,6 +2865,19 @@ const startServer = async () => {
 
             // 1. Obtener Store ID (Prioridad: Body si es Admin > Token)
             const storeId = req.role === 'SUPER_ADMIN' && bodyStoreId ? bodyStoreId : req.storeId;
+
+            console.log(`🔵 START SHIFT REQUEST:`, {
+                role: req.role,
+                tokenStoreId: req.storeId,
+                bodyStoreId: bodyStoreId,
+                finalStoreId: storeId,
+                user: req.user ? { id: req.user.id, userId: req.user.userId } : 'No User'
+            });
+
+            if (!storeId) {
+                console.error('❌ FAILED START SHIFT: No Store ID');
+                return res.status(400).json({ error: 'Falta ID de tienda' });
+            }
 
             // 2. FIX CRÍTICO: Leer el ID del usuario correctamente desde el token
             const userId = req.user.userId || req.user.id;
