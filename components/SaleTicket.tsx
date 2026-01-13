@@ -24,6 +24,7 @@ interface SaleTicketProps {
   paymentMethod?: string;
   sellerId?: string;
   onClose?: () => void;
+  shouldAutoPrint?: boolean; // NEW: Trigger print when ready (for IMPRIMIR button)
 }
 
 export const SaleTicket: React.FC<SaleTicketProps> = ({
@@ -38,7 +39,8 @@ export const SaleTicket: React.FC<SaleTicketProps> = ({
   folio: propFolio,
   paymentMethod: propPaymentMethod,
   sellerId: propSellerId,
-  onClose
+  onClose,
+  shouldAutoPrint = false
 }) => {
   // State for fetched data
   const [fetchedSale, setFetchedSale] = useState<any>(null);
@@ -86,37 +88,46 @@ export const SaleTicket: React.FC<SaleTicketProps> = ({
   // Track if we've already printed to prevent duplicate prints
   const hasPrintedRef = useRef(false);
 
-  // Auto-print when data is ready (no timeout needed)
+  // Auto-print when data is ready - handles three modes
   useEffect(() => {
-    // Conditions for auto-print:
-    // 1. No onClose callback (POS mode, not preview mode)
-    // 2. Not loading
-    // 3. No error
-    // 4. Haven't printed yet
-    // 5. Have valid data (items and total exist)
-    const shouldAutoPrint =
-      !onClose &&
+    // Mode detection:
+    // 1. POS mode: !onClose && !shouldAutoPrint (direct from sale completion)
+    // 2. Print mode: onClose && shouldAutoPrint (IMPRIMIR button from history)
+    // 3. Preview mode: onClose && !shouldAutoPrint (DETALLES button from history)
+
+    const isPOSMode = !onClose && !shouldAutoPrint;
+    const isPrintMode = onClose && shouldAutoPrint;
+    const isPreviewMode = onClose && !shouldAutoPrint;
+
+    // Only auto-print in POS mode or Print mode (NOT in Preview mode)
+    const shouldTriggerPrint =
+      (isPOSMode || isPrintMode) &&
       !isLoading &&
       !error &&
       !hasPrintedRef.current &&
       items.length > 0 &&
       total > 0;
 
-    if (shouldAutoPrint) {
+    if (shouldTriggerPrint) {
       // Mark as printed before triggering to prevent race conditions
       hasPrintedRef.current = true;
 
+      // Log mode for debugging
+      console.log(`🖨️ Auto-print triggered in ${isPOSMode ? 'POS' : 'Print'} mode`);
+
       // Trigger print immediately - data is ready
       window.print();
+    } else if (isPreviewMode) {
+      console.log('👁️ Preview mode - no auto-print');
     }
-  }, [onClose, isLoading, error, items.length, total]);
+  }, [onClose, shouldAutoPrint, isLoading, error, items.length, total]);
 
   // Reset print flag when component unmounts or when switching sales
   useEffect(() => {
     return () => {
       hasPrintedRef.current = false;
     };
-  }, [saleId]);
+  }, [saleId, shouldAutoPrint]);
 
   // Loading state
   if (isLoading) {

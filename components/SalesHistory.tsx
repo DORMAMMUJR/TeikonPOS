@@ -16,6 +16,7 @@ const SalesHistory: React.FC<SalesHistoryProps> = ({ targetStoreId }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showTodayOnly, setShowTodayOnly] = useState(true);
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
+  const [autoPrint, setAutoPrint] = useState(false); // NEW: Track print mode
   const [copied, setCopied] = useState(false);
   const [showSessionExpiredModal, setShowSessionExpiredModal] = useState(false);
 
@@ -103,9 +104,10 @@ const SalesHistory: React.FC<SalesHistoryProps> = ({ targetStoreId }) => {
       return;
     }
 
-    // Session is valid, proceed with printing
+    // Session is valid, set sale and trigger print mode
+    // SaleTicket will handle the actual printing when ready
     setSelectedSale(sale);
-    setTimeout(() => window.print(), 500);
+    setAutoPrint(true); // Signal print mode to SaleTicket
   };
 
   const copyToClipboard = async (text: string) => {
@@ -233,7 +235,11 @@ const SalesHistory: React.FC<SalesHistoryProps> = ({ targetStoreId }) => {
           sellerId={selectedSale.sellerId}
           folio={selectedSale.id.slice(0, 8)}
           date={selectedSale.date}
-          onClose={() => setSelectedSale(null)}
+          onClose={() => {
+            setSelectedSale(null);
+            setAutoPrint(false); // Reset print mode
+          }}
+          shouldAutoPrint={autoPrint} // NEW: Pass print mode
           storeInfo={{
             name: currentUser?.storeName || "TEIKON OS TERMINAL",
             address: "NODO OPERATIVO ACTIVO",
