@@ -182,8 +182,10 @@ export const SaleTicket: React.FC<SaleTicketProps> = ({
           renderLine(centerText("-- Sin productos --"))
         ) : (
           items.map((item: any, i: number) => {
-            const quantity = Number(item.quantity) || Number(item.qty) || 1;
-            const unitPrice = Number(item.unitPrice) || Number(item.price) || Number(item.salePrice) || Number(item.sellingPrice) || 0;
+            // Lógica ESTRICTA de cálculo
+            // Expanded property search for items coming from different sources (Backend, Cart, History)
+            const quantity = Number(item.quantity) || Number(item.qty) || Number(item.cantidad) || Number(item.units) || 1;
+            const unitPrice = Number(item.unitPrice) || Number(item.price) || Number(item.salePrice) || Number(item.sellingPrice) || Number(item.precio) || 0;
             const itemSubtotal = quantity * unitPrice;
 
             // Línea 1: Nombre del producto
