@@ -128,18 +128,18 @@ export const SaleTicket: React.FC<SaleTicketProps> = ({
   }, [shouldAutoPrint, isLoading, error, items.length]);
 
   // Componente de contenido del ticket
-  const TicketContent = () => (
+  const TicketContent = ({ isPrint = false }: { isPrint?: boolean }) => (
     <div className="thermal-ticket-content" style={{
-      width: TICKET_WIDTH,
+      width: isPrint ? '100%' : TICKET_WIDTH, // En print, el ancho lo define el contenedor .ticket
       fontFamily: FONT_FAMILY,
       fontSize: FONT_SIZE,
       lineHeight: '1.2',
       color: 'black',
       background: 'white',
-      padding: '0',
-      margin: '0', // Margin 0 para alineación a la izquierda
+      padding: isPrint ? 0 : '0',
+      margin: isPrint ? 0 : '0', // En print, el margen lo maneja .ticket
       boxSizing: 'border-box',
-      textAlign: 'left' // Alineación estricta a la izquierda
+      textAlign: 'left'
     }}>
       {/* 1. Encabezado */}
       <div style={{ marginBottom: '8px' }}>
@@ -240,12 +240,38 @@ export const SaleTicket: React.FC<SaleTicketProps> = ({
         padding: '10px',
         display: 'inline-block'
       }}>
-        <TicketContent />
+        <TicketContent isPrint={false} />
       </div>
 
       {/* 2. IMPRESIÓN (Portal) */}
       {printContainer && ReactDOM.createPortal(
-        <TicketContent />,
+        <>
+          <style>{`
+            @media print {
+              body {
+                margin: 0;
+                padding: 0;
+              }
+              .print-wrapper {
+                width: 100%;
+                display: block;
+              }
+              .ticket {
+                width: 58mm;
+                margin: 0 auto;           /* ← CENTRADO REAL EN PAPEL */
+                padding-left: 2mm;        /* ← evita que el texto se “coma” el borde */
+                padding-right: 2mm;
+                font-family: monospace;
+                text-align: left;
+              }
+            }
+          `}</style>
+          <div className="print-wrapper">
+            <div className="ticket">
+              <TicketContent isPrint={true} />
+            </div>
+          </div>
+        </>,
         printContainer
       )}
 
