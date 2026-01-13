@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useStore } from '../context/StoreContext';
-import { Search, Printer, X, Calendar, FileText, History as HistoryIcon } from 'lucide-react';
+import { Search, Printer, X, Calendar, FileText, History as HistoryIcon, Loader2 } from 'lucide-react';
 import { Modal, Button, TeikonWordmark } from '../src/components/ui';
 import { SaleTicket } from './SaleTicket';
 import { Sale } from '../types';
 import { isTokenValid, salesAPI } from '../utils/api';
-import { Share2, Check } from 'lucide-react'; // Adding missing icons
 
 interface SalesHistoryProps {
   targetStoreId?: string; // IMPROVED: Add prop for AdminPanel filtering
@@ -28,7 +27,6 @@ const SalesHistory: React.FC<SalesHistoryProps> = ({ targetStoreId }) => {
   const [showTodayOnly, setShowTodayOnly] = useState(true);
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
   const [autoPrint, setAutoPrint] = useState(false); // NEW: Track print mode
-  const [copied, setCopied] = useState(false);
   const [showSessionExpiredModal, setShowSessionExpiredModal] = useState(false);
 
   // IMPROVED: Local state for store-specific sales
@@ -74,38 +72,16 @@ const SalesHistory: React.FC<SalesHistoryProps> = ({ targetStoreId }) => {
     })
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-  const handleCancel = (saleId: string) => {
-    if (confirm('¿CONFIRMAR DEVOLUCIÓN? Los productos volverán al stock y el dinero saldrá de caja.')) {
-      cancelSale(saleId);
-      setSelectedSale(null);
+  const handleViewDetails = (sale: Sale) => {
+    // Validate session before showing details to prevent errors
+    if (!isTokenValid()) {
+      setShowSessionExpiredModal(true);
+      return;
     }
-  };
 
-  const handleShare = async () => {
-    if (!selectedSale) return;
-
-    const shareText = `Ticket TEIKON #${selectedSale.id.slice(0, 8).toUpperCase()} - Total: $${formatMoney(selectedSale.total)}\nFecha: ${new Date(selectedSale.date).toLocaleString()}\nAtendido por: ${selectedSale.sellerId}`;
-
-    if (navigator.share) {
-      try {
-        const shareData: ShareData = {
-          title: 'Recibo de Venta TEIKON',
-          text: shareText,
-        };
-
-        const currentUrl = window.location.href;
-        if (currentUrl.startsWith('http')) {
-          shareData.url = currentUrl;
-        }
-
-        await navigator.share(shareData);
-      } catch (err) {
-        console.error('Error al compartir:', err);
-        copyToClipboard(shareText);
-      }
-    } else {
-      copyToClipboard(shareText);
-    }
+    // Session is valid, show sale details
+    setSelectedSale(sale);
+    setAutoPrint(false); // Ensure we're in view mode, not print mode
   };
 
   const handlePrint = (sale: Sale) => {
@@ -121,15 +97,6 @@ const SalesHistory: React.FC<SalesHistoryProps> = ({ targetStoreId }) => {
     setAutoPrint(true); // Signal print mode to SaleTicket
   };
 
-  const copyToClipboard = async (text: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      console.error('Error al copiar:', err);
-    }
-  };
 
   return (
     <div className="space-y-6">
@@ -182,7 +149,16 @@ const SalesHistory: React.FC<SalesHistoryProps> = ({ targetStoreId }) => {
               </tr>
             </thead>
             <tbody className="divide-y divide-brand-border">
-              {filteredSales.map(sale => (
+              {isLoadingStore ? (
+                <tr>
+                  <td colSpan={6} className="px-8 py-16 text-center">
+                    <div className="flex flex-col items-center justify-center space-y-4">
+                      <Loader2 className="h-8 w-8 text-brand-pink animate-spin" />
+                      <p className="text-sm font-bold text-brand-muted">Cargando ventas...</p>
+                    </div>
+                  </td>
+                </tr>
+              ) : filteredSales.map(sale => (
                 <tr key={sale.id} className={`transition-all ${sale.status === 'CANCELLED' ? 'opacity-40' : 'hover:bg-brand-pink/5'}`}>
                   <td className="px-8 py-5 whitespace-nowrap text-sm font-medium text-brand-muted">
                     {new Date(sale.date).toLocaleString()}
@@ -209,7 +185,7 @@ const SalesHistory: React.FC<SalesHistoryProps> = ({ targetStoreId }) => {
                       <Button
                         variant="secondary"
 
-                        onClick={() => setSelectedSale(sale)}
+                        onClick={() => handleViewDetails(sale)}
                         className="h-8 text-[10px]"
                       >
                         <FileText size={14} className="mr-1" />
@@ -230,7 +206,7 @@ const SalesHistory: React.FC<SalesHistoryProps> = ({ targetStoreId }) => {
               ))}
             </tbody>
           </table>
-          {filteredSales.length === 0 && (
+          {!isLoadingStore && filteredSales.length === 0 && (
             <div className="p-8 text-center text-brand-muted font-bold text-sm">
               No hay transacciones {showTodayOnly ? 'para el día de hoy' : 'que coincidan con la búsqueda'}.
             </div>
