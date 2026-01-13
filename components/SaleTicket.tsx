@@ -4,15 +4,29 @@ import { salesAPI } from '../utils/api';
 
 // Configuración de estilo encapsulada
 const TICKET_WIDTH = '58mm';
-const FONT_FAMILY = 'monospace';
+const FONT_FAMILY = '"Courier New", Courier, monospace'; // Explicit monospace
 const FONT_SIZE = '12px';
+const LINE_WIDTH = 32; // 32 caracteres por línea para 58mm
 
-// Separador de texto
-const Separator = () => (
-  <div style={{ padding: '4px 0', textAlign: 'left', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-    --------------------------------
-  </div>
-);
+// Separador de texto (32 guiones)
+const SEPARATOR_LINE = '-'.repeat(LINE_WIDTH);
+
+// Helpers para formato de texto
+const centerText = (text: string): string => {
+  const trimmed = text.substring(0, LINE_WIDTH);
+  const padding = Math.max(0, Math.floor((LINE_WIDTH - trimmed.length) / 2));
+  return ' '.repeat(padding) + trimmed;
+};
+
+const justifyText = (left: string, right: string): string => {
+  // Aseguramos que la derecha quepa
+  const rightStr = right.substring(0, LINE_WIDTH / 2); // Seguridad
+  const targetLen = LINE_WIDTH - rightStr.length;
+  // Recortamos izquierda si es necesario para que no empuje
+  const leftStr = left.substring(0, targetLen - 1); // -1 para asegurar al menos un espacio
+
+  return leftStr.padEnd(targetLen, ' ') + rightStr;
+};
 
 // Función auxiliar para dinero
 const formatMoney = (value: any): string => {
@@ -128,103 +142,92 @@ export const SaleTicket: React.FC<SaleTicketProps> = ({
   }, [shouldAutoPrint, isLoading, error, items.length]);
 
   // Componente de contenido del ticket
-  const TicketContent = ({ isPrint = false }: { isPrint?: boolean }) => (
-    <div className="thermal-ticket-content" style={{
-      width: isPrint ? '100%' : TICKET_WIDTH, // En print, el ancho lo define el contenedor .ticket
-      fontFamily: FONT_FAMILY,
-      fontSize: FONT_SIZE,
-      lineHeight: '1.2',
-      color: 'black',
-      background: 'white',
-      padding: isPrint ? 0 : '0',
-      margin: isPrint ? 0 : '0', // En print, el margen lo maneja .ticket
-      boxSizing: 'border-box',
-      textAlign: 'left'
-    }}>
-      {/* 1. Encabezado */}
-      <div style={{ marginBottom: '8px' }}>
-        <div style={{ fontWeight: 'bold', fontSize: '13px' }}>{storeInfo.name}</div>
-        {storeInfo.address && <div>{storeInfo.address}</div>}
-        {storeInfo.phone && <div>Tel: {storeInfo.phone}</div>}
+  const TicketContent = ({ isPrint = false }: { isPrint?: boolean }) => {
+    // Generación de líneas de texto plano
+    const renderLine = (text: string, key?: number | string) => (
+      <div key={key} style={{ whiteSpace: 'pre', overflow: 'hidden', width: '100%' }}>
+        {text}
       </div>
+    );
 
-      <Separator />
+    return (
+      <div className="thermal-ticket-content" style={{
+        width: isPrint ? '100%' : TICKET_WIDTH,
+        fontFamily: FONT_FAMILY,
+        fontSize: FONT_SIZE,
+        lineHeight: '1.2',
+        color: 'black',
+        background: 'white',
+        padding: isPrint ? 0 : '0 2mm', // Padding visual en preview
+        margin: 0,
+        boxSizing: 'border-box',
+        textAlign: 'left'
+      }}>
+        {/* Encabezado */}
+        {renderLine(centerText(storeInfo.name))}
+        {storeInfo.address && renderLine(centerText(storeInfo.address))}
+        {storeInfo.phone && renderLine(centerText(`Tel: ${storeInfo.phone}`))}
 
-      {/* 2. Info Venta */}
-      <div style={{ marginBottom: '8px' }}>
-        <div>{new Date(date).toLocaleString('es-MX')}</div>
-        {folio && <div>Folio: {folio.toUpperCase()}</div>}
-        {sellerName && <div>Le atendió: {sellerName}</div>}
-      </div>
+        {renderLine(SEPARATOR_LINE)}
 
-      <Separator />
+        {/* Info Venta */}
+        {renderLine(`Fecha: ${new Date(date).toLocaleString('es-MX')}`)}
+        {folio && renderLine(`Folio: ${folio.toUpperCase()}`)}
+        {sellerName && renderLine(`Le atendió: ${sellerName}`)}
 
-      {/* 3. Productos */}
-      <div style={{ marginBottom: '8px' }}>
+        {renderLine(SEPARATOR_LINE)}
+
+        {/* Productos */}
         {items.length === 0 ? (
-          <div>-- Sin productos --</div>
+          renderLine(centerText("-- Sin productos --"))
         ) : (
           items.map((item: any, i: number) => {
-            // Lógica ESTRICTA de cálculo
             const quantity = Number(item.quantity) || Number(item.qty) || 1;
             const unitPrice = Number(item.unitPrice) || Number(item.price) || Number(item.salePrice) || Number(item.sellingPrice) || 0;
             const itemSubtotal = quantity * unitPrice;
 
-            return (
-              <div key={i} style={{ marginBottom: '6px' }}>
-                {/* Nombre del producto */}
-                <div style={{ marginBottom: '2px' }}>{item.productName || item.name || item.nombre}</div>
+            // Línea 1: Nombre del producto
+            // Línea 2: Qty x Price ... Subtotal
+            const name = item.productName || item.name || item.nombre || '';
+            const detailsLeft = `${quantity} x $${formatMoney(unitPrice)}`;
+            const detailsRight = `$${formatMoney(itemSubtotal)}`;
+            const detailsLine = justifyText(detailsLeft, detailsRight);
 
-                {/* Cantidad x Precio ... Subtotal */}
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ marginRight: '8px' }}>{quantity} x ${formatMoney(unitPrice)}</span>
-                  <span style={{ fontWeight: 'bold' }}>
-                    ${formatMoney(itemSubtotal)}
-                  </span>
-                </div>
+            return (
+              <div key={i}>
+                {renderLine(name.substring(0, LINE_WIDTH))}
+                {renderLine(detailsLine)}
               </div>
             );
           })
         )}
-      </div>
 
-      <Separator />
+        {renderLine(SEPARATOR_LINE)}
 
-      {/* 4. Totales */}
-      <div style={{ marginBottom: '8px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '14px' }}>
-          <span>TOTAL:</span>
-          <span>${formatMoney(total)}</span>
-        </div>
+        {/* Totales */}
+        {renderLine(justifyText("TOTAL:", `$${formatMoney(total)}`))}
 
         {amountPaid > 0 && (
           <>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px' }}>
-              <span>Efectivo:</span>
-              <span>${formatMoney(amountPaid)}</span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span>Cambio:</span>
-              <span>${formatMoney(change)}</span>
-            </div>
+            {renderLine(justifyText("Efectivo:", `$${formatMoney(amountPaid)}`))}
+            {renderLine(justifyText("Cambio:", `$${formatMoney(change)}`))}
           </>
         )}
 
         {paymentMethod && (
-          <div style={{ marginTop: '4px' }}>
-            Pago: {paymentMethod === 'CASH' ? 'EFECTIVO' : paymentMethod}
-          </div>
+          renderLine(`Pago: ${paymentMethod === 'CASH' ? 'EFECTIVO' : paymentMethod}`)
         )}
-      </div>
 
-      <Separator />
+        {renderLine(SEPARATOR_LINE)}
 
-      {/* 5. Pie de página */}
-      <div style={{ textAlign: 'center', marginTop: '8px' }}>
-        <div>{footerMessage}</div>
+        {/* Pie de página */}
+        <div style={{ paddingTop: '8px' }}>
+          {renderLine(centerText(footerMessage))}
+          {renderLine(centerText("** Gracias por su preferencia **"))}
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   if (isLoading) return <div style={{ fontFamily: FONT_FAMILY, padding: '20px' }}>Cargando ticket...</div>;
   if (error) return <div style={{ fontFamily: FONT_FAMILY, padding: '20px', color: 'red' }}>Error: {error}</div>;
@@ -258,11 +261,13 @@ export const SaleTicket: React.FC<SaleTicketProps> = ({
               }
               .ticket {
                 width: 58mm;
-                margin: 0 auto;           /* ← CENTRADO REAL EN PAPEL */
-                padding-left: 2mm;        /* ← evita que el texto se “coma” el borde */
-                padding-right: 2mm;
+                margin: 0 auto;
+                padding: 0; /* Padding controlado por espacios */
                 font-family: monospace;
-                text-align: left;
+                font-size: 12px;
+              }
+              .thermal-ticket-content {
+                 width: 100% !important;
               }
             }
           `}</style>
@@ -287,7 +292,8 @@ export const SaleTicket: React.FC<SaleTicketProps> = ({
               padding: '8px 16px',
               borderRadius: '6px',
               cursor: 'pointer',
-              fontWeight: 'bold'
+              fontWeight: 'bold',
+              fontFamily: 'sans-serif'
             }}
           >
             IMPRIMIR
@@ -301,7 +307,8 @@ export const SaleTicket: React.FC<SaleTicketProps> = ({
               padding: '8px 16px',
               borderRadius: '6px',
               cursor: 'pointer',
-              fontWeight: 'bold'
+              fontWeight: 'bold',
+              fontFamily: 'sans-serif'
             }}
           >
             CERRAR
