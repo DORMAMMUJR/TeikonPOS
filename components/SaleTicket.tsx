@@ -1,15 +1,28 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { salesAPI } from '../utils/api';
 
-// Si tienes el logo, descomenta la siguiente línea. Si no, déjala comentada.
-// import { TeikonLogo } from './ui';
+// Configuración de estilo encapsulada para asegurar consistencia
+const TICKET_WIDTH = '58mm';
+const FONT_FAMILY = 'monospace';
+const FONT_SIZE = '11px';
+
+// Separador de texto como solicitado
+const Separator = () => (
+  <div style={{ padding: '4px 0', textAlign: 'center', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+    --------------------------------
+  </div>
+);
+
+// Función auxiliar para dinero
+const formatMoney = (value: any): string => {
+  const num = Number(value);
+  if (isNaN(num)) return "0.00";
+  return num.toFixed(2);
+};
 
 interface SaleTicketProps {
-  // Optional saleId for fetching data when props are missing
   saleId?: string;
-
-  // Existing props - now optional when saleId is provided
-  items?: any[]; // Puedes cambiar 'any' por tu tipo 'Product' si lo prefieres
+  items?: any[];
   total?: number;
   amountPaid?: number;
   change?: number;
@@ -24,19 +37,9 @@ interface SaleTicketProps {
   paymentMethod?: string;
   sellerId?: string;
   onClose?: () => void;
-  shouldAutoPrint?: boolean; // NEW: Trigger print when ready (for IMPRIMIR button)
-  hideControls?: boolean; // NEW: Hide internal buttons (close/X) when managed externally
+  shouldAutoPrint?: boolean;
+  hideControls?: boolean; // Controles internos (cerrar)
 }
-
-// Helper function to safely format money values
-// Prevents "toFixed is not a function" errors when values are strings, null, or undefined
-const formatMoney = (value: any): string => {
-  const num = Number(value);
-  if (isNaN(num)) {
-    return "0.00";
-  }
-  return num.toFixed(2);
-};
 
 export const SaleTicket: React.FC<SaleTicketProps> = ({
   saleId,
@@ -54,37 +57,31 @@ export const SaleTicket: React.FC<SaleTicketProps> = ({
   shouldAutoPrint = false,
   hideControls = false
 }) => {
-  // State for fetched data
   const [fetchedSale, setFetchedSale] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch sale data if saleId is provided but required props are missing
+  // Lógica de carga de datos (mantenida del original)
   useEffect(() => {
     const needsToFetch = saleId && (!propItems || !propTotal || !propDate);
-
     if (needsToFetch) {
       const fetchSaleData = async () => {
         setIsLoading(true);
         setError(null);
         try {
-          console.log(`🔍 Fetching sale data for ID: ${saleId}`);
           const sale = await salesAPI.getById(saleId);
           setFetchedSale(sale);
-          console.log(`✅ Sale data loaded successfully`);
         } catch (err: any) {
-          console.error('❌ Error fetching sale:', err);
-          setError(err.message || 'Error al cargar la venta');
+          setError(err.message || 'Error al cargar venta');
         } finally {
           setIsLoading(false);
         }
       };
-
       fetchSaleData();
     }
   }, [saleId, propItems, propTotal, propDate]);
 
-  // Determine data source: props take precedence, fallback to fetched data
+  // Consolidación de datos
   const items = propItems || fetchedSale?.items || [];
   const total = propTotal ?? fetchedSale?.total ?? 0;
   const date = propDate || fetchedSale?.date || new Date().toISOString();
@@ -97,21 +94,13 @@ export const SaleTicket: React.FC<SaleTicketProps> = ({
     phone: 'N/A'
   };
 
-  // Track if we've already printed to prevent duplicate prints
+  // Lógica de autoprint
   const hasPrintedRef = useRef(false);
-
-  // Auto-print when data is ready - handles three modes
   useEffect(() => {
-    // Mode detection:
-    // 1. POS mode: !onClose && !shouldAutoPrint (direct from sale completion)
-    // 2. Print mode: onClose && shouldAutoPrint (IMPRIMIR button from history)
-    // 3. Preview mode: onClose && !shouldAutoPrint (DETALLES button from history)
-
     const isPOSMode = !onClose && !shouldAutoPrint;
     const isPrintMode = onClose && shouldAutoPrint;
     const isPreviewMode = onClose && !shouldAutoPrint;
 
-    // Only auto-print in POS mode or Print mode (NOT in Preview mode)
     const shouldTriggerPrint =
       (isPOSMode || isPrintMode) &&
       !isLoading &&
@@ -121,319 +110,200 @@ export const SaleTicket: React.FC<SaleTicketProps> = ({
       total > 0;
 
     if (shouldTriggerPrint) {
-      // Mark as printed before triggering to prevent race conditions
       hasPrintedRef.current = true;
-
-      // Log mode for debugging
-      console.log(`🖨️ Auto-print triggered in ${isPOSMode ? 'POS' : 'Print'} mode`);
-
-      // Trigger print immediately - data is ready
-      window.print();
-    } else if (isPreviewMode) {
-      console.log('👁️ Preview mode - no auto-print');
+      setTimeout(() => window.print(), 500); // Pequeño delay para asegurar renderizado
     }
   }, [onClose, shouldAutoPrint, isLoading, error, items.length, total]);
 
-  // Reset print flag when component unmounts or when switching sales
+  // Reset del ref al desmontar
   useEffect(() => {
-    return () => {
-      hasPrintedRef.current = false;
-    };
-  }, [saleId, shouldAutoPrint]);
+    return () => { hasPrintedRef.current = false; };
+  }, [saleId]);
 
-  // Loading state
-  if (isLoading) {
-    return (
-      <div className="p-8 bg-white text-black text-center max-w-[300px] mx-auto">
-        {onClose && !hideControls && (
-          <button
-            onClick={onClose}
-            className="absolute top-2 right-2 w-8 h-8 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors print:hidden flex items-center justify-center text-lg font-bold shadow-lg"
-            aria-label="Cerrar"
-          >
-            ×
-          </button>
-        )}
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mb-4"></div>
-        <p className="text-sm font-bold">Cargando ticket...</p>
-      </div>
-    );
-  }
-
-  // Error state
-  if (error) {
-    return (
-      <div className="p-8 bg-white text-black text-center max-w-[300px] mx-auto">
-        {onClose && !hideControls && (
-          <button
-            onClick={onClose}
-            className="absolute top-2 right-2 w-8 h-8 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors print:hidden flex items-center justify-center text-lg font-bold shadow-lg"
-            aria-label="Cerrar"
-          >
-            ×
-          </button>
-        )}
-        <div className="text-red-500 mb-4">
-          <svg className="h-12 w-12 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-        </div>
-        <p className="text-sm font-bold mb-2">Error al cargar el ticket</p>
-        <p className="text-xs text-gray-600">{error}</p>
-        {onClose && !hideControls && (
-          <button
-            onClick={onClose}
-            className="mt-4 px-6 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors text-sm font-bold"
-          >
-            CERRAR
-          </button>
-        )}
-      </div>
-    );
-  }
-
-  // Empty state - no items or invalid total
-  if (items.length === 0 || total <= 0) {
-    return (
-      <div className="p-8 bg-white text-black text-center max-w-[300px] mx-auto">
-        {onClose && !hideControls && (
-          <button
-            onClick={onClose}
-            className="absolute top-2 right-2 w-8 h-8 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors print:hidden flex items-center justify-center text-lg font-bold shadow-lg"
-            aria-label="Cerrar"
-          >
-            ×
-          </button>
-        )}
-        <div className="text-gray-400 mb-4 text-6xl">📄</div>
-        <p className="text-sm font-bold mb-2">Ticket sin información válida</p>
-        <p className="text-xs text-gray-600 mb-4">No hay productos en esta venta</p>
-        {onClose && !hideControls && (
-          <button
-            onClick={onClose}
-            className="mt-4 px-6 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors text-sm font-bold"
-          >
-            CERRAR
-          </button>
-        )}
-      </div>
-    );
-  }
+  // Renderizado de carga y error simplificado pero visual
+  if (isLoading) return <div style={{ fontFamily: FONT_FAMILY, padding: '20px', textAlign: 'center' }}>Cargando ticket...</div>;
+  if (error) return <div style={{ fontFamily: FONT_FAMILY, padding: '20px', textAlign: 'center', color: 'red' }}>Error: {error}</div>;
 
   return (
-    <div id="printable-ticket" style={{
-      maxWidth: '80mm',
-      width: '80mm',
-      margin: '0 auto',
-      padding: '4mm',
-      fontFamily: "'Courier New', Courier, monospace",
-      fontSize: '12pt',
-      lineHeight: '1.3',
-      color: '#000',
-      backgroundColor: '#fff',
-      position: 'relative'
-    }}>
-      {/* Close button - hidden on print or if hideControls is true */}
-      {onClose && !hideControls && (
-        <button
-          onClick={onClose}
-          className="absolute top-2 right-2 w-8 h-8 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors print:hidden flex items-center justify-center text-lg font-bold shadow-lg"
-          aria-label="Cerrar"
-        >
-          ×
-        </button>
-      )}
-
-      {/* Encabezado */}
-      <div style={{ textAlign: 'center', marginBottom: '3mm' }}>
-        <div style={{ fontSize: '14pt', fontWeight: 'bold', textTransform: 'uppercase', marginBottom: '2mm' }}>
-          {storeInfo.name}
-        </div>
-        {storeInfo.address && (
-          <div style={{ fontSize: '10pt', marginBottom: '1mm' }}>{storeInfo.address}</div>
-        )}
-        {storeInfo.phone && (
-          <div style={{ fontSize: '10pt', marginBottom: '2mm' }}>Tel: {storeInfo.phone}</div>
-        )}
-        <div style={{ borderBottom: '1px dashed #000', margin: '2mm 0' }}></div>
-        <div style={{ fontSize: '10pt', textAlign: 'left', marginTop: '2mm' }}>
-          Fecha: {new Date(date).toLocaleString('es-MX', {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit'
-          })}
-        </div>
-        {folio && (
-          <div style={{ fontSize: '10pt', textAlign: 'left' }}>Ticket #: {folio.toUpperCase()}</div>
-        )}
-        {sellerId && (
-          <div style={{ fontSize: '10pt', textAlign: 'left' }}>Vendedor: {sellerId}</div>
-        )}
-        {paymentMethod && (
-          <div style={{ fontSize: '10pt', textAlign: 'left' }}>Método: {paymentMethod}</div>
-        )}
-      </div>
-
-      {/* Lista de Items */}
-      <div style={{ marginBottom: '3mm' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10pt' }}>
-          <thead>
-            <tr style={{ borderBottom: '1px solid #000' }}>
-              <th style={{ textAlign: 'left', padding: '1mm 0', width: '15%' }}>Cant</th>
-              <th style={{ textAlign: 'left', padding: '1mm 0', width: '55%' }}>Producto</th>
-              <th style={{ textAlign: 'right', padding: '1mm 0', width: '30%' }}>Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((item: any, index: number) => {
-              const quantity = item.quantity || item.qty || 1;
-              const unitPrice = item.unitPrice || item.price || item.salePrice || 0;
-              const lineTotal = unitPrice * quantity;
-
-              return (
-                <tr key={index}>
-                  <td style={{ padding: '1mm 0', verticalAlign: 'top' }}>
-                    {quantity}
-                  </td>
-                  <td style={{ padding: '1mm 0', verticalAlign: 'top' }}>
-                    <div>{item.productName || item.name || item.nombre}</div>
-                    {quantity > 1 && (
-                      <div style={{ fontSize: '9pt', color: '#000' }}>
-                        @ ${formatMoney(unitPrice)}
-                      </div>
-                    )}
-                  </td>
-                  <td style={{ padding: '1mm 0', textAlign: 'right', verticalAlign: 'top' }}>
-                    ${formatMoney(lineTotal)}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Totales */}
-      <div style={{ borderTop: '1px dashed #000', paddingTop: '2mm', marginBottom: '3mm' }}>
-        <table style={{ width: '100%', fontSize: '12pt' }}>
-          <tbody>
-            <tr style={{ fontWeight: 'bold' }}>
-              <td style={{ textAlign: 'left', padding: '1mm 0' }}>TOTAL:</td>
-              <td style={{ textAlign: 'right', padding: '1mm 0' }}>${formatMoney(total)}</td>
-            </tr>
-            {amountPaid > 0 && (
-              <>
-                <tr style={{ fontSize: '10pt' }}>
-                  <td style={{ textAlign: 'left', padding: '1mm 0' }}>Efectivo/Pago:</td>
-                  <td style={{ textAlign: 'right', padding: '1mm 0' }}>${formatMoney(amountPaid)}</td>
-                </tr>
-                <tr style={{ fontSize: '10pt' }}>
-                  <td style={{ textAlign: 'left', padding: '1mm 0' }}>Cambio:</td>
-                  <td style={{ textAlign: 'right', padding: '1mm 0' }}>${formatMoney(change)}</td>
-                </tr>
-              </>
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Pie de página */}
-      <div style={{ textAlign: 'center', marginTop: '4mm', fontSize: '10pt', borderTop: '1px dashed #000', paddingTop: '2mm' }}>
-        <div style={{ marginBottom: '2mm' }}>{footerMessage}</div>
-        <div style={{ fontSize: '9pt' }}>Sistema TeikonPOS</div>
-      </div>
-
-      {/* Botón de cerrar (solo visible en pantalla, no en impresión) */}
-      {onClose && !hideControls && (
-        <div className="text-center mt-4 print:hidden">
-          <button
-            onClick={onClose}
-            className="px-6 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors text-sm font-bold"
-          >
-            CERRAR
-          </button>
-        </div>
-      )}
-
-      {/* Estilos específicos para impresión térmica */}
+    <>
       <style>{`
+        /* Estilos base para el ticket */
+        .thermal-ticket {
+          width: ${TICKET_WIDTH};
+          max-width: ${TICKET_WIDTH};
+          font-family: ${FONT_FAMILY};
+          font-size: ${FONT_SIZE};
+          line-height: 1.2;
+          color: black;
+          background: white;
+          padding: 5px;
+          margin: 0 auto;
+          box-sizing: border-box;
+        }
+
+        /* Utilidades simples */
+        .text-center { text-align: center; }
+        .text-right { text-align: right; }
+        .text-left { text-align: left; }
+        .font-bold { fontWeight: bold; }
+        .flex-between { display: flex; justify-content: space-between; }
+        .mb-1 { margin-bottom: 4px; }
+        .mb-2 { margin-bottom: 8px; }
+
+        /* Estilos de impresión */
         @media print {
           @page {
-            size: 80mm auto;
             margin: 0;
+            size: auto; /* Permite longitud variable */
           }
-          
           body {
             margin: 0;
             padding: 0;
+            background-color: white;
           }
-          
-          * {
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-          }
-          
           body * {
             visibility: hidden;
           }
-          
-          #printable-ticket,
-          #printable-ticket * {
+          .thermal-ticket, .thermal-ticket * {
             visibility: visible;
           }
-          
-          #printable-ticket {
+          .thermal-ticket {
             position: absolute;
             left: 0;
             top: 0;
-            width: 80mm;
-            max-width: 80mm;
+            width: ${TICKET_WIDTH};
             margin: 0;
-            padding: 2mm;
-            font-family: 'Courier New', Courier, monospace !important;
-            font-size: 12pt;
-            line-height: 1.3;
-            color: #000 !important;
-            background: #fff !important;
+            padding: 0;
+            box-shadow: none;
+            overflow: visible;
           }
-          
-          /* Force black text on white background */
-          #printable-ticket * {
-            color: #000 !important;
-            background: transparent !important;
-            border-color: #000 !important;
-          }
-          
-          /* Hide screen-only elements */
-          .print\\:hidden {
+          .no-print {
             display: none !important;
-          }
-          
-          /* Ensure tables print correctly */
-          table {
-            page-break-inside: avoid;
-          }
-          
-          /* Paper cut hint - add page break after ticket */
-          #printable-ticket::after {
-            content: "";
-            display: block;
-            page-break-after: always;
           }
         }
         
-        /* Screen preview styles */
+        /* Estilos visuales en pantalla */
         @media screen {
-          #printable-ticket {
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            border: 1px solid #e0e0e0;
+          .thermal-ticket {
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            margin-top: 20px;
+            margin-bottom: 20px;
           }
         }
       `}</style>
-    </div>
+
+      {/* Botón de cerrar para pantalla */}
+      {onClose && !hideControls && (
+        <div className="no-print" style={{ textAlign: 'center', marginBottom: '10px' }}>
+          <button
+            onClick={onClose}
+            style={{
+              background: '#ef4444',
+              color: 'white',
+              border: 'none',
+              padding: '5px 10px',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontFamily: 'sans-serif',
+              fontWeight: 'bold'
+            }}
+          >
+            CERRAR
+          </button>
+        </div>
+      )}
+
+      <div className="thermal-ticket">
+        {/* 1. Nombre de la tienda */}
+        <div className="text-center font-bold mb-1" style={{ fontSize: '13px' }}>
+          {storeInfo.name}
+        </div>
+
+        {/* 2. Dirección / Teléfono */}
+        <div className="text-center mb-1">
+          {storeInfo.address && <div>{storeInfo.address}</div>}
+          {storeInfo.phone && <div>Tel: {storeInfo.phone}</div>}
+        </div>
+
+        {/* 3. Línea separadora */}
+        <Separator />
+
+        {/* 4. Fecha y hora */}
+        <div className="mb-1">
+          <div>Fecha: {new Date(date).toLocaleString('es-MX')}</div>
+          {folio && <div>Folio: {folio}</div>}
+          {sellerId && <div>Le atendió: {sellerId}</div>}
+        </div>
+
+        <Separator />
+
+        {/* 5. Lista de productos */}
+        <div className="mb-1">
+          {items.length === 0 ? (
+            <div className="text-center">-- Sin productos --</div>
+          ) : (
+            items.map((item, i) => {
+              const quantity = item.quantity || item.qty || 1;
+              const unitPrice = item.unitPrice || item.price || item.salePrice || 0;
+              const itemTotal = unitPrice * quantity;
+
+              return (
+                <div key={i} style={{ marginBottom: '6px' }}>
+                  {/* Nombre del producto */}
+                  <div className="text-left">{item.productName || item.name || item.nombre}</div>
+
+                  {/* Detalles en segunda línea para asegurar espacio */}
+                  <div className="flex-between">
+                    <span>{quantity} x ${formatMoney(unitPrice)}</span>
+                    <span className="font-bold">${formatMoney(itemTotal)}</span>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* 6. Línea separadora */}
+        <Separator />
+
+        {/* 7. Total, 8. Pago, 9. Cambio */}
+        <div style={{ marginBottom: '8px' }}>
+          <div className="flex-between font-bold" style={{ fontSize: '14px' }}>
+            <span>TOTAL:</span>
+            <span>${formatMoney(total)}</span>
+          </div>
+
+          {amountPaid > 0 && (
+            <>
+              <div className="flex-between mt-1">
+                <span>Efectivo:</span>
+                <span>${formatMoney(amountPaid)}</span>
+              </div>
+              <div className="flex-between">
+                <span>Cambio:</span>
+                <span>${formatMoney(change)}</span>
+              </div>
+            </>
+          )}
+
+          {/* Método de pago si existe */}
+          {paymentMethod && (
+            <div className="text-left" style={{ marginTop: '4px' }}>
+              Forma de Pago: {paymentMethod}
+            </div>
+          )}
+        </div>
+
+        <Separator />
+
+        {/* 10. Mensaje final */}
+        <div className="text-center" style={{ marginTop: '4px' }}>
+          <div>{footerMessage}</div>
+          <div style={{ fontSize: '9px', marginTop: '4px' }}>** Gracias por su preferencia **</div>
+        </div>
+      </div>
+    </>
   );
 };
+
 export default SaleTicket;
