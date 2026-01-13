@@ -248,7 +248,7 @@ export const SaleTicket: React.FC<SaleTicketProps> = ({
             </tr>
           </thead>
           <tbody>
-            {items.map((item, index) => {
+            {items.map((item: any, index: number) => {
               const quantity = item.quantity || item.qty || 1;
               const unitPrice = item.unitPrice || item.price || item.salePrice || 0;
               const lineTotal = unitPrice * quantity;
