@@ -11,6 +11,17 @@ interface SalesHistoryProps {
   targetStoreId?: string; // IMPROVED: Add prop for AdminPanel filtering
 }
 
+// Helper function to safely format money values
+// Prevents "toFixed is not a function" and "toLocaleString is not a function" errors
+const formatMoney = (value: any): string => {
+  const num = Number(value);
+  if (isNaN(num)) {
+    return "0.00";
+  }
+  return num.toFixed(2);
+};
+
+
 const SalesHistory: React.FC<SalesHistoryProps> = ({ targetStoreId }) => {
   const { sales: contextSales, cancelSale, currentUser } = useStore();
   const [searchTerm, setSearchTerm] = useState('');
@@ -73,7 +84,7 @@ const SalesHistory: React.FC<SalesHistoryProps> = ({ targetStoreId }) => {
   const handleShare = async () => {
     if (!selectedSale) return;
 
-    const shareText = `Ticket TEIKON #${selectedSale.id.slice(0, 8).toUpperCase()} - Total: $${selectedSale.total.toFixed(2)}\nFecha: ${new Date(selectedSale.date).toLocaleString()}\nAtendido por: ${selectedSale.sellerId}`;
+    const shareText = `Ticket TEIKON #${selectedSale.id.slice(0, 8).toUpperCase()} - Total: $${formatMoney(selectedSale.total)}\nFecha: ${new Date(selectedSale.date).toLocaleString()}\nAtendido por: ${selectedSale.sellerId}`;
 
     if (navigator.share) {
       try {
@@ -183,7 +194,7 @@ const SalesHistory: React.FC<SalesHistoryProps> = ({ targetStoreId }) => {
                     {sale.sellerId}
                   </td>
                   <td className={`px-8 py-5 whitespace-nowrap text-lg text-right font-black ${sale.status === 'CANCELLED' ? 'line-through' : 'text-brand-pink'}`}>
-                    ${sale.total.toLocaleString()}
+                    ${formatMoney(sale.total)}
                   </td>
                   <td className="px-8 py-5 whitespace-nowrap text-center">
                     <span className={`px-4 py-1 rounded-full text-[9px] font-black uppercase ${sale.status === 'ACTIVE'
