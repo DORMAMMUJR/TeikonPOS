@@ -876,6 +876,64 @@ Store.hasMany(GoalHistory, { foreignKey: 'storeId', as: 'goalHistory', onDelete:
 GoalHistory.belongsTo(Store, { foreignKey: 'storeId', as: 'store' });
 
 // ==========================================
+// MODELO: TicketSettings (Configuración de Tickets)
+// ==========================================
+const TicketSettings = sequelize.define('TicketSettings', {
+    id: {
+        type: DataTypes.UUID,
+        defaultValue: DataTypes.UUIDV4,
+        primaryKey: true
+    },
+    storeId: {
+        type: DataTypes.UUID,
+        allowNull: false,
+        unique: true,
+        references: {
+            model: 'stores',
+            key: 'id'
+        },
+        field: 'store_id'
+    },
+    showLogo: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false,
+        field: 'show_logo',
+        comment: 'Display store logo on ticket'
+    },
+    showAddress: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: true,
+        field: 'show_address',
+        comment: 'Display store address on ticket'
+    },
+    showPhone: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: true,
+        field: 'show_phone',
+        comment: 'Display store phone on ticket'
+    },
+    showTaxes: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false,
+        field: 'show_taxes',
+        comment: 'Display tax breakdown on ticket'
+    },
+    footerMessage: {
+        type: DataTypes.STRING(200),
+        defaultValue: '¡Gracias por su compra!',
+        field: 'footer_message',
+        comment: 'Custom footer message'
+    }
+}, {
+    tableName: 'ticket_settings',
+    timestamps: true
+});
+
+// Store -> TicketSettings (1:1)
+Store.hasOne(TicketSettings, { foreignKey: 'storeId', as: 'ticketSettings', onDelete: 'CASCADE' });
+TicketSettings.belongsTo(Store, { foreignKey: 'storeId', as: 'store' });
+
+// ==========================================
 // EXPORTAR
 // ==========================================
 export {
@@ -894,5 +952,6 @@ export {
     Ticket,
     StoreConfig,
     CashSession,
-    GoalHistory
+    GoalHistory,
+    TicketSettings
 };

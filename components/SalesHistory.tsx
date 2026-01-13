@@ -17,6 +17,7 @@ const SalesHistory: React.FC<SalesHistoryProps> = ({ targetStoreId }) => {
   const [showTodayOnly, setShowTodayOnly] = useState(true);
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
   const [copied, setCopied] = useState(false);
+  const [showSessionExpiredModal, setShowSessionExpiredModal] = useState(false);
 
   // IMPROVED: Local state for store-specific sales
   const [storeSales, setStoreSales] = useState<Sale[]>([]);
@@ -98,8 +99,7 @@ const SalesHistory: React.FC<SalesHistoryProps> = ({ targetStoreId }) => {
   const handlePrint = (sale: Sale) => {
     // Validate session before printing to prevent blank tickets
     if (!isTokenValid()) {
-      alert('⚠️ Tu sesión ha expirado. Por favor, inicia sesión nuevamente para imprimir tickets.');
-      window.location.href = '/login';
+      setShowSessionExpiredModal(true);
       return;
     }
 
@@ -240,6 +240,27 @@ const SalesHistory: React.FC<SalesHistoryProps> = ({ targetStoreId }) => {
             phone: currentUser?.phone || "N/A"
           }}
         />
+      )}
+
+      {showSessionExpiredModal && (
+        <Modal
+          isOpen={showSessionExpiredModal}
+          onClose={() => window.location.href = '/login'}
+          title="Sesión Expirada"
+        >
+          <div className="space-y-4">
+            <p className="text-base">
+              Tu sesión ha expirado. Por favor, inicia sesión nuevamente para imprimir tickets.
+            </p>
+            <Button
+              variant="primary"
+              onClick={() => window.location.href = '/login'}
+              className="w-full"
+            >
+              Ir a Inicio de Sesión
+            </Button>
+          </div>
+        </Modal>
       )}
     </div>
   );

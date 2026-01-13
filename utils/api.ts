@@ -359,6 +359,18 @@ export const salesAPI = {
         }));
     },
 
+    getById: async (id: string) => {
+        const response = await safeFetch(`${API_URL}/api/ventas/${id}`, {
+            headers: getHeaders()
+        });
+        const data = await response.json();
+        // Map backend createdAt to frontend date property for consistency
+        return {
+            ...data,
+            date: data.createdAt || data.date
+        };
+    },
+
     create: async (sale: any) => {
         const response = await safeFetch(`${API_URL}/api/ventas`, {
             method: 'POST',
@@ -475,6 +487,28 @@ export const shiftsAPI = {
             method: 'POST',
             headers: getHeaders(),
             body: JSON.stringify({ shiftId, ...data })
+        });
+        return response.json();
+    }
+};
+
+// ==========================================
+// TICKET SETTINGS API
+// ==========================================
+
+export const ticketSettingsAPI = {
+    get: async (storeId: string) => {
+        const response = await safeFetch(`${API_URL}/api/ticket-settings/${storeId}`, {
+            headers: getHeaders()
+        });
+        return response.json();
+    },
+
+    update: async (storeId: string, settings: any) => {
+        const response = await safeFetch(`${API_URL}/api/ticket-settings/${storeId}`, {
+            method: 'PUT',
+            headers: getHeaders(),
+            body: JSON.stringify(settings)
         });
         return response.json();
     }

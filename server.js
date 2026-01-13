@@ -50,7 +50,8 @@ import {
     Client,
     Ticket,
     StoreConfig,
-    GoalHistory
+    GoalHistory,
+    TicketSettings
 } from './models.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -1197,6 +1198,47 @@ app.get('/api/ventas', authenticateToken, async (req, res) => {
         res.status(500).json({ error: 'Error al obtener ventas' });
     }
 });
+
+// GET /api/ventas/:id - Get single sale by ID
+app.get('/api/ventas/:id', authenticateToken, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const where = { id };
+
+        // IMPROVED: Multi-tenant security - Filter by storeId for non-SUPER_ADMIN
+        // Caso 1: SUPER_ADMIN → Can view any sale
+        // Caso 2: Usuario normal → ONLY their store's sales (SECURITY)
+        if (req.role !== 'SUPER_ADMIN') {
+            where.storeId = req.storeId;
+        }
+
+        console.log(`🔍 Fetching sale ${id} for ${req.role === 'SUPER_ADMIN' ? 'SUPER_ADMIN' : `store ${req.storeId}`}`);
+
+        const sale = await Sale.findOne({
+            where,
+            include: req.role === 'SUPER_ADMIN' ? [{
+                model: Store,
+                as: 'store',
+                attributes: ['nombre']
+            }] : []
+        });
+
+        if (!sale) {
+            console.log(`❌ Sale not found: ${id}`);
+            return res.status(404).json({
+                error: 'Venta no encontrada',
+                saleId: id
+            });
+        }
+
+        console.log(`✅ Sale found: ${id} - Total: $${sale.total}`);
+        res.json(sale);
+    } catch (error) {
+        console.error('Error al obtener venta:', error);
+        res.status(500).json({ error: 'Error al obtener venta' });
+    }
+});
+
 
 // POST /api/ventas - Crear venta (ATOMIC TRANSACTION)
 app.post('/api/ventas', authenticateToken, async (req, res) => {
@@ -2935,6 +2977,91 @@ const startServer = async () => {
             } catch (err) {
                 console.error('Error al cerrar turno:', err);
                 res.status(500).json({ error: 'Error al realizar el corte' });
+            }
+        });
+
+
+        // ==========================================
+        // ENDPOINTS DE CONFIGURACIÓN DE TICKETS
+        // ==========================================
+
+        // GET /api/ticket-settings/:storeId - Get ticket settings for a store
+        app.get('/api/ticket-settings/:storeId', authenticateToken, async (req, res) => {
+            try {
+                const { storeId } = req.params;
+
+                // Security: Only SUPER_ADMIN or store owner can view settings
+                if (req.role !== 'SUPER_ADMIN' && req.storeId !== storeId) {
+                    return res.status(403).json({ error: 'Acceso denegado' });
+                }
+
+                let settings = await TicketSettings.findOne({ where: { storeId } });
+
+                // If no settings exist, return defaults
+                if (!settings) {
+                    console.log(`📄 No ticket settings found for store ${storeId}, returning defaults`);
+                    return res.json({
+                        storeId,
+                        showLogo: false,
+                        showAddress: true,
+                        showPhone: true,
+                        showTaxes: false,
+                        footerMessage: '¡Gracias por su compra!'
+                    });
+                }
+
+                console.log(`✅ Ticket settings found for store ${storeId}`);
+                res.json(settings);
+            } catch (error) {
+                console.error('Error al obtener configuración de tickets:', error);
+                res.status(500).json({ error: 'Error al obtener configuración' });
+            }
+        });
+
+        // PUT /api/ticket-settings/:storeId - Update ticket settings
+        app.put('/api/ticket-settings/:storeId', authenticateToken, async (req, res) => {
+            try {
+                const { storeId } = req.params;
+                const { showLogo, showAddress, showPhone, showTaxes, footerMessage } = req.body;
+
+                // Security: Only SUPER_ADMIN or ADMIN can update settings
+                if (req.role !== 'SUPER_ADMIN' && req.role !== 'ADMIN') {
+                    return res.status(403).json({ error: 'Solo administradores pueden modificar configuración' });
+                }
+
+                // Security: Non-SUPER_ADMIN can only update their own store
+                if (req.role !== 'SUPER_ADMIN' && req.storeId !== storeId) {
+                    return res.status(403).json({ error: 'Acceso denegado' });
+                }
+
+                // Find or create settings
+                let [settings, created] = await TicketSettings.findOrCreate({
+                    where: { storeId },
+                    defaults: {
+                        showLogo: showLogo ?? false,
+                        showAddress: showAddress ?? true,
+                        showPhone: showPhone ?? true,
+                        showTaxes: showTaxes ?? false,
+                        footerMessage: footerMessage || '¡Gracias por su compra!'
+                    }
+                });
+
+                // If exists, update
+                if (!created) {
+                    await settings.update({
+                        showLogo: showLogo ?? settings.showLogo,
+                        showAddress: showAddress ?? settings.showAddress,
+                        showPhone: showPhone ?? settings.showPhone,
+                        showTaxes: showTaxes ?? settings.showTaxes,
+                        footerMessage: footerMessage || settings.footerMessage
+                    });
+                }
+
+                console.log(`✅ Ticket settings ${created ? 'created' : 'updated'} for store ${storeId}`);
+                res.json(settings);
+            } catch (error) {
+                console.error('Error al actualizar configuración de tickets:', error);
+                res.status(500).json({ error: 'Error al actualizar configuración' });
             }
         });
 
