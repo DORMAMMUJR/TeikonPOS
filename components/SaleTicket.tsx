@@ -242,7 +242,7 @@ export const SaleTicket: React.FC<SaleTicketProps> = ({
           {items.length === 0 ? (
             <div className="text-center">-- Sin productos --</div>
           ) : (
-            items.map((item, i) => {
+            items.map((item: any, i: number) => {
               const quantity = item.quantity || item.qty || 1;
               const unitPrice = item.unitPrice || item.price || item.salePrice || 0;
               const itemTotal = unitPrice * quantity;
