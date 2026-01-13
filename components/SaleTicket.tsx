@@ -9,7 +9,9 @@ const FONT_SIZE = '12px';
 
 // Separador de texto
 const Separator = () => (
-  <div style={{ padding: '4px 0', borderBottom: '1px dashed black', marginBottom: '4px' }} />
+  <div style={{ padding: '4px 0', textAlign: 'left', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+    --------------------------------
+  </div>
 );
 
 // Función auxiliar para dinero
@@ -175,7 +177,7 @@ export const SaleTicket: React.FC<SaleTicketProps> = ({
 
                 {/* Cantidad x Precio ... Subtotal */}
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span>{quantity} x ${formatMoney(unitPrice)}</span>
+                  <span style={{ marginRight: '8px' }}>{quantity} x ${formatMoney(unitPrice)}</span>
                   <span style={{ fontWeight: 'bold' }}>
                     ${formatMoney(itemSubtotal)}
                   </span>
