@@ -25,6 +25,7 @@ interface SaleTicketProps {
   sellerId?: string;
   onClose?: () => void;
   shouldAutoPrint?: boolean; // NEW: Trigger print when ready (for IMPRIMIR button)
+  hideControls?: boolean; // NEW: Hide internal buttons (close/X) when managed externally
 }
 
 // Helper function to safely format money values
@@ -36,7 +37,6 @@ const formatMoney = (value: any): string => {
   }
   return num.toFixed(2);
 };
-
 
 export const SaleTicket: React.FC<SaleTicketProps> = ({
   saleId,
@@ -51,7 +51,8 @@ export const SaleTicket: React.FC<SaleTicketProps> = ({
   paymentMethod: propPaymentMethod,
   sellerId: propSellerId,
   onClose,
-  shouldAutoPrint = false
+  shouldAutoPrint = false,
+  hideControls = false
 }) => {
   // State for fetched data
   const [fetchedSale, setFetchedSale] = useState<any>(null);
@@ -144,7 +145,7 @@ export const SaleTicket: React.FC<SaleTicketProps> = ({
   if (isLoading) {
     return (
       <div className="p-8 bg-white text-black text-center max-w-[300px] mx-auto">
-        {onClose && (
+        {onClose && !hideControls && (
           <button
             onClick={onClose}
             className="absolute top-2 right-2 w-8 h-8 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors print:hidden flex items-center justify-center text-lg font-bold shadow-lg"
@@ -163,7 +164,7 @@ export const SaleTicket: React.FC<SaleTicketProps> = ({
   if (error) {
     return (
       <div className="p-8 bg-white text-black text-center max-w-[300px] mx-auto">
-        {onClose && (
+        {onClose && !hideControls && (
           <button
             onClick={onClose}
             className="absolute top-2 right-2 w-8 h-8 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors print:hidden flex items-center justify-center text-lg font-bold shadow-lg"
@@ -179,7 +180,7 @@ export const SaleTicket: React.FC<SaleTicketProps> = ({
         </div>
         <p className="text-sm font-bold mb-2">Error al cargar el ticket</p>
         <p className="text-xs text-gray-600">{error}</p>
-        {onClose && (
+        {onClose && !hideControls && (
           <button
             onClick={onClose}
             className="mt-4 px-6 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors text-sm font-bold"
@@ -195,7 +196,7 @@ export const SaleTicket: React.FC<SaleTicketProps> = ({
   if (items.length === 0 || total <= 0) {
     return (
       <div className="p-8 bg-white text-black text-center max-w-[300px] mx-auto">
-        {onClose && (
+        {onClose && !hideControls && (
           <button
             onClick={onClose}
             className="absolute top-2 right-2 w-8 h-8 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors print:hidden flex items-center justify-center text-lg font-bold shadow-lg"
@@ -207,7 +208,7 @@ export const SaleTicket: React.FC<SaleTicketProps> = ({
         <div className="text-gray-400 mb-4 text-6xl">📄</div>
         <p className="text-sm font-bold mb-2">Ticket sin información válida</p>
         <p className="text-xs text-gray-600 mb-4">No hay productos en esta venta</p>
-        {onClose && (
+        {onClose && !hideControls && (
           <button
             onClick={onClose}
             className="mt-4 px-6 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors text-sm font-bold"
@@ -232,8 +233,8 @@ export const SaleTicket: React.FC<SaleTicketProps> = ({
       backgroundColor: '#fff',
       position: 'relative'
     }}>
-      {/* Close button - hidden on print */}
-      {onClose && (
+      {/* Close button - hidden on print or if hideControls is true */}
+      {onClose && !hideControls && (
         <button
           onClick={onClose}
           className="absolute top-2 right-2 w-8 h-8 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors print:hidden flex items-center justify-center text-lg font-bold shadow-lg"
@@ -346,7 +347,7 @@ export const SaleTicket: React.FC<SaleTicketProps> = ({
       </div>
 
       {/* Botón de cerrar (solo visible en pantalla, no en impresión) */}
-      {onClose && (
+      {onClose && !hideControls && (
         <div className="text-center mt-4 print:hidden">
           <button
             onClick={onClose}

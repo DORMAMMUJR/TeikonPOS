@@ -141,9 +141,9 @@ const POS: React.FC = () => {
       setCart([]);
       setIsCheckoutOpen(false);
       setAmountReceived('');
-      setShowTicket(true);
+      setShowTicket(true); // Open modal with ticket
 
-      setTimeout(() => setSaleSummary(null), 10000);
+      // Keep sale summary for modal, don't auto-clear
     }
   };
 
@@ -346,24 +346,57 @@ const POS: React.FC = () => {
         </div>
       </Modal>
 
-      {
-        showTicket && saleSummary && (
-          <SaleTicket
-            items={saleSummary.items}
-            total={saleSummary.revenue}
-            paymentMethod="CASH"
-            sellerId={currentUser?.username || "SISTEMA"}
-            folio={saleSummary.folio}
-            date={new Date().toLocaleString()}
-            storeInfo={{
-              name: currentUser?.storeName || "TEIKON OS TERMINAL",
-              address: "NODO OPERATIVO ACTIVO",
-              phone: currentUser?.phone || "N/A"
-            }}
-            onClose={() => setShowTicket(false)}
-          />
-        )
-      }
+      {/* Sale Complete Modal with Ticket */}
+      <Modal
+        isOpen={showTicket && saleSummary !== null}
+        onClose={() => {
+          setShowTicket(false);
+          setSaleSummary(null);
+        }}
+        title="✅ VENTA COMPLETADA"
+      >
+        {saleSummary && (
+          <div className="space-y-4">
+            <SaleTicket
+              items={saleSummary.items}
+              total={saleSummary.revenue}
+              paymentMethod="CASH"
+              sellerId={currentUser?.username || "SISTEMA"}
+              folio={saleSummary.folio}
+              date={new Date().toLocaleString()}
+              storeInfo={{
+                name: currentUser?.storeName || "TEIKON OS TERMINAL",
+                address: "NODO OPERATIVO ACTIVO",
+                phone: currentUser?.phone || "N/A"
+              }}
+              onClose={() => { }} // Prevent auto-print
+              hideControls={true} // Hide internal buttons, use modal buttons
+            />
+
+            <div className="flex gap-3 pt-4">
+              <Button
+                variant="secondary"
+                fullWidth
+                onClick={() => {
+                  setShowTicket(false);
+                  setSaleSummary(null);
+                }}
+                className="h-[48px]"
+              >
+                CERRAR
+              </Button>
+              <Button
+                variant="primary"
+                fullWidth
+                onClick={() => window.print()}
+                className="h-[48px]"
+              >
+                IMPRIMIR
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
 
       {/* Modals */}
       <SalesGoalModal isOpen={isGoalModalOpen} onClose={() => setIsGoalModalOpen(false)} />
