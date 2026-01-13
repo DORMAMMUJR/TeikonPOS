@@ -3,15 +3,13 @@ import ReactDOM from 'react-dom';
 import { salesAPI } from '../utils/api';
 
 // Configuración de estilo encapsulada
-const TICKET_WIDTH = '48mm';
+const TICKET_WIDTH = '58mm';
 const FONT_FAMILY = 'monospace';
-const FONT_SIZE = '11px';
+const FONT_SIZE = '12px';
 
 // Separador de texto
 const Separator = () => (
-  <div style={{ padding: '4px 0', textAlign: 'center', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-    --------------------------------
-  </div>
+  <div style={{ padding: '4px 0', borderBottom: '1px dashed black', marginBottom: '4px' }} />
 );
 
 // Función auxiliar para dinero
@@ -36,7 +34,7 @@ interface SaleTicketProps {
   footerMessage?: string;
   folio?: string;
   paymentMethod?: string;
-  sellerId?: string; // Esperamos "Nombre" o "Nombre (email)"
+  sellerId?: string;
   onClose?: () => void;
   shouldAutoPrint?: boolean;
   hideControls?: boolean;
@@ -89,22 +87,16 @@ export const SaleTicket: React.FC<SaleTicketProps> = ({
   const folio = propFolio || fetchedSale?.id?.slice(0, 8) || 'N/A';
   const paymentMethod = propPaymentMethod || fetchedSale?.paymentMethod;
 
-  // Limpieza de sellerId: Eliminar email si viene en formato "Nombre (email@domain.com)"
-  // O usar el string directo si es solo nombre.
+  // Limpieza de sellerId
   let rawSeller = propSellerId || fetchedSale?.vendedor || fetchedSale?.sellerId || 'SISTEMA';
-
-  // Si es un objeto (caso borde), intenta sacar nombre
   if (typeof rawSeller === 'object') {
     rawSeller = rawSeller.username || rawSeller.name || 'SISTEMA';
   }
 
-  // Lógica para quitar email entre paréntesis o si es un email directo
   const cleanSellerName = (input: string) => {
-    // Caso 1: "Juan Perez (juan@gmail.com)" -> "Juan Perez"
     if (input.includes('(')) {
       return input.split('(')[0].trim();
     }
-    // Caso 2: "juan@gmail.com" -> "Juan" (Capitalizado)
     if (input.includes('@')) {
       const namePart = input.split('@')[0];
       return namePart.charAt(0).toUpperCase() + namePart.slice(1);
@@ -123,81 +115,69 @@ export const SaleTicket: React.FC<SaleTicketProps> = ({
   // Lógica de autoprint
   const hasPrintedRef = useRef(false);
   useEffect(() => {
-    const isPOSMode = !onClose && !shouldAutoPrint;
-    const isPrintMode = onClose && shouldAutoPrint;
-
-    // Auto-print solo si NO estamos en modo Preview (donde el usuario elige manualmente)
-    const shouldTriggerPrint =
-      (isPOSMode || isPrintMode) &&
-      !isLoading &&
-      !error &&
-      !hasPrintedRef.current &&
-      items.length > 0 &&
-      total > 0;
+    // Si onClose está definido (modo modal/preview), solo imprimimos si shouldAutoPrint es true
+    // Si onClose NO está definido (modo background/auto), imprimimos si shouldAutoPrint es false (comportamiento legacy) o true
+    const shouldTriggerPrint = shouldAutoPrint && !isLoading && !error && !hasPrintedRef.current && items.length > 0;
 
     if (shouldTriggerPrint) {
       hasPrintedRef.current = true;
       setTimeout(() => window.print(), 500);
     }
-  }, [onClose, shouldAutoPrint, isLoading, error, items.length, total]);
+  }, [shouldAutoPrint, isLoading, error, items.length]);
 
-  // Componente de contenido del ticket (reutilizable)
+  // Componente de contenido del ticket
   const TicketContent = () => (
     <div className="thermal-ticket-content" style={{
       width: TICKET_WIDTH,
-      maxWidth: TICKET_WIDTH,
       fontFamily: FONT_FAMILY,
       fontSize: FONT_SIZE,
       lineHeight: '1.2',
       color: 'black',
       background: 'white',
-      padding: '5px',
-      margin: '0 auto',
-      boxSizing: 'border-box'
+      padding: '0',
+      margin: '0', // Margin 0 para alineación a la izquierda
+      boxSizing: 'border-box',
+      textAlign: 'left' // Alineación estricta a la izquierda
     }}>
-      {/* 1. Nombre de la tienda */}
-      <div className="text-center font-bold mb-1" style={{ textAlign: 'center', fontWeight: 'bold', marginBottom: '4px', fontSize: '13px' }}>
-        {storeInfo.name}
-      </div>
-
-      {/* 2. Dirección / Teléfono */}
-      <div className="text-center mb-1" style={{ textAlign: 'center', marginBottom: '4px' }}>
+      {/* 1. Encabezado */}
+      <div style={{ marginBottom: '8px' }}>
+        <div style={{ fontWeight: 'bold', fontSize: '13px' }}>{storeInfo.name}</div>
         {storeInfo.address && <div>{storeInfo.address}</div>}
         {storeInfo.phone && <div>Tel: {storeInfo.phone}</div>}
       </div>
 
-      {/* 3. Línea separadora */}
       <Separator />
 
-      {/* 4. Fecha y hora */}
-      <div className="mb-1" style={{ marginBottom: '4px' }}>
-        <div>Fecha: {new Date(date).toLocaleString('es-MX')}</div>
+      {/* 2. Info Venta */}
+      <div style={{ marginBottom: '8px' }}>
+        <div>{new Date(date).toLocaleString('es-MX')}</div>
         {folio && <div>Folio: {folio.toUpperCase()}</div>}
         {sellerName && <div>Le atendió: {sellerName}</div>}
       </div>
 
       <Separator />
 
-      {/* 5. Lista de productos */}
-      <div className="mb-1" style={{ marginBottom: '4px' }}>
+      {/* 3. Productos */}
+      <div style={{ marginBottom: '8px' }}>
         {items.length === 0 ? (
-          <div className="text-center">-- Sin productos --</div>
+          <div>-- Sin productos --</div>
         ) : (
           items.map((item: any, i: number) => {
+            // Lógica ESTRICTA de cálculo
             const quantity = Number(item.quantity) || Number(item.qty) || 1;
             const unitPrice = Number(item.unitPrice) || Number(item.price) || Number(item.salePrice) || Number(item.sellingPrice) || 0;
-            const itemTotal = unitPrice * quantity;
+            const itemSubtotal = quantity * unitPrice;
 
             return (
               <div key={i} style={{ marginBottom: '6px' }}>
                 {/* Nombre del producto */}
-                <div className="text-left" style={{ textAlign: 'left' }}>{item.productName || item.name || item.nombre}</div>
+                <div style={{ marginBottom: '2px' }}>{item.productName || item.name || item.nombre}</div>
 
-                {/* Detalles: Cantidad x Precio = Total */}
-                <div className="flex-between" style={{ display: 'flex', justifyContent: 'space-between' }}>
+                {/* Cantidad x Precio ... Subtotal */}
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span>{quantity} x ${formatMoney(unitPrice)}</span>
-                  <span className="font-bold" style={{ fontWeight: 'bold' }}>
-                    ${formatMoney(itemTotal)}
+                  <span style={{ fontWeight: 'bold' }}>
+                    ${formatMoney(itemSubtotal)}
                   </span>
                 </div>
               </div>
@@ -206,74 +186,84 @@ export const SaleTicket: React.FC<SaleTicketProps> = ({
         )}
       </div>
 
-      {/* 6. Línea separadora */}
       <Separator />
 
-      {/* 7. Total, 8. Pago, 9. Cambio */}
+      {/* 4. Totales */}
       <div style={{ marginBottom: '8px' }}>
-        <div className="flex-between font-bold" style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '14px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '14px' }}>
           <span>TOTAL:</span>
           <span>${formatMoney(total)}</span>
         </div>
 
         {amountPaid > 0 && (
           <>
-            <div className="flex-between mt-1" style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px' }}>
               <span>Efectivo:</span>
               <span>${formatMoney(amountPaid)}</span>
             </div>
-            <div className="flex-between" style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span>Cambio:</span>
               <span>${formatMoney(change)}</span>
             </div>
           </>
         )}
 
-        {/* Método de pago */}
         {paymentMethod && (
-          <div className="text-left" style={{ textAlign: 'left', marginTop: '4px' }}>
-            Forma de Pago: {paymentMethod === 'CASH' ? 'EFECTIVO' : paymentMethod}
+          <div style={{ marginTop: '4px' }}>
+            Pago: {paymentMethod === 'CASH' ? 'EFECTIVO' : paymentMethod}
           </div>
         )}
       </div>
 
       <Separator />
 
-      {/* 10. Mensaje final */}
-      <div className="text-center" style={{ textAlign: 'center', marginTop: '4px' }}>
+      {/* 5. Pie de página */}
+      <div style={{ textAlign: 'center', marginTop: '8px' }}>
         <div>{footerMessage}</div>
-        <div style={{ fontSize: '9px', marginTop: '4px' }}>** Gracias por su preferencia **</div>
       </div>
     </div>
   );
 
-  if (isLoading) return <div style={{ fontFamily: FONT_FAMILY, padding: '20px', textAlign: 'center' }}>Cargando ticket...</div>;
-  if (error) return <div style={{ fontFamily: FONT_FAMILY, padding: '20px', textAlign: 'center', color: 'red' }}>Error: {error}</div>;
+  if (isLoading) return <div style={{ fontFamily: FONT_FAMILY, padding: '20px' }}>Cargando ticket...</div>;
+  if (error) return <div style={{ fontFamily: FONT_FAMILY, padding: '20px', color: 'red' }}>Error: {error}</div>;
 
   const printContainer = document.getElementById('print-ticket');
 
   return (
     <>
-      {/* 1. VISTA PREVIA (Visible en pantalla / modal) */}
+      {/* 1. VISTA PREVIA */}
       <div className="ticket-preview-container print:hidden" style={{
         background: '#fff',
         border: '1px solid #eee',
-        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-        display: 'inline-block',
-        margin: '0 auto'
+        padding: '10px',
+        display: 'inline-block'
       }}>
         <TicketContent />
       </div>
 
-      {/* 2. VERSIÓN DE IMPRESIÓN (Portal oculto en pantalla, visible al imprimir) */}
+      {/* 2. IMPRESIÓN (Portal) */}
       {printContainer && ReactDOM.createPortal(
-        <TicketContent />, // Renderiza exáctamente el mismo contenido
+        <TicketContent />,
         printContainer
       )}
 
-      {/* Controles UI (solo visibles en pantalla) */}
+      {/* Controles UI */}
       {onClose && !hideControls && (
-        <div className="no-print" style={{ textAlign: 'center', marginTop: '10px' }}>
+        <div className="no-print" style={{ textAlign: 'center', marginTop: '10px', display: 'flex', gap: '10px', justifyContent: 'center' }}>
+          <button
+            onClick={() => window.print()}
+            style={{
+              background: 'black',
+              color: 'white',
+              border: 'none',
+              padding: '8px 16px',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontWeight: 'bold'
+            }}
+          >
+            IMPRIMIR
+          </button>
           <button
             onClick={onClose}
             style={{
@@ -283,9 +273,7 @@ export const SaleTicket: React.FC<SaleTicketProps> = ({
               padding: '8px 16px',
               borderRadius: '6px',
               cursor: 'pointer',
-              fontFamily: 'sans-serif',
-              fontWeight: 'bold',
-              boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+              fontWeight: 'bold'
             }}
           >
             CERRAR

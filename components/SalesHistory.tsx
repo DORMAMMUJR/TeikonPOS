@@ -214,25 +214,47 @@ const SalesHistory: React.FC<SalesHistoryProps> = ({ targetStoreId }) => {
         </div>
       </div>
 
+      {/* Modal de Detalles y Reimpresión */}
       {selectedSale && (
-        <SaleTicket
-          items={selectedSale.items}
-          total={selectedSale.total}
-          paymentMethod={selectedSale.paymentMethod}
-          sellerId={selectedSale.sellerId}
-          folio={selectedSale.id.slice(0, 8)}
-          date={selectedSale.date}
+        <Modal
+          isOpen={!!selectedSale}
           onClose={() => {
             setSelectedSale(null);
-            setAutoPrint(false); // Reset print mode
+            setAutoPrint(false);
           }}
-          shouldAutoPrint={autoPrint} // NEW: Pass print mode
-          storeInfo={{
-            name: currentUser?.storeName || "TEIKON OS TERMINAL",
-            address: "NODO OPERATIVO ACTIVO",
-            phone: currentUser?.phone || "N/A"
-          }}
-        />
+          title={`Detalles de Venta #${selectedSale.id.slice(0, 8).toUpperCase()}`}
+          maxWidth="max-w-md" // Ancho controlado para el modal
+        >
+          <div className="flex flex-col items-center">
+            {/* Renderizar el Ticket (Preview + Portal de Impresión) */}
+            <SaleTicket
+              items={selectedSale.items}
+              total={selectedSale.total}
+              paymentMethod={selectedSale.paymentMethod}
+              sellerId={selectedSale.sellerId}
+              folio={selectedSale.id.slice(0, 8)}
+              date={selectedSale.date}
+              onClose={() => {
+                setSelectedSale(null);
+                setAutoPrint(false);
+              }}
+              // Si autoPrint es true (clic en imprimir directo), activamos autoPrint
+              // Si es false (clic en detalles), solo muestra preview y botones
+              shouldAutoPrint={autoPrint}
+              storeInfo={{
+                name: currentUser?.storeName || "TEIKON OS TERMINAL",
+                address: "NODO OPERATIVO ACTIVO",
+                phone: currentUser?.phone || "N/A"
+              }}
+              // Ocultamos controles internos del ticket si queremos usar los del modal,
+              // pero como SaleTicket ya trae botones "Imprimir" y "Cerrar" lindos, los dejamos.
+              // O podemos ocultarlos y ponerlos aquí.
+              // Para cumplir requerimiento "Botón IMPRIMIR dentro del modal -> window.print()",
+              // Dejemos que SaleTicket maneje la UI para ser consistentes.
+              hideControls={false}
+            />
+          </div>
+        </Modal>
       )}
 
       {showSessionExpiredModal && (
