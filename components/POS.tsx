@@ -135,12 +135,14 @@ const POS: React.FC = () => {
 
       if (savedSale) {
         setSaleSummary({
+          // Add full sale object first to avoid overwriting specific keys later if we wanted defaults, 
+          // but here we want specific keys to override or exist alongside.
+          // Spreading savedSale gives us: id, date, items, total, etc.
+          ...savedSale,
           revenue: result.totalRevenueAdded,
           profit: result.totalProfitAdded,
-          items: savedSale.items, // Use persisted items
-          folio: savedSale.id?.slice(0, 8) || 'N/A', // Use persisted ID
-          // Add full sale object to state for completeness if needed later
-          ...savedSale
+          // Explicitly map keys that might differ or need transformation
+          folio: savedSale.id?.slice(0, 8) || 'N/A',
         });
       } else {
         // Fallback should rarely happen if StoreContext is correct
