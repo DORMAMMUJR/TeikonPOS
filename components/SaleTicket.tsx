@@ -27,6 +27,17 @@ interface SaleTicketProps {
   shouldAutoPrint?: boolean; // NEW: Trigger print when ready (for IMPRIMIR button)
 }
 
+// Helper function to safely format money values
+// Prevents "toFixed is not a function" errors when values are strings, null, or undefined
+const formatMoney = (value: any): string => {
+  const num = Number(value);
+  if (isNaN(num)) {
+    return "0.00";
+  }
+  return num.toFixed(2);
+};
+
+
 export const SaleTicket: React.FC<SaleTicketProps> = ({
   saleId,
   items: propItems,
@@ -180,6 +191,34 @@ export const SaleTicket: React.FC<SaleTicketProps> = ({
     );
   }
 
+  // Empty state - no items or invalid total
+  if (items.length === 0 || total <= 0) {
+    return (
+      <div className="p-8 bg-white text-black text-center max-w-[300px] mx-auto">
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="absolute top-2 right-2 w-8 h-8 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors print:hidden flex items-center justify-center text-lg font-bold shadow-lg"
+            aria-label="Cerrar"
+          >
+            ×
+          </button>
+        )}
+        <div className="text-gray-400 mb-4 text-6xl">📄</div>
+        <p className="text-sm font-bold mb-2">Ticket sin información válida</p>
+        <p className="text-xs text-gray-600 mb-4">No hay productos en esta venta</p>
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="mt-4 px-6 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors text-sm font-bold"
+          >
+            CERRAR
+          </button>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div id="printable-ticket" style={{
       maxWidth: '80mm',
@@ -262,12 +301,12 @@ export const SaleTicket: React.FC<SaleTicketProps> = ({
                     <div>{item.productName || item.name || item.nombre}</div>
                     {quantity > 1 && (
                       <div style={{ fontSize: '9pt', color: '#000' }}>
-                        @ ${unitPrice.toFixed(2)}
+                        @ ${formatMoney(unitPrice)}
                       </div>
                     )}
                   </td>
                   <td style={{ padding: '1mm 0', textAlign: 'right', verticalAlign: 'top' }}>
-                    ${lineTotal.toFixed(2)}
+                    ${formatMoney(lineTotal)}
                   </td>
                 </tr>
               );
@@ -282,17 +321,17 @@ export const SaleTicket: React.FC<SaleTicketProps> = ({
           <tbody>
             <tr style={{ fontWeight: 'bold' }}>
               <td style={{ textAlign: 'left', padding: '1mm 0' }}>TOTAL:</td>
-              <td style={{ textAlign: 'right', padding: '1mm 0' }}>${total.toFixed(2)}</td>
+              <td style={{ textAlign: 'right', padding: '1mm 0' }}>${formatMoney(total)}</td>
             </tr>
             {amountPaid > 0 && (
               <>
                 <tr style={{ fontSize: '10pt' }}>
                   <td style={{ textAlign: 'left', padding: '1mm 0' }}>Efectivo/Pago:</td>
-                  <td style={{ textAlign: 'right', padding: '1mm 0' }}>${amountPaid.toFixed(2)}</td>
+                  <td style={{ textAlign: 'right', padding: '1mm 0' }}>${formatMoney(amountPaid)}</td>
                 </tr>
                 <tr style={{ fontSize: '10pt' }}>
                   <td style={{ textAlign: 'left', padding: '1mm 0' }}>Cambio:</td>
-                  <td style={{ textAlign: 'right', padding: '1mm 0' }}>${change.toFixed(2)}</td>
+                  <td style={{ textAlign: 'right', padding: '1mm 0' }}>${formatMoney(change)}</td>
                 </tr>
               </>
             )}
