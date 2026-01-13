@@ -1,8 +1,9 @@
 import React, { useEffect, useState, useRef } from 'react';
+import ReactDOM from 'react-dom';
 import { salesAPI } from '../utils/api';
 
 // Configuración de estilo encapsulada para asegurar consistencia
-const TICKET_WIDTH = '58mm';
+const TICKET_WIDTH = '48mm'; // Changed to 48mm as requested
 const FONT_FAMILY = 'monospace';
 const FONT_SIZE = '11px';
 
@@ -99,7 +100,7 @@ export const SaleTicket: React.FC<SaleTicketProps> = ({
   useEffect(() => {
     const isPOSMode = !onClose && !shouldAutoPrint;
     const isPrintMode = onClose && shouldAutoPrint;
-    const isPreviewMode = onClose && !shouldAutoPrint;
+    const isPreviewMode = onClose && !shouldAutoPrint; // Used in logic but not assignment?
 
     const shouldTriggerPrint =
       (isPOSMode || isPrintMode) &&
@@ -120,107 +121,30 @@ export const SaleTicket: React.FC<SaleTicketProps> = ({
     return () => { hasPrintedRef.current = false; };
   }, [saleId]);
 
-  // Renderizado de carga y error simplificado pero visual
-  if (isLoading) return <div style={{ fontFamily: FONT_FAMILY, padding: '20px', textAlign: 'center' }}>Cargando ticket...</div>;
-  if (error) return <div style={{ fontFamily: FONT_FAMILY, padding: '20px', textAlign: 'center', color: 'red' }}>Error: {error}</div>;
 
-  return (
-    <>
-      <style>{`
-        /* Estilos base para el ticket */
-        .thermal-ticket {
-          width: ${TICKET_WIDTH};
-          max-width: ${TICKET_WIDTH};
-          font-family: ${FONT_FAMILY};
-          font-size: ${FONT_SIZE};
-          line-height: 1.2;
-          color: black;
-          background: white;
-          padding: 5px;
-          margin: 0 auto;
-          box-sizing: border-box;
-        }
+  const ticketContent = (
+    <div className="thermal-ticket">
+      {/* Estilos locales para asegurar aislamiento dentro del portal */}
+      <div style={{
+        width: TICKET_WIDTH,
+        maxWidth: TICKET_WIDTH,
+        fontFamily: FONT_FAMILY,
+        fontSize: FONT_SIZE,
+        lineHeight: '1.2',
+        color: 'black',
+        background: 'white',
+        padding: '5px',
+        margin: '0 auto',
+        boxSizing: 'border-box'
+      }}>
 
-        /* Utilidades simples */
-        .text-center { text-align: center; }
-        .text-right { text-align: right; }
-        .text-left { text-align: left; }
-        .font-bold { fontWeight: bold; }
-        .flex-between { display: flex; justify-content: space-between; }
-        .mb-1 { margin-bottom: 4px; }
-        .mb-2 { margin-bottom: 8px; }
-
-        /* Estilos de impresión */
-        @media print {
-          @page {
-            margin: 0;
-            size: auto; /* Permite longitud variable */
-          }
-          body {
-            margin: 0;
-            padding: 0;
-            background-color: white;
-          }
-          body * {
-            visibility: hidden;
-          }
-          .thermal-ticket, .thermal-ticket * {
-            visibility: visible;
-          }
-          .thermal-ticket {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: ${TICKET_WIDTH};
-            margin: 0;
-            padding: 0;
-            box-shadow: none;
-            overflow: visible;
-          }
-          .no-print {
-            display: none !important;
-          }
-        }
-        
-        /* Estilos visuales en pantalla */
-        @media screen {
-          .thermal-ticket {
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-            margin-top: 20px;
-            margin-bottom: 20px;
-          }
-        }
-      `}</style>
-
-      {/* Botón de cerrar para pantalla */}
-      {onClose && !hideControls && (
-        <div className="no-print" style={{ textAlign: 'center', marginBottom: '10px' }}>
-          <button
-            onClick={onClose}
-            style={{
-              background: '#ef4444',
-              color: 'white',
-              border: 'none',
-              padding: '5px 10px',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontFamily: 'sans-serif',
-              fontWeight: 'bold'
-            }}
-          >
-            CERRAR
-          </button>
-        </div>
-      )}
-
-      <div className="thermal-ticket">
         {/* 1. Nombre de la tienda */}
-        <div className="text-center font-bold mb-1" style={{ fontSize: '13px' }}>
+        <div className="text-center font-bold mb-1" style={{ textAlign: 'center', fontWeight: 'bold', marginBottom: '4px', fontSize: '13px' }}>
           {storeInfo.name}
         </div>
 
         {/* 2. Dirección / Teléfono */}
-        <div className="text-center mb-1">
+        <div className="text-center mb-1" style={{ textAlign: 'center', marginBottom: '4px' }}>
           {storeInfo.address && <div>{storeInfo.address}</div>}
           {storeInfo.phone && <div>Tel: {storeInfo.phone}</div>}
         </div>
@@ -229,7 +153,7 @@ export const SaleTicket: React.FC<SaleTicketProps> = ({
         <Separator />
 
         {/* 4. Fecha y hora */}
-        <div className="mb-1">
+        <div className="mb-1" style={{ marginBottom: '4px' }}>
           <div>Fecha: {new Date(date).toLocaleString('es-MX')}</div>
           {folio && <div>Folio: {folio}</div>}
           {sellerId && <div>Le atendió: {sellerId}</div>}
@@ -238,7 +162,7 @@ export const SaleTicket: React.FC<SaleTicketProps> = ({
         <Separator />
 
         {/* 5. Lista de productos */}
-        <div className="mb-1">
+        <div className="mb-1" style={{ marginBottom: '4px' }}>
           {items.length === 0 ? (
             <div className="text-center">-- Sin productos --</div>
           ) : (
@@ -250,12 +174,12 @@ export const SaleTicket: React.FC<SaleTicketProps> = ({
               return (
                 <div key={i} style={{ marginBottom: '6px' }}>
                   {/* Nombre del producto */}
-                  <div className="text-left">{item.productName || item.name || item.nombre}</div>
+                  <div className="text-left" style={{ textAlign: 'left' }}>{item.productName || item.name || item.nombre}</div>
 
                   {/* Detalles en segunda línea para asegurar espacio */}
-                  <div className="flex-between">
+                  <div className="flex-between" style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <span>{quantity} x ${formatMoney(unitPrice)}</span>
-                    <span className="font-bold">${formatMoney(itemTotal)}</span>
+                    <span className="font-bold" style={{ fontWeight: 'bold' }}>${formatMoney(itemTotal)}</span>
                   </div>
                 </div>
               );
@@ -268,18 +192,18 @@ export const SaleTicket: React.FC<SaleTicketProps> = ({
 
         {/* 7. Total, 8. Pago, 9. Cambio */}
         <div style={{ marginBottom: '8px' }}>
-          <div className="flex-between font-bold" style={{ fontSize: '14px' }}>
+          <div className="flex-between font-bold" style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '14px' }}>
             <span>TOTAL:</span>
             <span>${formatMoney(total)}</span>
           </div>
 
           {amountPaid > 0 && (
             <>
-              <div className="flex-between mt-1">
+              <div className="flex-between mt-1" style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px' }}>
                 <span>Efectivo:</span>
                 <span>${formatMoney(amountPaid)}</span>
               </div>
-              <div className="flex-between">
+              <div className="flex-between" style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span>Cambio:</span>
                 <span>${formatMoney(change)}</span>
               </div>
@@ -288,7 +212,7 @@ export const SaleTicket: React.FC<SaleTicketProps> = ({
 
           {/* Método de pago si existe */}
           {paymentMethod && (
-            <div className="text-left" style={{ marginTop: '4px' }}>
+            <div className="text-left" style={{ textAlign: 'left', marginTop: '4px' }}>
               Forma de Pago: {paymentMethod}
             </div>
           )}
@@ -297,11 +221,58 @@ export const SaleTicket: React.FC<SaleTicketProps> = ({
         <Separator />
 
         {/* 10. Mensaje final */}
-        <div className="text-center" style={{ marginTop: '4px' }}>
+        <div className="text-center" style={{ textAlign: 'center', marginTop: '4px' }}>
           <div>{footerMessage}</div>
           <div style={{ fontSize: '9px', marginTop: '4px' }}>** Gracias por su preferencia **</div>
         </div>
       </div>
+    </div>
+  );
+
+  // Renderizado de carga y error para la interfaz de usuario (NO en el ticket modal)
+  if (isLoading) return <div style={{ fontFamily: FONT_FAMILY, padding: '20px', textAlign: 'center' }}>Cargando ticket...</div>;
+  if (error) return <div style={{ fontFamily: FONT_FAMILY, padding: '20px', textAlign: 'center', color: 'red' }}>Error: {error}</div>;
+
+  // Render logic:
+  // 1. Always render the ticket content via Portal to #print-ticket
+  // 2. Also render controls/feedback in the normal tree (where component is used)
+
+  const printContainer = document.getElementById('print-ticket');
+
+  if (!printContainer) {
+    console.error("Print container #print-ticket not found!");
+    return null;
+  }
+
+  return (
+    <>
+      {/* Portal del ticket para impresión */}
+      {ReactDOM.createPortal(ticketContent, printContainer)}
+
+      {/* Contenido visible en la App (botón cerrar, etc.) */}
+      {onClose && !hideControls && (
+        <div className="no-print" style={{ textAlign: 'center', marginBottom: '10px' }}>
+          <div style={{ marginBottom: '10px', fontSize: '14px', color: '#666' }}>
+            Vista previa del ticket lista para imprimir
+          </div>
+          <button
+            onClick={onClose}
+            style={{
+              background: '#ef4444',
+              color: 'white',
+              border: 'none',
+              padding: '8px 16px',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontFamily: 'sans-serif',
+              fontWeight: 'bold',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+            }}
+          >
+            CERRAR
+          </button>
+        </div>
+      )}
     </>
   );
 };
