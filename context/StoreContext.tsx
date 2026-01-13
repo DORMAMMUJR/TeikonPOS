@@ -865,10 +865,14 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       syncedAt: isOnline ? new Date() : null
     };
 
+    let finalSale: Sale | undefined;
+
     try {
       if (isOnline) {
         // Try online sync
         const savedSale = await salesAPI.create(newSale);
+        finalSale = savedSale; // Capture the saved sale
+
         // Update local state with real data from server
         setSales(prev => [...prev, savedSale]);
 
@@ -894,7 +898,6 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         console.log('Sale saved offline');
 
         // Update UI optimistically
-        // We need to cast it to 'Sale' type for local state
         const optimisticSale: Sale = {
           id: offlineSale.tempId || 'temp',
           sellerId: newSale.vendedor,
@@ -902,6 +905,8 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
           ownerId: currentUser.id,
           ...newSale
         } as any;
+
+        finalSale = optimisticSale; // Capture the optimistic sale
 
         setSales(prev => [...prev, optimisticSale]);
       }
@@ -929,7 +934,8 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       return {
         totalRevenueAdded: totalTransactionRevenue,
         totalProfitAdded: totalTransactionProfit,
-        success: true
+        success: true,
+        sale: finalSale
       };
 
     } catch (error) {

@@ -24,7 +24,7 @@ const POS: React.FC = () => {
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [amountReceived, setAmountReceived] = useState('');
   const [lastAddedId, setLastAddedId] = useState<string | null>(null);
-  const [saleSummary, setSaleSummary] = useState<{ revenue: number, profit: number, items: any[], folio: string } | null>(null);
+  const [saleSummary, setSaleSummary] = useState<{ revenue: number, profit: number, items: any[], folio: string, id?: string, total?: number, paymentMethod?: string, sellerId?: string, date?: string } | null>(null);
   const [showTicket, setShowTicket] = useState(false);
   const [animateCart, setAnimateCart] = useState(false);
   const [isGoalModalOpen, setIsGoalModalOpen] = useState(false);
@@ -130,13 +130,29 @@ const POS: React.FC = () => {
     const result = await processSaleAndContributeToGoal(itemsToProcess, 'CASH');
 
     if (result.success) {
-      const folioId = crypto.randomUUID().slice(0, 8);
-      setSaleSummary({
-        revenue: result.totalRevenueAdded,
-        profit: result.totalProfitAdded,
-        items: cartSnapshot,
-        folio: folioId
-      });
+      // Use the persisted sale from backend/store context
+      const savedSale = result.sale;
+
+      if (savedSale) {
+        setSaleSummary({
+          revenue: result.totalRevenueAdded,
+          profit: result.totalProfitAdded,
+          items: savedSale.items, // Use persisted items
+          folio: savedSale.id?.slice(0, 8) || 'N/A', // Use persisted ID
+          // Add full sale object to state for completeness if needed later
+          ...savedSale
+        });
+      } else {
+        // Fallback should rarely happen if StoreContext is correct
+        console.warn('⚠️ No sale object returned, using local snapshot fallback');
+        const folioId = crypto.randomUUID().slice(0, 8);
+        setSaleSummary({
+          revenue: result.totalRevenueAdded,
+          profit: result.totalProfitAdded,
+          items: cartSnapshot,
+          folio: folioId
+        });
+      }
 
       setCart([]);
       setIsCheckoutOpen(false);
@@ -358,12 +374,13 @@ const POS: React.FC = () => {
         {saleSummary && (
           <div className="space-y-4">
             <SaleTicket
+              saleId={saleSummary.id} // Pass generated/persisted ID
               items={saleSummary.items}
-              total={saleSummary.revenue}
-              paymentMethod="CASH"
-              sellerId={currentUser?.username || "SISTEMA"}
+              total={saleSummary.total || saleSummary.revenue}
+              paymentMethod={saleSummary.paymentMethod || "CASH"}
+              sellerId={saleSummary.sellerId || currentUser?.username || "SISTEMA"}
               folio={saleSummary.folio}
-              date={new Date().toLocaleString()}
+              date={saleSummary.date || new Date().toISOString()} // Use persisted date
               storeInfo={{
                 name: currentUser?.storeName || "TEIKON OS TERMINAL",
                 address: "NODO OPERATIVO ACTIVO",

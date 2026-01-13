@@ -97,6 +97,7 @@ export interface SaleResult {
   totalRevenueAdded: number;
   totalProfitAdded: number;
   success: boolean;
+  sale?: Sale;
 }
 
 export interface Sale {
