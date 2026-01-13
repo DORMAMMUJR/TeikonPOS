@@ -670,36 +670,43 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
             if (existingShiftResponse.ok) {
               const contentType = existingShiftResponse.headers.get('content-type');
+
               if (!contentType?.includes('application/json')) {
-                throw new Error('Backend returned non-JSON response');
+                // Backend returned HTML - log response for debugging
+                const responseText = await existingShiftResponse.text();
+                console.error('❌ Backend returned HTML instead of JSON');
+                console.error('   Response preview:', responseText.substring(0, 200));
+                console.error('   Content-Type:', contentType);
+
+                // Since we know shift exists but can't recover it, show helpful message
+                throw new Error('El servidor confirmó que existe un turno abierto, pero no pudo proporcionar los detalles. Por favor, contacta al administrador para cerrar el turno anterior desde la base de datos.');
               }
 
               const existingShift = await existingShiftResponse.json();
 
-              if (!existingShift.id) {
-                throw new Error('Invalid shift data received');
-              }
-
-              const session: CashSession = {
-                id: existingShift.id,
-                startTime: existingShift.start_time || existingShift.startTime || new Date().toISOString(),
-                startBalance: parseFloat(existingShift.initial_amount || existingShift.initialAmount || 0),
-                expectedBalance: parseFloat(existingShift.expected_amount || existingShift.expectedAmount || 0),
-                cashSales: parseFloat(existingShift.cash_sales || existingShift.cashSales || 0),
-                refunds: 0,
-                status: 'OPEN',
-                ownerId: currentUser.id
-              };
+              // Use standardized mapper
+              const session = mapShiftToSession(existingShift, currentUser.id);
 
               setAllSessions([session]);
               localStorage.setItem('cashSession', JSON.stringify(session));
               console.log('✅ Recovered existing shift:', session.id);
               console.log('   You can continue working with the existing shift');
               return; // Exit successfully
+            } else {
+              // Recovery endpoint returned error
+              console.error('❌ Failed to fetch existing shift, status:', existingShiftResponse.status);
+              throw new Error('No se pudo recuperar el turno existente del servidor.');
             }
           } catch (recoveryError: any) {
             console.error('❌ Failed to recover existing shift:', recoveryError);
-            throw new Error('Ya existe un turno abierto pero no se pudo recuperar. Contacta al administrador.');
+
+            // If the error already has a user-friendly message, use it
+            if (recoveryError.message.includes('servidor') || recoveryError.message.includes('administrador')) {
+              throw recoveryError;
+            }
+
+            // Otherwise, provide generic guidance
+            throw new Error('Ya existe un turno abierto pero no se pudo recuperar. Verifica tu conexión o contacta al administrador.');
           }
         }
 
