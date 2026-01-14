@@ -1290,8 +1290,17 @@ app.post('/api/ventas', authenticateToken, async (req, res) => {
         });
 
         if (!activeShift) {
-            return res.status(403).json({ error: 'NO_OPEN_SHIFT' });
+            console.warn(`⚠️ [POST /api/ventas] No hay turno abierto para store ${req.storeId}`);
+            console.warn(`   Vendedor: ${vendedor}, Items: ${items.length}, Total: ${total}`);
+            return res.status(403).json({
+                error: 'NO_OPEN_SHIFT',
+                message: 'Debes abrir un turno de caja antes de realizar ventas'
+            });
         }
+
+        console.log(`✅ [POST /api/ventas] Shift activo: ${activeShift.id} para store ${req.storeId}`);
+        console.log(`   Vendedor: ${vendedor}, Items: ${items.length}, Total: ${total}`);
+
 
         // 4. Sanitizar Productos (Convertir strings a números y prevenir NaN)
         const sanitizedItems = items.map((p, index) => {
@@ -2746,6 +2755,42 @@ app.get('/api/dashboard/summary', authenticateToken, async (req, res) => {
 
 
 // ==========================================
+// FUNCIÓN DE LIMPIEZA: CERRAR SHIFTS HUÉRFANOS
+// ==========================================
+async function cleanupOrphanedShifts() {
+    try {
+        console.log('🧹 Verificando shifts huérfanos...');
+
+        const orphanedShifts = await Shift.findAll({
+            where: {
+                status: 'OPEN',
+                startTime: {
+                    [sequelize.Sequelize.Op.lt]: new Date(Date.now() - 24 * 60 * 60 * 1000) // Más de 24 horas
+                }
+            }
+        });
+
+        if (orphanedShifts.length > 0) {
+            console.warn(`⚠️ Encontrados ${orphanedShifts.length} shifts huérfanos (>24h abiertos). Cerrando...`);
+            for (const shift of orphanedShifts) {
+                await shift.update({
+                    status: 'CLOSED',
+                    endTime: new Date(),
+                    notes: 'Cerrado automáticamente por limpieza del sistema'
+                });
+                console.log(`   ✅ Shift ${shift.id} cerrado (store: ${shift.storeId})`);
+            }
+            console.log(`✅ Limpieza completada: ${orphanedShifts.length} shifts cerrados`);
+        } else {
+            console.log('✅ No se encontraron shifts huérfanos');
+        }
+    } catch (err) {
+        console.error('❌ Error en limpieza de shifts:', err);
+        // No lanzar error para no bloquear el inicio del servidor
+    }
+}
+
+// ==========================================
 // INICIAR SERVIDOR
 // ==========================================
 const startServer = async () => {
@@ -2770,6 +2815,9 @@ const startServer = async () => {
 
         // Crear usuario SuperAdmin por defecto si no existe
         // await createSuperAdmin(); // COMMENTED: Function not defined, admin may already exist in production
+
+        // 🧹 LIMPIEZA: Cerrar shifts huérfanos al iniciar servidor
+        await cleanupOrphanedShifts();
 
         // ==========================================
         // ENDPOINTS DE TICKETS (SOPORTE)
@@ -2903,7 +2951,24 @@ const startServer = async () => {
                 const { storeId } = req.query;
                 const targetStoreId = req.role === 'SUPER_ADMIN' && storeId ? storeId : req.storeId;
 
+                console.log(`🔵 [GET /api/shifts/current] storeId: ${targetStoreId}`);
+
                 if (!targetStoreId) return res.status(400).json({ error: 'Store ID requerido' });
+
+                // 🛡️ BLINDAJE: Detectar múltiples shifts abiertos
+                const openShifts = await Shift.findAll({
+                    where: { storeId: targetStoreId, status: 'OPEN' },
+                    order: [['startTime', 'DESC']]
+                });
+
+                if (openShifts.length > 1) {
+                    console.warn(`⚠️ [GET /api/shifts/current] Múltiples shifts abiertos detectados (${openShifts.length}). Cerrando duplicados...`);
+                    // Cerrar todos excepto el más reciente
+                    for (let i = 1; i < openShifts.length; i++) {
+                        await openShifts[i].update({ status: 'CLOSED', endTime: new Date() });
+                        console.log(`   ✅ Shift duplicado cerrado: ID ${openShifts[i].id}`);
+                    }
+                }
 
                 // Fetch OPEN shift with associated Sales and Expenses
                 const shift = await Shift.findOne({
@@ -2915,6 +2980,7 @@ const startServer = async () => {
                 });
 
                 if (!shift) {
+                    console.log(`ℹ️ [GET /api/shifts/current] No hay turno abierto para store ${targetStoreId}`);
                     return res.status(204).send(); // No shift open
                 }
 
@@ -2954,8 +3020,10 @@ const startServer = async () => {
                 });
 
             } catch (err) {
-                console.error('Error al obtener turno actual:', err);
-                res.status(500).json({ error: 'Error al obtener turno actual' });
+                console.error(`❌ [GET /api/shifts/current] Error:`, err);
+                console.error(`   StoreId: ${req.query.storeId || req.storeId}`);
+                console.error(`   Sequelize Error:`, err.parent || err.original || err.message);
+                res.status(500).json({ error: 'Error al obtener turno actual', details: err.message });
             }
         });
 
@@ -2966,6 +3034,8 @@ const startServer = async () => {
                 const storeId = req.role === 'SUPER_ADMIN' && bodyStoreId ? bodyStoreId : req.storeId;
                 const userId = req.user.userId || req.user.id;
 
+                console.log(`🔵 [POST /api/shifts/start] storeId: ${storeId}, userId: ${userId}, initialAmount: ${initialAmount}`);
+
                 if (!storeId) return res.status(400).json({ error: 'Falta ID de tienda' });
 
                 // Check for existing open shift
@@ -2974,7 +3044,8 @@ const startServer = async () => {
                 });
 
                 if (existingShift) {
-                    return res.status(409).json({ error: 'Ya existe un turno abierto. Debes cerrarlo antes de abrir uno nuevo.' });
+                    console.log(`ℹ️ [POST /api/shifts/start] Shift ya existe para store ${storeId}. Retornando shift activo ID: ${existingShift.id}`);
+                    return res.status(200).json(existingShift); // 🛡️ BLINDAJE: Retornar shift existente en lugar de error
                 }
 
                 const newShift = await Shift.create({
@@ -2988,8 +3059,10 @@ const startServer = async () => {
                 res.status(201).json(newShift);
 
             } catch (err) {
-                console.error('Error al abrir turno:', err);
-                res.status(500).json({ error: 'Error al abrir turno' });
+                console.error(`❌ [POST /api/shifts/start] Error:`, err);
+                console.error(`   StoreId: ${req.body.storeId || req.storeId}`);
+                console.error(`   Sequelize Error:`, err.parent || err.original || err.message);
+                res.status(500).json({ error: 'Error al abrir turno', details: err.message });
             }
         });
 
@@ -3045,8 +3118,10 @@ const startServer = async () => {
                 res.json(shift);
 
             } catch (err) {
-                console.error('Error al cerrar turno:', err);
-                res.status(500).json({ error: 'Error al cerrar turno' });
+                console.error(`❌ [POST /api/shifts/end] Error:`, err);
+                console.error(`   ShiftId: ${req.body.shiftId}`);
+                console.error(`   Sequelize Error:`, err.parent || err.original || err.message);
+                res.status(500).json({ error: 'Error al cerrar turno', details: err.message });
             }
         });
 
