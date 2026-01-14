@@ -1,5 +1,5 @@
 import { Op } from 'sequelize';
-import { Sale, SaleItem, Product, StoreConfig, CashSession } from '../models.js';
+import { Sale, SaleItem, Product, StoreConfig, Shift } from '../models.js';
 
 export const getCashCloseDetails = async (req, res) => {
     try {
@@ -13,50 +13,41 @@ export const getCashCloseDetails = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Store ID required' });
         }
 
-        // Get shift start time from query OR find active session
-        let { shiftStartTime } = req.query;
+        // Find active shift
+        const activeShift = await Shift.findOne({
+            where: { storeId, status: 'OPEN' }
+        });
 
-        if (!shiftStartTime) {
-            const activeSession = await CashSession.findOne({
-                where: { storeId, status: 'OPEN' }
-            });
-            if (activeSession) {
-                shiftStartTime = activeSession.startTime;
-            } else {
-                // If no session and no time provided, default to today 00:00 (or return error)
-                // Returning empty/zero stats instead of error to prevent UI crash
-                shiftStartTime = new Date();
-                shiftStartTime.setHours(0, 0, 0, 0);
-            }
+        // If specific shift requested by URL (not implemented in query params of this controller yet, but good practice)
+        // For now, rely on active shift or fallback to time-based if no shift (legacy) 
+
+        const whereClause = {
+            storeId,
+            status: 'ACTIVE'
+        };
+
+        let shiftStart = new Date();
+        shiftStart.setHours(0, 0, 0, 0);
+
+        if (activeShift) {
+            whereClause.shiftId = activeShift.id;
+            shiftStart = activeShift.startTime;
+        } else {
+            // Fallback: Sales from today if no shift open? 
+            // Or return 0? 
+            // Better to show today's sales for "Daily Goal" context even if shift closed.
+            const now = new Date();
+            whereClause.createdAt = {
+                [Op.gte]: shiftStart
+            };
         }
 
-        const shiftStart = new Date(shiftStartTime);
         const now = new Date();
 
-        // 1. Calculate Totals from shift start to now
-        const salesTotal = await Sale.sum('total', {
-            where: {
-                storeId,
-                status: 'ACTIVE',
-                createdAt: { [Op.between]: [shiftStart, now] }
-            }
-        }) || 0;
-
-        const profitTotal = await Sale.sum('netProfit', {
-            where: {
-                storeId,
-                status: 'ACTIVE',
-                createdAt: { [Op.between]: [shiftStart, now] }
-            }
-        }) || 0;
-
-        const ordersCount = await Sale.count({
-            where: {
-                storeId,
-                status: 'ACTIVE',
-                createdAt: { [Op.between]: [shiftStart, now] }
-            }
-        });
+        // 1. Calculate Totals
+        const salesTotal = await Sale.sum('total', { where: whereClause }) || 0;
+        const profitTotal = await Sale.sum('netProfit', { where: whereClause }) || 0;
+        const ordersCount = await Sale.count({ where: whereClause });
 
         // 2. Get Daily Goal (Strict Calculation from Monthly Expenses / 30)
         const config = await StoreConfig.findOne({ where: { storeId } });

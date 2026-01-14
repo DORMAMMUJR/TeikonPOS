@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 
 const POS: React.FC = () => {
-  const { products, processSaleAndContributeToGoal, currentUser, syncData } = useStore();
+  const { products, processSaleAndContributeToGoal, currentUser, syncData, currentSession } = useStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [cart, setCart] = useState<CartItemState[]>([]);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
@@ -293,11 +293,11 @@ const POS: React.FC = () => {
             <Button
               fullWidth
               variant="sales"
-              disabled={cart.length === 0}
+              disabled={cart.length === 0 || !currentSession}
               onClick={() => setIsCheckoutOpen(true)}
               className="h-[48px] text-sm font-black"
             >
-              CONFIRMAR VENTA
+              {currentSession ? 'CONFIRMAR VENTA' : '⛔ CAJA CERRADA'}
             </Button>
           </div>
         </div>
@@ -323,11 +323,11 @@ const POS: React.FC = () => {
           <Button
             fullWidth
             variant="sales"
-            disabled={cart.length === 0}
+            disabled={cart.length === 0 || !currentSession}
             onClick={() => setIsCheckoutOpen(true)}
             className="h-[52px] text-sm font-black shadow-lg"
           >
-            CONFIRMAR VENTA
+            {currentSession ? 'CONFIRMAR VENTA' : '⛔ CAJA CERRADA'}
           </Button>
         </div>
       </div>

@@ -123,11 +123,8 @@ const CloseShiftModal: React.FC<CloseShiftModalProps> = ({ isOpen, onClose, onSh
     const ventasEfectivo = toNumber(shiftData?.ventasEfectivo);
     const gastos = toNumber(shiftData?.gastos);
 
-    // Strict calculation: Expected = Initial + Sales - Expenses
-    // We override backend provided montoEsperado to ensure UI consistency if backend lags
-    // OR we respect backend? The prompt says: "Calculations MUST be: const esperadoEnCaja = fondo + ventas - gastosCaja;"
-    // So we calculate it locally.
-    const esperadoEnCaja = fondoInicial + ventasEfectivo - gastos;
+    // Use backend-provided expected amount (Single Source of Truth)
+    const esperadoEnCaja = toNumber(shiftData?.montoEsperado);
 
     const dineroContado = toNumber(montoReal);
     const diferencia = dineroContado - esperadoEnCaja;

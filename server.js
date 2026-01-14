@@ -46,7 +46,7 @@ import {
     Sale,
     Expense,
     StockMovement,
-    CashShift,
+    Shift,
     Client,
     Ticket,
     StoreConfig,
@@ -1183,6 +1183,22 @@ app.get('/api/ventas', authenticateToken, async (req, res) => {
             };
         }
 
+        // Filter by Shift (Support for specific ID or 'current' open shift)
+        if (req.query.shiftId) {
+            if (req.query.shiftId === 'current') {
+                const targetStoreId = where.storeId || req.storeId;
+                if (targetStoreId) {
+                    const activeShift = await Shift.findOne({
+                        where: { storeId: targetStoreId, status: 'OPEN' },
+                        attributes: ['id']
+                    });
+                    where.shiftId = activeShift ? activeShift.id : -1; // -1 ensures no results if no shift
+                }
+            } else {
+                where.shiftId = req.query.shiftId;
+            }
+        }
+
         const sales = await Sale.findAll({
             where,
             include: req.role === 'SUPER_ADMIN' ? [{
@@ -1268,6 +1284,15 @@ app.post('/api/ventas', authenticateToken, async (req, res) => {
             return res.status(400).json({ error: 'El carrito está vacío' });
         }
 
+        // 4. Validar Turno Abierto (Strict Mode)
+        const activeShift = await Shift.findOne({
+            where: { storeId: req.storeId, status: 'OPEN' }
+        });
+
+        if (!activeShift) {
+            return res.status(403).json({ error: 'NO_OPEN_SHIFT' });
+        }
+
         // 4. Sanitizar Productos (Convertir strings a números y prevenir NaN)
         const sanitizedItems = items.map((p, index) => {
             const precio = Number(p.price || p.precio || p.unitPrice || p.sellingPrice || 0);
@@ -1348,6 +1373,8 @@ app.post('/api/ventas', authenticateToken, async (req, res) => {
             // 2. Registro de la Venta (Header)
             const newSale = await Sale.create({
                 storeId: req.storeId,
+                shiftId: activeShift.id,
+                vendedor: vendedor || req.user.username,
                 vendedor: vendedor || req.user.username,
                 subtotal: calculatedTotal,
                 totalDiscount: 0,
@@ -1741,8 +1768,17 @@ app.post('/api/gastos', authenticateToken, async (req, res) => {
             return res.status(400).json({ error: 'Faltan campos requeridos' });
         }
 
+        const activeShift = await Shift.findOne({
+            where: { storeId: req.storeId, status: 'OPEN' }
+        });
+
+        if (!activeShift) {
+            return res.status(403).json({ error: 'Debes abrir caja para registrar gastos.' });
+        }
+
         const expense = await Expense.create({
             storeId: req.storeId,
+            shiftId: activeShift.id,
             categoria,
             descripcion,
             monto,
@@ -2857,129 +2893,162 @@ const startServer = async () => {
         // 🏦 GESTIÓN DE CAJA (VERSIÓN ESTABLE v2.9.3)
         // ==========================================
 
-        // 1. OBTENER TURNO ACTUAL
+        // ==========================================
+        // 🏦 GESTIÓN DE CAJA (VERSIÓN STRICT SEQUELIZE v3.0)
+        // ==========================================
+
+        // 1. OBTENER TURNO ACTUAL (CON CÁLCULO EN TIEMPO REAL)
         app.get('/api/shifts/current', authenticateToken, async (req, res) => {
             try {
                 const { storeId } = req.query;
-                // Seguridad: Si es Super Admin y pide una tienda específica, usa esa. Si no, fuerza la del usuario.
                 const targetStoreId = req.role === 'SUPER_ADMIN' && storeId ? storeId : req.storeId;
 
-                console.log(`🔍 CURRENT SHIFT CHECK:`, {
-                    role: req.role,
-                    tokenStoreId: req.storeId,
-                    queryStoreId: storeId,
-                    targetStoreId: targetStoreId
+                if (!targetStoreId) return res.status(400).json({ error: 'Store ID requerido' });
+
+                // Fetch OPEN shift with associated Sales and Expenses
+                const shift = await Shift.findOne({
+                    where: { storeId: targetStoreId, status: 'OPEN' },
+                    include: [
+                        { model: Sale, as: 'sales', attributes: ['total', 'paymentMethod', 'status'] },
+                        { model: Expense, as: 'expenses', attributes: ['monto'] }
+                    ]
                 });
 
-                if (!targetStoreId) {
-                    console.error('❌ FAILED SHIFT CHECK: No Store ID');
-                    return res.status(400).json({ error: 'No se pudo identificar la tienda' });
+                if (!shift) {
+                    return res.status(204).send(); // No shift open
                 }
 
-                // Usamos 'start_time' y 'status' (Columnas correctas de la DB)
-                const result = await pool.query(
-                    "SELECT * FROM shifts WHERE store_id = $1 AND status = 'OPEN' LIMIT 1",
-                    [targetStoreId]
-                );
+                // Calculate Totals on the Fly (Strict Accounting)
+                let ventasEfectivo = 0;
+                let ventasTarjeta = 0;
+                let ventasTransferencia = 0;
+                let ventasTotales = 0;
 
-                if (result.rows.length === 0) {
-                    return res.status(204).send(); // 204 No Content = No hay caja abierta (Correcto)
-                }
+                shift.sales.forEach(sale => {
+                    if (sale.status === 'ACTIVE') {
+                        const amount = parseFloat(sale.total);
+                        ventasTotales += amount;
+                        if (sale.paymentMethod === 'CASH') ventasEfectivo += amount;
+                        else if (sale.paymentMethod === 'CARD') ventasTarjeta += amount;
+                        else if (sale.paymentMethod === 'TRANSFER') ventasTransferencia += amount;
+                    }
+                });
 
-                res.json(result.rows[0]);
+                const gastosTotal = shift.expenses.reduce((sum, exp) => sum + parseFloat(exp.monto), 0);
+                const montoInicial = parseFloat(shift.initialAmount);
+
+                // Expected Cash = Initial + Cash Sales - Expenses
+                const montoEsperado = montoInicial + ventasEfectivo - gastosTotal;
+
+                // Return formatted data matching frontend interface
+                res.json({
+                    id: shift.id,
+                    montoInicial: montoInicial,
+                    ventasEfectivo: ventasEfectivo,
+                    ventasTarjeta: ventasTarjeta,
+                    ventasTransferencia: ventasTransferencia,
+                    ventasTotales: ventasTotales,
+                    gastos: gastosTotal,
+                    montoEsperado: montoEsperado, // Dynamic calculation
+                    startTime: shift.startTime
+                });
+
             } catch (err) {
-                console.error('Error crítico al consultar turno de caja:', err);
-                res.status(500).json({ error: 'Error interno del servidor al verificar caja' });
+                console.error('Error al obtener turno actual:', err);
+                res.status(500).json({ error: 'Error al obtener turno actual' });
             }
         });
 
-        // 2. APERTURA DE CAJA (CORREGIDO v2.9.5)
+        // 2. APERTURA DE CAJA
         app.post('/api/shifts/start', authenticateToken, async (req, res) => {
-            const { initialAmount, storeId: bodyStoreId } = req.body;
-
-            // 1. Obtener Store ID (Prioridad: Body si es Admin > Token)
-            const storeId = req.role === 'SUPER_ADMIN' && bodyStoreId ? bodyStoreId : req.storeId;
-
-            console.log(`🔵 START SHIFT REQUEST:`, {
-                role: req.role,
-                tokenStoreId: req.storeId,
-                bodyStoreId: bodyStoreId,
-                finalStoreId: storeId,
-                user: req.user ? { id: req.user.id, userId: req.user.userId } : 'No User'
-            });
-
-            if (!storeId) {
-                console.error('❌ FAILED START SHIFT: No Store ID');
-                return res.status(400).json({ error: 'Falta ID de tienda' });
-            }
-
-            // 2. FIX CRÍTICO: Leer el ID del usuario correctamente desde el token
-            const userId = req.user.userId || req.user.id;
-
-            if (!storeId) return res.status(400).json({ error: 'Falta ID de tienda' });
-            if (!userId) return res.status(400).json({ error: 'Falta ID de usuario en token' });
-
             try {
-                // Verificar duplicados
-                const checkOpen = await pool.query(
-                    "SELECT id FROM shifts WHERE store_id = $1 AND status = 'OPEN'",
-                    [storeId]
-                );
+                const { initialAmount, storeId: bodyStoreId } = req.body;
+                const storeId = req.role === 'SUPER_ADMIN' && bodyStoreId ? bodyStoreId : req.storeId;
+                const userId = req.user.userId || req.user.id;
 
-                if (checkOpen.rows.length > 0) {
-                    return res.status(409).json({ error: 'Ya existe un turno abierto.' });
+                if (!storeId) return res.status(400).json({ error: 'Falta ID de tienda' });
+
+                // Check for existing open shift
+                const existingShift = await Shift.findOne({
+                    where: { storeId, status: 'OPEN' }
+                });
+
+                if (existingShift) {
+                    return res.status(409).json({ error: 'Ya existe un turno abierto. Debes cerrarlo antes de abrir uno nuevo.' });
                 }
 
-                const newShift = await pool.query(
-                    `INSERT INTO shifts (
-                        store_id, opened_by, initial_amount, expected_amount, status, start_time
-                    ) VALUES ($1, $2, $3, $3, 'OPEN', NOW()) RETURNING *`,
-                    [storeId, userId, initialAmount]
-                );
+                const newShift = await Shift.create({
+                    storeId,
+                    openedBy: userId,
+                    initialAmount: initialAmount || 0,
+                    startTime: new Date(),
+                    status: 'OPEN'
+                });
 
-                res.status(201).json(newShift.rows[0]);
+                res.status(201).json(newShift);
+
             } catch (err) {
-                console.error('Error POST turno:', err);
-                res.status(500).json({ error: 'Error DB al abrir caja: ' + err.message });
+                console.error('Error al abrir turno:', err);
+                res.status(500).json({ error: 'Error al abrir turno' });
             }
         });
 
         // 3. CIERRE DE CAJA
         app.post('/api/shifts/end', authenticateToken, async (req, res) => {
-            const { finalAmount, notes } = req.body;
-            const storeId = req.storeId;
-
             try {
-                const currentShift = await pool.query(
-                    "SELECT * FROM shifts WHERE store_id = $1 AND status = 'OPEN'",
-                    [storeId]
-                );
+                const { shiftId, montoReal, notes } = req.body;
 
-                if (currentShift.rows.length === 0) {
-                    return res.status(404).json({ error: 'No hay turno abierto para cerrar' });
-                }
+                const shift = await Shift.findByPk(shiftId, {
+                    include: [
+                        { model: Sale, as: 'sales' },
+                        { model: Expense, as: 'expenses' }
+                    ]
+                });
 
-                const shift = currentShift.rows[0];
-                const difference = parseFloat(finalAmount) - parseFloat(shift.expected_amount);
+                if (!shift) return res.status(404).json({ error: 'Turno no encontrado' });
+                if (shift.status === 'CLOSED') return res.status(400).json({ error: 'El turno ya está cerrado' });
 
-                const closedShift = await pool.query(
-                    `UPDATE shifts SET 
-                        final_amount = $1, 
-                        difference = $2, 
-                        status = 'CLOSED', 
-                        end_time = NOW(),
-                        notes = $3
-                    WHERE id = $4 RETURNING *`,
-                    [finalAmount, difference, notes, shift.id]
-                );
+                // Strict Recalculation
+                let ventasEfectivo = 0;
+                let ventasTarjeta = 0;
+                let ventasTransferencia = 0;
 
-                res.json(closedShift.rows[0]);
+                shift.sales.forEach(sale => {
+                    if (sale.status === 'ACTIVE') {
+                        const amount = parseFloat(sale.total);
+                        if (sale.paymentMethod === 'CASH') ventasEfectivo += amount;
+                        else if (sale.paymentMethod === 'CARD') ventasTarjeta += amount;
+                        else if (sale.paymentMethod === 'TRANSFER') ventasTransferencia += amount;
+                    }
+                });
+
+                const gastosTotal = shift.expenses.reduce((sum, exp) => sum + parseFloat(exp.monto), 0);
+                const montoInicial = parseFloat(shift.initialAmount);
+                const montoEsperado = montoInicial + ventasEfectivo - gastosTotal;
+
+                const finalReal = parseFloat(montoReal);
+                const diferencia = finalReal - montoEsperado;
+
+                await shift.update({
+                    finalAmount: finalReal,
+                    expectedAmount: montoEsperado,
+                    difference: diferencia,
+                    cashSales: ventasEfectivo,
+                    cardSales: ventasTarjeta,
+                    transferSales: ventasTransferencia,
+                    expensesTotal: gastosTotal,
+                    endTime: new Date(),
+                    status: 'CLOSED',
+                    notes: notes
+                });
+
+                res.json(shift);
+
             } catch (err) {
                 console.error('Error al cerrar turno:', err);
-                res.status(500).json({ error: 'Error al realizar el corte' });
+                res.status(500).json({ error: 'Error al cerrar turno' });
             }
         });
-
 
         // ==========================================
         // ENDPOINTS DE CONFIGURACIÓN DE TICKETS

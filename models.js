@@ -240,6 +240,15 @@ const Sale = sequelize.define('Sale', {
         },
         field: 'store_id'
     },
+    shiftId: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        references: {
+            model: 'shifts',
+            key: 'id'
+        },
+        field: 'shift_id'
+    },
     vendedor: {
         type: DataTypes.STRING,
         allowNull: false
@@ -297,6 +306,9 @@ const Sale = sequelize.define('Sale', {
     indexes: [
         {
             fields: ['store_id']
+        },
+        {
+            fields: ['shift_id']
         }
     ]
 });
@@ -409,6 +421,15 @@ const Expense = sequelize.define('Expense', {
         },
         field: 'store_id'
     },
+    shiftId: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        references: {
+            model: 'shifts',
+            key: 'id'
+        },
+        field: 'shift_id'
+    },
     categoria: {
         type: DataTypes.ENUM('RENT', 'UTILITIES', 'PAYROLL', 'SUPPLIES', 'MAINTENANCE', 'OTHER'),
         allowNull: false
@@ -445,6 +466,9 @@ const Expense = sequelize.define('Expense', {
     indexes: [
         {
             fields: ['store_id']
+        },
+        {
+            fields: ['shift_id']
         }
     ]
 });
@@ -520,12 +544,13 @@ const StockMovement = sequelize.define('StockMovement', {
 });
 
 // ==========================================
-// MODELO: CashShift (Turno de Caja)
+// MODELO: Shift (Turno de Caja - NUEVO v2)
 // ==========================================
-const CashShift = sequelize.define('CashShift', {
+// Reemplaza CashShift y CashSession para unificar lógica
+const Shift = sequelize.define('Shift', {
     id: {
-        type: DataTypes.UUID,
-        defaultValue: DataTypes.UUIDV4,
+        type: DataTypes.INTEGER,
+        autoIncrement: true,
         primaryKey: true
     },
     storeId: {
@@ -537,138 +562,72 @@ const CashShift = sequelize.define('CashShift', {
         },
         field: 'store_id'
     },
-    cajero: {
-        type: DataTypes.STRING,
-        allowNull: false
-    },
-    apertura: {
-        type: DataTypes.DATE,
-        allowNull: false
-    },
-    cierre: {
-        type: DataTypes.DATE,
-        allowNull: true
-    },
-    montoInicial: {
-        type: DataTypes.DECIMAL(10, 2),
-        allowNull: false,
-        field: 'monto_inicial'
-    },
-    ventasEfectivo: {
-        type: DataTypes.DECIMAL(10, 2),
-        defaultValue: 0,
-        field: 'ventas_efectivo'
-    },
-    ventasTarjeta: {
-        type: DataTypes.DECIMAL(10, 2),
-        defaultValue: 0,
-        field: 'ventas_tarjeta'
-    },
-    ventasTransferencia: {
-        type: DataTypes.DECIMAL(10, 2),
-        defaultValue: 0,
-        field: 'ventas_transferencia'
-    },
-    gastos: {
-        type: DataTypes.DECIMAL(10, 2),
-        defaultValue: 0
-    },
-    montoEsperado: {
-        type: DataTypes.DECIMAL(10, 2),
-        allowNull: true,
-        field: 'monto_esperado'
-    },
-    montoReal: {
-        type: DataTypes.DECIMAL(10, 2),
-        allowNull: true,
-        field: 'monto_real'
-    },
-    diferencia: {
-        type: DataTypes.DECIMAL(10, 2),
-        allowNull: true
-    },
-    notas: {
-        type: DataTypes.TEXT,
-        allowNull: true
-    },
-    status: {
-        type: DataTypes.ENUM('OPEN', 'CLOSED'),
-        defaultValue: 'OPEN'
-    }
-}, {
-    tableName: 'cash_shifts',
-    timestamps: true,
-    updatedAt: 'updated_at',
-    indexes: [
-        {
-            fields: ['store_id']
-        }
-    ]
-});
-
-// ==========================================
-// MODELO: CashSession (Sesión de Caja en Tiempo Real)
-// ==========================================
-const CashSession = sequelize.define('CashSession', {
-    id: {
-        type: DataTypes.UUID,
-        defaultValue: DataTypes.UUIDV4,
-        primaryKey: true
-    },
-    storeId: {
-        type: DataTypes.UUID,
-        allowNull: false,
-        references: {
-            model: 'stores',
-            key: 'id'
-        },
-        field: 'store_id'
-    },
-    ownerId: {
-        type: DataTypes.UUID,
-        allowNull: false,
-        comment: 'User ID who opened the session'
+    openedBy: {
+        type: DataTypes.UUID, // User ID references users table? Or just string?
+        allowNull: false,     // Based on previous usage it was userId
+        field: 'opened_by'
     },
     startTime: {
         type: DataTypes.DATE,
         allowNull: false,
-        defaultValue: DataTypes.NOW
+        defaultValue: DataTypes.NOW,
+        field: 'start_time'
     },
     endTime: {
         type: DataTypes.DATE,
-        allowNull: true
+        allowNull: true,
+        field: 'end_time'
     },
-    startBalance: {
+    initialAmount: {
         type: DataTypes.DECIMAL(10, 2),
         allowNull: false,
         defaultValue: 0,
-        field: 'start_balance'
+        field: 'initial_amount'
     },
-    expectedBalance: {
+    finalAmount: {
         type: DataTypes.DECIMAL(10, 2),
         allowNull: true,
-        field: 'expected_balance'
+        field: 'final_amount'
     },
-    endBalanceReal: {
+    expectedAmount: {
         type: DataTypes.DECIMAL(10, 2),
         allowNull: true,
-        field: 'end_balance_real'
+        field: 'expected_amount' // Calculated: initial + cash_sales - expenses
+    },
+    difference: {
+        type: DataTypes.DECIMAL(10, 2),
+        allowNull: true
     },
     cashSales: {
         type: DataTypes.DECIMAL(10, 2),
         defaultValue: 0,
         field: 'cash_sales'
     },
-    refunds: {
+    cardSales: {
         type: DataTypes.DECIMAL(10, 2),
-        defaultValue: 0
+        defaultValue: 0,
+        field: 'card_sales'
+    },
+    transferSales: {
+        type: DataTypes.DECIMAL(10, 2),
+        defaultValue: 0,
+        field: 'transfer_sales'
+    },
+    expensesTotal: {
+        type: DataTypes.DECIMAL(10, 2),
+        defaultValue: 0,
+        field: 'expenses_total'
     },
     status: {
         type: DataTypes.ENUM('OPEN', 'CLOSED'),
         defaultValue: 'OPEN'
+    },
+    notes: {
+        type: DataTypes.TEXT,
+        allowNull: true
     }
 }, {
-    tableName: 'cash_sessions',
+    tableName: 'shifts',
     timestamps: true,
     indexes: [
         {
@@ -708,13 +667,17 @@ SaleItem.belongsTo(Product, { foreignKey: 'productId' });
 Store.hasMany(Expense, { foreignKey: 'storeId', as: 'expenses', onDelete: 'CASCADE' });
 Expense.belongsTo(Store, { foreignKey: 'storeId', as: 'store' });
 
-// Store -> CashShift (1:N)
-Store.hasMany(CashShift, { foreignKey: 'storeId', as: 'cashShifts', onDelete: 'CASCADE' });
-CashShift.belongsTo(Store, { foreignKey: 'storeId', as: 'store' });
+// Store -> Shift (1:N)
+Store.hasMany(Shift, { foreignKey: 'storeId', as: 'shifts', onDelete: 'CASCADE' });
+Shift.belongsTo(Store, { foreignKey: 'storeId', as: 'store' });
 
-// Store -> CashSession (1:N)
-Store.hasMany(CashSession, { foreignKey: 'storeId', as: 'cashSessions', onDelete: 'CASCADE' });
-CashSession.belongsTo(Store, { foreignKey: 'storeId', as: 'store' });
+// Shift -> Sale (1:N)
+Shift.hasMany(Sale, { foreignKey: 'shiftId', as: 'sales' });
+Sale.belongsTo(Shift, { foreignKey: 'shiftId', as: 'shift' });
+
+// Shift -> Expense (1:N)
+Shift.hasMany(Expense, { foreignKey: 'shiftId', as: 'expenses' });
+Expense.belongsTo(Shift, { foreignKey: 'shiftId', as: 'shift' });
 
 // Store -> User (1:N)
 Store.hasMany(User, { foreignKey: 'storeId', as: 'users', onDelete: 'CASCADE' });
@@ -947,11 +910,11 @@ export {
     SaleItem,
     Expense,
     StockMovement,
-    CashShift,
+    StockMovement,
+    Shift,
     Client,
     Ticket,
     StoreConfig,
-    CashSession,
     GoalHistory,
     TicketSettings
 };
