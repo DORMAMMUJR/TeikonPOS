@@ -910,7 +910,6 @@ export {
     SaleItem,
     Expense,
     StockMovement,
-    StockMovement,
     Shift,
     Client,
     Ticket,
