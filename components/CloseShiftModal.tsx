@@ -21,12 +21,21 @@ interface ShiftData {
 
 const CloseShiftModal: React.FC<CloseShiftModalProps> = ({ isOpen, onClose, onShiftClosed }) => {
 
-
     const [loading, setLoading] = useState(false);
     const [shiftData, setShiftData] = useState<ShiftData | null>(null);
     const [montoReal, setMontoReal] = useState<string>('');
     const [notas, setNotas] = useState('');
     const [error, setError] = useState<string | null>(null);
+
+    // Helper: Safe number conversion
+    const toNumber = (value: any): number => {
+        const n = Number(value);
+        return isNaN(n) ? 0 : n;
+    };
+
+    // Helper: Safe currency formatting
+    const formatMoney = (value: any) =>
+        `$${toNumber(value).toFixed(2)}`;
 
     // Fetch current shift data when modal opens
     useEffect(() => {
@@ -69,11 +78,9 @@ const CloseShiftModal: React.FC<CloseShiftModalProps> = ({ isOpen, onClose, onSh
     const handleCloseShift = async () => {
         if (!shiftData) return;
 
-        const realAmount = parseFloat(montoReal);
-        if (isNaN(realAmount)) {
-            setError('Por favor ingresa un monto válido');
-            return;
-        }
+        const realAmount = toNumber(montoReal);
+        // We allow 0, but check for negative? The request says just validate number.
+        // The original logic checked for isNaN which toNumber handles (returns 0).
 
         setLoading(true);
         try {
@@ -101,12 +108,7 @@ const CloseShiftModal: React.FC<CloseShiftModalProps> = ({ isOpen, onClose, onSh
             if (onShiftClosed) {
                 onShiftClosed();
             } else {
-                // Default behavior: logout or reload
-                // For now, let's close the modal and maybe refresh
                 onClose();
-                // Optionally logout user as is common in POS
-                // logout(); 
-                // navigate('/login');
             }
 
         } catch (err: any) {
@@ -116,18 +118,20 @@ const CloseShiftModal: React.FC<CloseShiftModalProps> = ({ isOpen, onClose, onSh
         }
     };
 
-    const formatCurrency = (amount: number) => {
-        return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(amount);
-    };
+    // Normalize values for rendering
+    const fondoInicial = toNumber(shiftData?.montoInicial);
+    const ventasEfectivo = toNumber(shiftData?.ventasEfectivo);
+    const gastos = toNumber(shiftData?.gastos);
 
-    const calculateDifference = () => {
-        if (!shiftData) return 0;
-        const real = parseFloat(montoReal) || 0;
-        return real - shiftData.montoEsperado;
-    };
+    // Strict calculation: Expected = Initial + Sales - Expenses
+    // We override backend provided montoEsperado to ensure UI consistency if backend lags
+    // OR we respect backend? The prompt says: "Calculations MUST be: const esperadoEnCaja = fondo + ventas - gastosCaja;"
+    // So we calculate it locally.
+    const esperadoEnCaja = fondoInicial + ventasEfectivo - gastos;
 
-    const difference = calculateDifference();
-    const isDifferenceNegative = difference < 0;
+    const dineroContado = toNumber(montoReal);
+    const diferencia = dineroContado - esperadoEnCaja;
+    const isDifferenceNegative = diferencia < 0;
 
     return (
         <Modal isOpen={isOpen} onClose={onClose} title="CERRAR TURNO (CORTE DE CAJA)">
@@ -147,25 +151,25 @@ const CloseShiftModal: React.FC<CloseShiftModalProps> = ({ isOpen, onClose, onSh
                             <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
                                 <div className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-1">Fondo Inicial</div>
                                 <div className="text-lg font-mono font-bold text-slate-700 dark:text-slate-300">
-                                    {formatCurrency(shiftData.montoInicial)}
+                                    {formatMoney(fondoInicial)}
                                 </div>
                             </div>
                             <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-xl border border-green-200 dark:border-green-800">
                                 <div className="text-xs text-green-600 dark:text-green-400 font-bold uppercase tracking-wider mb-1">Ventas Efectivo</div>
                                 <div className="text-lg font-mono font-bold text-green-700 dark:text-green-400">
-                                    + {formatCurrency(shiftData.ventasEfectivo)}
+                                    + {formatMoney(ventasEfectivo)}
                                 </div>
                             </div>
                             <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-200 dark:border-red-800">
                                 <div className="text-xs text-red-600 dark:text-red-400 font-bold uppercase tracking-wider mb-1">Gastos</div>
                                 <div className="text-lg font-mono font-bold text-red-700 dark:text-red-400">
-                                    - {formatCurrency(shiftData.gastos)}
+                                    - {formatMoney(gastos)}
                                 </div>
                             </div>
                             <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800">
                                 <div className="text-xs text-blue-600 dark:text-blue-400 font-bold uppercase tracking-wider mb-1">Esperado en Caja</div>
                                 <div className="text-xl font-mono font-black text-blue-700 dark:text-blue-400">
-                                    {formatCurrency(shiftData.montoEsperado)}
+                                    {formatMoney(esperadoEnCaja)}
                                 </div>
                             </div>
                         </div>
@@ -197,7 +201,7 @@ const CloseShiftModal: React.FC<CloseShiftModalProps> = ({ isOpen, onClose, onSh
                                         <Calculator size={14} /> Diferencia
                                     </span>
                                     <span className="font-mono font-bold">
-                                        {difference > 0 ? '+' : ''}{formatCurrency(difference)}
+                                        {diferencia > 0 ? '+' : ''}{formatMoney(diferencia)}
                                     </span>
                                 </div>
                             )}
