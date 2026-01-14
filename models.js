@@ -628,7 +628,7 @@ const Shift = sequelize.define('Shift', {
     }
 }, {
     tableName: 'shifts',
-    timestamps: true,
+    timestamps: false, // ⚠️ CRÍTICO: La tabla 'shifts' NO tiene columnas createdAt/updatedAt
     indexes: [
         {
             fields: ['store_id']

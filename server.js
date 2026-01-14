@@ -2958,7 +2958,7 @@ const startServer = async () => {
                 // 🛡️ BLINDAJE: Detectar múltiples shifts abiertos
                 const openShifts = await Shift.findAll({
                     where: { storeId: targetStoreId, status: 'OPEN' },
-                    order: [['startTime', 'DESC']]
+                    order: [['id', 'DESC']] // Ordenar por ID (más reciente primero)
                 });
 
                 if (openShifts.length > 1) {
