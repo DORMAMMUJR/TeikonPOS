@@ -278,11 +278,11 @@ const ProductList: React.FC<ProductListProps> = ({ products: propProducts, targe
                     <span className="text-base font-black text-orange-500">
                       ${p.salePrice.toLocaleString()}
                     </span>
-                    <span className={`text-xs font-bold px-2 py-0.5 rounded ${p.stock <= p.minStock
+                    <span className={`text-sm font-extrabold px-2 py-0.5 rounded ${p.stock <= p.minStock
                       ? 'bg-red-100 dark:bg-red-950/30 text-red-600 dark:text-red-400'
                       : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
                       }`}>
-                      Stock: {p.stock}
+                      Stock: <span className="text-lg font-black">{p.stock}</span>
                     </span>
                   </div>
                   <div className="flex items-center gap-1">
@@ -397,7 +397,7 @@ const ProductList: React.FC<ProductListProps> = ({ products: propProducts, targe
 
                       {/* STOCK Column - Badge Style */}
                       <td className="px-6 py-4 text-center">
-                        <span className={`inline-flex items-center justify-center px-3 py-1.5 rounded-lg text-xs font-black uppercase border-2 ${p.stock <= p.minStock
+                        <span className={`inline-flex items-center justify-center px-3 py-1.5 rounded-lg text-xl font-black uppercase border-2 ${p.stock <= p.minStock
                           ? 'bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 border-red-200 dark:border-red-900/50'
                           : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700'
                           }`}>
