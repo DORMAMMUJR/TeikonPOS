@@ -196,9 +196,11 @@ const POS: React.FC = () => {
                     <ImageOff className="text-slate-200 dark:text-slate-700" size={32} />
                   )}
 
-                  <div className={`absolute top-2 right-2 px-1.5 py-1 sm:px-2 rounded-md text-xs sm:text-sm md:text-base font-black uppercase tracking-tighter ${p.stock <= p.minStock
-                    ? 'bg-red-500 text-white animate-pulse'
-                    : 'bg-black/40 dark:bg-white/10 text-white backdrop-blur-sm'
+                  <div className={`absolute top-2 right-2 px-2 py-1.5 sm:px-2.5 rounded-lg text-sm sm:text-base md:text-xl font-black uppercase tracking-tight shadow-lg ${p.stock === 0
+                    ? 'bg-red-600 text-white animate-pulse ring-4 ring-red-300'
+                    : p.stock <= p.minStock
+                      ? 'bg-red-500 text-white animate-pulse'
+                      : 'bg-black/50 dark:bg-white/20 text-white backdrop-blur-sm'
                     }`}>
                     {p.stock} U.
                   </div>

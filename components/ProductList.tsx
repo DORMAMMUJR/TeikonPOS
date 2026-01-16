@@ -397,9 +397,11 @@ const ProductList: React.FC<ProductListProps> = ({ products: propProducts, targe
 
                       {/* STOCK Column - Badge Style */}
                       <td className="px-6 py-4 text-center">
-                        <span className={`inline-flex items-center justify-center px-3 py-1.5 rounded-lg text-xl font-black uppercase border-2 ${p.stock <= p.minStock
-                          ? 'bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 border-red-200 dark:border-red-900/50'
-                          : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700'
+                        <span className={`inline-flex items-center justify-center px-4 py-2 rounded-lg text-2xl font-black uppercase border-2 ${p.stock === 0
+                          ? 'bg-red-600 text-white border-red-700 ring-2 ring-red-300'
+                          : p.stock <= p.minStock
+                            ? 'bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 border-red-200 dark:border-red-900/50'
+                            : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700'
                           }`}>
                           {p.stock}
                         </span>
