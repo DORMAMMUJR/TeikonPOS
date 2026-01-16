@@ -1651,6 +1651,12 @@ app.get('/api/dashboard/summary', authenticateToken, async (req, res) => {
 app.post('/api/ventas/sync', authenticateToken, async (req, res) => {
     try {
         const { ventas } = req.body;
+
+        // Validación: Verificar que ventas existe y es un array
+        if (!ventas || !Array.isArray(ventas)) {
+            return res.status(200).json({ message: 'Sin datos' });
+        }
+
         const results = [];
 
         for (const ventaData of ventas) {
