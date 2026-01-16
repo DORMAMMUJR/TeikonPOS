@@ -2599,537 +2599,496 @@ app.get('/api/test/run', async (req, res) => {
 // ENDPOINT DE DASHBOARD OPTIMIZADO
 // ==========================================
 
-// GET /api/dashboard/summary - Resumen agregado optimizado
-app.get('/api/dashboard/summary', authenticateToken, async (req, res) => {
+// GET /api/dashboard/summary - Resumen de ventas y ganancias (basado en turno activo)
+app.get('/api/dashboard/summary', authenticateToken, getDashboardSummary);
+
+// ==========================================
+// FUNCIÓN DE LIMPIEZA: CERRAR SHIFTS HUÉRFANOS
+// ==========================================
+async function cleanupOrphanedShifts() {
     try {
-        const { period = 'month' } = req.query; // 'day', 'week', 'month', 'year'
+        console.log('🧹 Verificando shifts huérfanos...');
 
-        // Calcular rango de fechas
-        const now = new Date();
-        let startDate;
-
-        switch (period) {
-            case 'day':
-                startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-                break;
-            case 'week':
-                const dayOfWeek = now.getDay();
-                startDate = new Date(now);
-                startDate.setDate(now.getDate() - dayOfWeek);
-                startDate.setHours(0, 0, 0, 0);
-                break;
-            case 'month':
-                startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-                break;
-            case 'year':
-                startDate = new Date(now.getFullYear(), 0, 1);
-                break;
-            default:
-                startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-        }
-
-        // Agregación de ventas con PostgreSQL
-        const salesSummary = await Sale.findOne({
-            attributes: [
-                [sequelize.fn('COUNT', sequelize.col('id')), 'totalSales'],
-                [sequelize.fn('SUM', sequelize.col('total')), 'totalRevenue'],
-                [sequelize.fn('SUM', sequelize.col('total_cost')), 'totalCost'],
-                [sequelize.fn('SUM', sequelize.col('net_profit')), 'grossProfit']
-            ],
+        const orphanedShifts = await Shift.findAll({
             where: {
-                storeId: req.storeId,
-                status: 'ACTIVE',
-                createdAt: {
-                    [sequelize.Sequelize.Op.gte]: startDate
+                status: 'OPEN',
+                startTime: {
+                    [sequelize.Sequelize.Op.lt]: new Date(Date.now() - 24 * 60 * 60 * 1000) // Más de 24 horas
                 }
-            },
-            raw: true
+            }
+        });
+
+        if (orphanedShifts.length > 0) {
+            console.warn(`⚠️ Encontrados ${orphanedShifts.length} shifts huérfanos (>24h abiertos). Cerrando...`);
+            for (const shift of orphanedShifts) {
+                await shift.update({
+                    status: 'CLOSED',
+                    endTime: new Date(),
+                    notes: 'Cerrado automáticamente por limpieza del sistema'
+                });
+                console.log(`   ✅ Shift ${shift.id} cerrado (store: ${shift.storeId})`);
+            }
+            console.log(`✅ Limpieza completada: ${orphanedShifts.length} shifts cerrados`);
+        } else {
+            console.log('✅ No se encontraron shifts huérfanos');
+        }
+    } catch (err) {
+        console.error('❌ Error en limpieza de shifts:', err);
+        // No lanzar error para no bloquear el inicio del servidor
+    }
+}
+
+// ==========================================
+// INICIAR SERVIDOR
+// ==========================================
+const startServer = async () => {
+    try {
+        // Conectar a base de datos
+        await sequelize.authenticate();
+        console.log('✅ Conexión a PostgreSQL exitosa');
+
+        // Sincronizar modelos (crear tablas)
+        // Sincronizar Base de Datos (ALTER para actualizar schema sin borrar data)
+        sequelize.sync({ alter: true }).then(() => {
+            console.log('✅ Base de datos sincronizada (Schema Updated)');
+
+            // Crear usuario SuperAdmin por defecto si no existe
+            // await createSuperAdmin(); // COMMENTED: Function not defined, admin may already exist in production
+        }).catch(err => {
+            console.error("❌ ERROR CRÍTICO AL SINCRONIZAR BD:");
+            console.error(err); // Imprime el objeto completo
+            if (err.parent) console.error("🔍 Detalle SQL:", err.parent); // Si es Sequelize/Postgres
+            if (err.original) console.error("🔍 Original:", err.original);
+        });
+
+        // Crear usuario SuperAdmin por defecto si no existe
+        // await createSuperAdmin(); // COMMENTED: Function not defined, admin may already exist in production
+
+        // 🧹 LIMPIEZA: Cerrar shifts huérfanos al iniciar servidor
+        await cleanupOrphanedShifts();
+
+        // ==========================================
+        // ENDPOINTS DE TICKETS (SOPORTE)
+        // ==========================================
+
+        // GET /api/tickets - Listar tickets
+        app.get('/api/tickets', authenticateToken, async (req, res) => {
+            try {
+                const where = {};
+
+                // Si no es SUPER_ADMIN, solo ve los de su tienda
+                if (req.role !== 'SUPER_ADMIN') {
+                    where.storeId = req.storeId;
+                }
+
+                const tickets = await Ticket.findOne({ where }) // Check if any exist first to fail fast? No, findAll returns []
+                    ? await Ticket.findAll({
+                        where,
+                        include: req.role === 'SUPER_ADMIN' ? [{
+                            model: Store,
+                            as: 'store',
+                            attributes: ['nombre']
+                        }] : [],
+                        order: [
+                            ['status', 'ASC'], // OPEN first
+                            ['prioridad', 'DESC'], // URGENT first
+                            ['createdAt', 'DESC']
+                        ]
+                    })
+                    : []; // Optimization if needed, but standard findAll is fine.
+
+                // Re-doing the query standard way
+                const finalTickets = await Ticket.findAll({
+                    where,
+                    include: req.role === 'SUPER_ADMIN' ? [{
+                        model: Store,
+                        as: 'store',
+                        attributes: ['nombre']
+                    }] : [],
+                    order: [['createdAt', 'DESC']]
+                });
+
+                res.json(finalTickets);
+            } catch (error) {
+                console.error('Error al obtener tickets:', error);
+                res.status(500).json({ error: 'Error al obtener tickets' });
+            }
+        });
+
+        // POST /api/tickets - Crear ticket
+        app.post('/api/tickets', authenticateToken, async (req, res) => {
+            try {
+                const { titulo, descripcion, prioridad } = req.body;
+
+                if (!titulo || !descripcion) {
+                    return res.status(400).json({ error: 'Título y descripción requeridos' });
+                }
+
+                const ticket = await Ticket.create({
+                    storeId: req.storeId,
+                    titulo,
+                    descripcion,
+                    prioridad: prioridad || 'MEDIUM',
+                    status: 'OPEN',
+                    creadoPor: req.usuario
+                });
+
+                res.status(201).json(ticket);
+            } catch (error) {
+                console.error('Error al crear ticket:', error);
+                res.status(500).json({ error: 'Error al crear ticket' });
+            }
+        });
+
+        // PUT /api/tickets/:id - Actualizar ticket (Status/Prioridad)
+        app.put('/api/tickets/:id', authenticateToken, async (req, res) => {
+            try {
+                const { status, prioridad } = req.body;
+                const where = { id: req.params.id };
+
+                // Isolar: Si no es SA, solo puede editar sus propios tickets (opcionalmente) 
+                // Normalmente SA es quien edita el status a RESOLVED, pero dejaremos ambos por ahora.
+                if (req.role !== 'SUPER_ADMIN') {
+                    where.storeId = req.storeId;
+                }
+
+                const ticket = await Ticket.findOne({ where });
+
+                if (!ticket) {
+                    return res.status(404).json({ error: 'Ticket no encontrado' });
+                }
+
+                await ticket.update({
+                    status: status || ticket.status,
+                    prioridad: prioridad || ticket.prioridad
+                });
+
+                res.json(ticket);
+            } catch (error) {
+                console.error('Error al actualizar ticket:', error);
+                res.status(500).json({ error: 'Error al actualizar ticket' });
+            }
         });
 
 
-
+        // ==========================================
+        // ENDPOINTS DE CASH SHIFTS - REMOVED
+        // ==========================================
+        // NOTE: Old Sequelize-based endpoints removed due to schema mismatch
+        // The CashShift model uses old column names (apertura, cajero, montoInicial)
+        // that don't exist in the new PostgreSQL 'shifts' table schema.
+        // 
+        // New implementation should use pool.query with correct column names:
+        // - start_time (not apertura)
+        // - opened_by (not cajero)  
+        // - initial_amount (not montoInicial)
+        //
+        // Add new endpoints here using pool.query if needed.
 
         // ==========================================
-        // FUNCIÓN DE LIMPIEZA: CERRAR SHIFTS HUÉRFANOS
+        // 🏦 GESTIÓN DE CAJA (VERSIÓN ESTABLE v2.9.3)
         // ==========================================
-        async function cleanupOrphanedShifts() {
+
+        // ==========================================
+        // 🏦 GESTIÓN DE CAJA (VERSIÓN STRICT SEQUELIZE v3.0)
+        // ==========================================
+
+        // 1. OBTENER TURNO ACTUAL (CON CÁLCULO EN TIEMPO REAL)
+        app.get('/api/shifts/current', authenticateToken, async (req, res) => {
             try {
-                console.log('🧹 Verificando shifts huérfanos...');
+                const { storeId } = req.query;
+                const targetStoreId = req.role === 'SUPER_ADMIN' && storeId ? storeId : req.storeId;
 
-                const orphanedShifts = await Shift.findAll({
-                    where: {
-                        status: 'OPEN',
-                        startTime: {
-                            [sequelize.Sequelize.Op.lt]: new Date(Date.now() - 24 * 60 * 60 * 1000) // Más de 24 horas
-                        }
+                console.log(`🔵 [GET /api/shifts/current] storeId: ${targetStoreId}`);
+
+                if (!targetStoreId) return res.status(400).json({ error: 'Store ID requerido' });
+
+                // 🛡️ BLINDAJE: Detectar múltiples shifts abiertos
+                const openShifts = await Shift.findAll({
+                    where: { storeId: targetStoreId, status: 'OPEN' },
+                    order: [['id', 'DESC']] // Ordenar por ID (más reciente primero)
+                });
+
+                if (openShifts.length > 1) {
+                    console.warn(`⚠️ [GET /api/shifts/current] Múltiples shifts abiertos detectados (${openShifts.length}). Cerrando duplicados...`);
+                    // Cerrar todos excepto el más reciente
+                    for (let i = 1; i < openShifts.length; i++) {
+                        await openShifts[i].update({ status: 'CLOSED', endTime: new Date() });
+                        console.log(`   ✅ Shift duplicado cerrado: ID ${openShifts[i].id}`);
+                    }
+                }
+
+                // Fetch OPEN shift with associated Sales and Expenses
+                const shift = await Shift.findOne({
+                    where: { storeId: targetStoreId, status: 'OPEN' },
+                    include: [
+                        { model: Sale, as: 'sales', attributes: ['total', 'paymentMethod', 'status'] },
+                        { model: Expense, as: 'expenses', attributes: ['monto'] }
+                    ]
+                });
+
+                if (!shift) {
+                    console.log(`ℹ️ [GET /api/shifts/current] No hay turno abierto para store ${targetStoreId}`);
+                    return res.json(null); // Return null instead of 204 for better frontend handling
+                }
+
+                // Calculate Totals on the Fly (Strict Accounting)
+                let ventasEfectivo = 0;
+                let ventasTarjeta = 0;
+                let ventasTransferencia = 0;
+                let ventasTotales = 0;
+
+                shift.sales.forEach(sale => {
+                    if (sale.status === 'ACTIVE') {
+                        const amount = parseFloat(sale.total);
+                        ventasTotales += amount;
+                        if (sale.paymentMethod === 'CASH') ventasEfectivo += amount;
+                        else if (sale.paymentMethod === 'CARD') ventasTarjeta += amount;
+                        else if (sale.paymentMethod === 'TRANSFER') ventasTransferencia += amount;
                     }
                 });
 
-                if (orphanedShifts.length > 0) {
-                    console.warn(`⚠️ Encontrados ${orphanedShifts.length} shifts huérfanos (>24h abiertos). Cerrando...`);
-                    for (const shift of orphanedShifts) {
-                        await shift.update({
-                            status: 'CLOSED',
-                            endTime: new Date(),
-                            notes: 'Cerrado automáticamente por limpieza del sistema'
-                        });
-                        console.log(`   ✅ Shift ${shift.id} cerrado (store: ${shift.storeId})`);
-                    }
-                    console.log(`✅ Limpieza completada: ${orphanedShifts.length} shifts cerrados`);
-                } else {
-                    console.log('✅ No se encontraron shifts huérfanos');
-                }
+                const gastosTotal = shift.expenses.reduce((sum, exp) => sum + parseFloat(exp.monto), 0);
+                const montoInicial = parseFloat(shift.initialAmount);
+
+                // Expected Cash = Initial + Cash Sales - Expenses
+                const montoEsperado = montoInicial + ventasEfectivo - gastosTotal;
+
+                // Return formatted data matching frontend interface
+                res.json({
+                    id: shift.id,
+                    montoInicial: montoInicial,
+                    ventasEfectivo: ventasEfectivo,
+                    ventasTarjeta: ventasTarjeta,
+                    ventasTransferencia: ventasTransferencia,
+                    ventasTotales: ventasTotales,
+                    gastos: gastosTotal,
+                    montoEsperado: montoEsperado, // Dynamic calculation
+                    startTime: shift.startTime
+                });
+
             } catch (err) {
-                console.error('❌ Error en limpieza de shifts:', err);
-                // No lanzar error para no bloquear el inicio del servidor
+                console.error(`❌ [GET /api/shifts/current] Error:`, err);
+                console.error(`   StoreId: ${req.query.storeId || req.storeId}`);
+                console.error(`   Sequelize Error:`, err.parent || err.original || err.message);
+                res.status(500).json({ error: 'Error al obtener turno actual', details: err.message });
             }
-        }
+        });
+
+        // 2. APERTURA DE CAJA
+        app.post('/api/shifts/start', authenticateToken, async (req, res) => {
+            try {
+                const { initialAmount, storeId: bodyStoreId } = req.body;
+                const storeId = req.role === 'SUPER_ADMIN' && bodyStoreId ? bodyStoreId : req.storeId;
+                const userId = req.user.userId || req.user.id;
+
+                console.log(`🔵 [POST /api/shifts/start] storeId: ${storeId}, userId: ${userId}, initialAmount: ${initialAmount}`);
+
+                if (!storeId) return res.status(400).json({ error: 'Falta ID de tienda' });
+
+                // --- INICIO BLOQUE DE SEGURIDAD ---
+                // Verificar si ya existe un turno abierto para esta tienda
+                const existingShift = await Shift.findOne({
+                    where: {
+                        storeId: storeId, // Usando la variable storeId ya validada arriba
+                        status: 'OPEN'
+                    }
+                });
+
+                if (existingShift) {
+                    console.log(`[Shift Protection] Se intentó abrir turno pero ya existía el ID ${existingShift.id}`);
+                    // IMPORTANTE: Devolvemos 200 OK con el turno existente para que el Frontend crea que "abrió" exitosamente
+                    return res.status(200).json(existingShift);
+                }
+                // --- FIN BLOQUE DE SEGURIDAD ---
+
+                const newShift = await Shift.create({
+                    storeId,
+                    openedBy: userId,
+                    initialAmount: initialAmount || 0,
+                    startTime: new Date(),
+                    status: 'OPEN'
+                });
+
+                res.status(201).json(newShift);
+
+            } catch (err) {
+                console.error(`❌ [POST /api/shifts/start] Error:`, err);
+                console.error(`   StoreId: ${req.body.storeId || req.storeId}`);
+                console.error(`   Sequelize Error:`, err.parent || err.original || err.message);
+                res.status(500).json({ error: 'Error al abrir turno', details: err.message });
+            }
+        });
+
+        // 3. CIERRE DE CAJA
+        app.post('/api/shifts/end', authenticateToken, async (req, res) => {
+            try {
+                const { shiftId, montoReal, notes } = req.body;
+
+                const shift = await Shift.findByPk(shiftId, {
+                    include: [
+                        { model: Sale, as: 'sales' },
+                        { model: Expense, as: 'expenses' }
+                    ]
+                });
+
+                if (!shift) return res.status(404).json({ error: 'Turno no encontrado' });
+                if (shift.status === 'CLOSED') return res.status(400).json({ error: 'El turno ya está cerrado' });
+
+                // Strict Recalculation
+                let ventasEfectivo = 0;
+                let ventasTarjeta = 0;
+                let ventasTransferencia = 0;
+
+                shift.sales.forEach(sale => {
+                    if (sale.status === 'ACTIVE') {
+                        const amount = parseFloat(sale.total);
+                        if (sale.paymentMethod === 'CASH') ventasEfectivo += amount;
+                        else if (sale.paymentMethod === 'CARD') ventasTarjeta += amount;
+                        else if (sale.paymentMethod === 'TRANSFER') ventasTransferencia += amount;
+                    }
+                });
+
+                const gastosTotal = shift.expenses.reduce((sum, exp) => sum + parseFloat(exp.monto), 0);
+                const montoInicial = parseFloat(shift.initialAmount);
+                const montoEsperado = montoInicial + ventasEfectivo - gastosTotal;
+
+                const finalReal = parseFloat(montoReal);
+                const diferencia = finalReal - montoEsperado;
+
+                await shift.update({
+                    finalAmount: finalReal,
+                    expectedAmount: montoEsperado,
+                    difference: diferencia,
+                    cashSales: ventasEfectivo,
+                    cardSales: ventasTarjeta,
+                    transferSales: ventasTransferencia,
+                    expensesTotal: gastosTotal,
+                    endTime: new Date(),
+                    status: 'CLOSED',
+                    notes: notes
+                });
+
+                res.json(shift);
+
+            } catch (err) {
+                console.error(`❌ [POST /api/shifts/end] Error:`, err);
+                console.error(`   ShiftId: ${req.body.shiftId}`);
+                console.error(`   Sequelize Error:`, err.parent || err.original || err.message);
+                res.status(500).json({ error: 'Error al cerrar turno', details: err.message });
+            }
+        });
+
+        // ==========================================
+        // ENDPOINTS DE CONFIGURACIÓN DE TICKETS
+        // ==========================================
+
+        // GET /api/ticket-settings/:storeId - Get ticket settings for a store
+        app.get('/api/ticket-settings/:storeId', authenticateToken, async (req, res) => {
+            try {
+                const { storeId } = req.params;
+
+                // Security: Only SUPER_ADMIN or store owner can view settings
+                if (req.role !== 'SUPER_ADMIN' && req.storeId !== storeId) {
+                    return res.status(403).json({ error: 'Acceso denegado' });
+                }
+
+                let settings = await TicketSettings.findOne({ where: { storeId } });
+
+                // If no settings exist, return defaults
+                if (!settings) {
+                    console.log(`📄 No ticket settings found for store ${storeId}, returning defaults`);
+                    return res.json({
+                        storeId,
+                        showLogo: false,
+                        showAddress: true,
+                        showPhone: true,
+                        showTaxes: false,
+                        footerMessage: '¡Gracias por su compra!'
+                    });
+                }
+
+                console.log(`✅ Ticket settings found for store ${storeId}`);
+                res.json(settings);
+            } catch (error) {
+                console.error('Error al obtener configuración de tickets:', error);
+                res.status(500).json({ error: 'Error al obtener configuración' });
+            }
+        });
+
+        // PUT /api/ticket-settings/:storeId - Update ticket settings
+        app.put('/api/ticket-settings/:storeId', authenticateToken, async (req, res) => {
+            try {
+                const { storeId } = req.params;
+                const { showLogo, showAddress, showPhone, showTaxes, footerMessage } = req.body;
+
+                // Security: Only SUPER_ADMIN or ADMIN can update settings
+                if (req.role !== 'SUPER_ADMIN' && req.role !== 'ADMIN') {
+                    return res.status(403).json({ error: 'Solo administradores pueden modificar configuración' });
+                }
+
+                // Security: Non-SUPER_ADMIN can only update their own store
+                if (req.role !== 'SUPER_ADMIN' && req.storeId !== storeId) {
+                    return res.status(403).json({ error: 'Acceso denegado' });
+                }
+
+                // Find or create settings
+                let [settings, created] = await TicketSettings.findOrCreate({
+                    where: { storeId },
+                    defaults: {
+                        showLogo: showLogo ?? false,
+                        showAddress: showAddress ?? true,
+                        showPhone: showPhone ?? true,
+                        showTaxes: showTaxes ?? false,
+                        footerMessage: footerMessage || '¡Gracias por su compra!'
+                    }
+                });
+
+                // If exists, update
+                if (!created) {
+                    await settings.update({
+                        showLogo: showLogo ?? settings.showLogo,
+                        showAddress: showAddress ?? settings.showAddress,
+                        showPhone: showPhone ?? settings.showPhone,
+                        showTaxes: showTaxes ?? settings.showTaxes,
+                        footerMessage: footerMessage || settings.footerMessage
+                    });
+                }
+
+                console.log(`✅ Ticket settings ${created ? 'created' : 'updated'} for store ${storeId}`);
+                res.json(settings);
+            } catch (error) {
+                console.error('Error al actualizar configuración de tickets:', error);
+                res.status(500).json({ error: 'Error al actualizar configuración' });
+            }
+        });
+
+
+        // ==========================================
+        // SERVIR FRONTEND EN PRODUCCIÓN
+        // ==========================================
+
+        // 1. Servir archivos estáticos generados por Vite (dist/)
+        app.use(express.static(path.join(__dirname, 'dist')));
+
+        // 2. Catch-All: Cualquier ruta que NO sea API, redirige al index.html
+        // Esto permite que React Router maneje las rutas del frontend (SPA)
+        app.get('*', (req, res) => {
+            res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+        });
 
         // ==========================================
         // INICIAR SERVIDOR
         // ==========================================
-        const startServer = async () => {
-            try {
-                // Conectar a base de datos
-                await sequelize.authenticate();
-                console.log('✅ Conexión a PostgreSQL exitosa');
-
-                // Sincronizar modelos (crear tablas)
-                // Sincronizar Base de Datos (ALTER para actualizar schema sin borrar data)
-                sequelize.sync({ alter: true }).then(() => {
-                    console.log('✅ Base de datos sincronizada (Schema Updated)');
-
-                    // Crear usuario SuperAdmin por defecto si no existe
-                    // await createSuperAdmin(); // COMMENTED: Function not defined, admin may already exist in production
-                }).catch(err => {
-                    console.error("❌ ERROR CRÍTICO AL SINCRONIZAR BD:");
-                    console.error(err); // Imprime el objeto completo
-                    if (err.parent) console.error("🔍 Detalle SQL:", err.parent); // Si es Sequelize/Postgres
-                    if (err.original) console.error("🔍 Original:", err.original);
-                });
-
-                // Crear usuario SuperAdmin por defecto si no existe
-                // await createSuperAdmin(); // COMMENTED: Function not defined, admin may already exist in production
-
-                // 🧹 LIMPIEZA: Cerrar shifts huérfanos al iniciar servidor
-                await cleanupOrphanedShifts();
-
-                // ==========================================
-                // ENDPOINTS DE TICKETS (SOPORTE)
-                // ==========================================
-
-                // GET /api/tickets - Listar tickets
-                app.get('/api/tickets', authenticateToken, async (req, res) => {
-                    try {
-                        const where = {};
-
-                        // Si no es SUPER_ADMIN, solo ve los de su tienda
-                        if (req.role !== 'SUPER_ADMIN') {
-                            where.storeId = req.storeId;
-                        }
-
-                        const tickets = await Ticket.findOne({ where }) // Check if any exist first to fail fast? No, findAll returns []
-                            ? await Ticket.findAll({
-                                where,
-                                include: req.role === 'SUPER_ADMIN' ? [{
-                                    model: Store,
-                                    as: 'store',
-                                    attributes: ['nombre']
-                                }] : [],
-                                order: [
-                                    ['status', 'ASC'], // OPEN first
-                                    ['prioridad', 'DESC'], // URGENT first
-                                    ['createdAt', 'DESC']
-                                ]
-                            })
-                            : []; // Optimization if needed, but standard findAll is fine.
-
-                        // Re-doing the query standard way
-                        const finalTickets = await Ticket.findAll({
-                            where,
-                            include: req.role === 'SUPER_ADMIN' ? [{
-                                model: Store,
-                                as: 'store',
-                                attributes: ['nombre']
-                            }] : [],
-                            order: [['createdAt', 'DESC']]
-                        });
-
-                        res.json(finalTickets);
-                    } catch (error) {
-                        console.error('Error al obtener tickets:', error);
-                        res.status(500).json({ error: 'Error al obtener tickets' });
-                    }
-                });
-
-                // POST /api/tickets - Crear ticket
-                app.post('/api/tickets', authenticateToken, async (req, res) => {
-                    try {
-                        const { titulo, descripcion, prioridad } = req.body;
-
-                        if (!titulo || !descripcion) {
-                            return res.status(400).json({ error: 'Título y descripción requeridos' });
-                        }
-
-                        const ticket = await Ticket.create({
-                            storeId: req.storeId,
-                            titulo,
-                            descripcion,
-                            prioridad: prioridad || 'MEDIUM',
-                            status: 'OPEN',
-                            creadoPor: req.usuario
-                        });
-
-                        res.status(201).json(ticket);
-                    } catch (error) {
-                        console.error('Error al crear ticket:', error);
-                        res.status(500).json({ error: 'Error al crear ticket' });
-                    }
-                });
-
-                // PUT /api/tickets/:id - Actualizar ticket (Status/Prioridad)
-                app.put('/api/tickets/:id', authenticateToken, async (req, res) => {
-                    try {
-                        const { status, prioridad } = req.body;
-                        const where = { id: req.params.id };
-
-                        // Isolar: Si no es SA, solo puede editar sus propios tickets (opcionalmente) 
-                        // Normalmente SA es quien edita el status a RESOLVED, pero dejaremos ambos por ahora.
-                        if (req.role !== 'SUPER_ADMIN') {
-                            where.storeId = req.storeId;
-                        }
-
-                        const ticket = await Ticket.findOne({ where });
-
-                        if (!ticket) {
-                            return res.status(404).json({ error: 'Ticket no encontrado' });
-                        }
-
-                        await ticket.update({
-                            status: status || ticket.status,
-                            prioridad: prioridad || ticket.prioridad
-                        });
-
-                        res.json(ticket);
-                    } catch (error) {
-                        console.error('Error al actualizar ticket:', error);
-                        res.status(500).json({ error: 'Error al actualizar ticket' });
-                    }
-                });
-
-
-                // ==========================================
-                // ENDPOINTS DE CASH SHIFTS - REMOVED
-                // ==========================================
-                // NOTE: Old Sequelize-based endpoints removed due to schema mismatch
-                // The CashShift model uses old column names (apertura, cajero, montoInicial)
-                // that don't exist in the new PostgreSQL 'shifts' table schema.
-                // 
-                // New implementation should use pool.query with correct column names:
-                // - start_time (not apertura)
-                // - opened_by (not cajero)  
-                // - initial_amount (not montoInicial)
-                //
-                // Add new endpoints here using pool.query if needed.
-
-                // ==========================================
-                // 🏦 GESTIÓN DE CAJA (VERSIÓN ESTABLE v2.9.3)
-                // ==========================================
-
-                // ==========================================
-                // 🏦 GESTIÓN DE CAJA (VERSIÓN STRICT SEQUELIZE v3.0)
-                // ==========================================
-
-                // 1. OBTENER TURNO ACTUAL (CON CÁLCULO EN TIEMPO REAL)
-                app.get('/api/shifts/current', authenticateToken, async (req, res) => {
-                    try {
-                        const { storeId } = req.query;
-                        const targetStoreId = req.role === 'SUPER_ADMIN' && storeId ? storeId : req.storeId;
-
-                        console.log(`🔵 [GET /api/shifts/current] storeId: ${targetStoreId}`);
-
-                        if (!targetStoreId) return res.status(400).json({ error: 'Store ID requerido' });
-
-                        // 🛡️ BLINDAJE: Detectar múltiples shifts abiertos
-                        const openShifts = await Shift.findAll({
-                            where: { storeId: targetStoreId, status: 'OPEN' },
-                            order: [['id', 'DESC']] // Ordenar por ID (más reciente primero)
-                        });
-
-                        if (openShifts.length > 1) {
-                            console.warn(`⚠️ [GET /api/shifts/current] Múltiples shifts abiertos detectados (${openShifts.length}). Cerrando duplicados...`);
-                            // Cerrar todos excepto el más reciente
-                            for (let i = 1; i < openShifts.length; i++) {
-                                await openShifts[i].update({ status: 'CLOSED', endTime: new Date() });
-                                console.log(`   ✅ Shift duplicado cerrado: ID ${openShifts[i].id}`);
-                            }
-                        }
-
-                        // Fetch OPEN shift with associated Sales and Expenses
-                        const shift = await Shift.findOne({
-                            where: { storeId: targetStoreId, status: 'OPEN' },
-                            include: [
-                                { model: Sale, as: 'sales', attributes: ['total', 'paymentMethod', 'status'] },
-                                { model: Expense, as: 'expenses', attributes: ['monto'] }
-                            ]
-                        });
-
-                        if (!shift) {
-                            console.log(`ℹ️ [GET /api/shifts/current] No hay turno abierto para store ${targetStoreId}`);
-                            return res.status(204).send(); // No shift open
-                        }
-
-                        // Calculate Totals on the Fly (Strict Accounting)
-                        let ventasEfectivo = 0;
-                        let ventasTarjeta = 0;
-                        let ventasTransferencia = 0;
-                        let ventasTotales = 0;
-
-                        shift.sales.forEach(sale => {
-                            if (sale.status === 'ACTIVE') {
-                                const amount = parseFloat(sale.total);
-                                ventasTotales += amount;
-                                if (sale.paymentMethod === 'CASH') ventasEfectivo += amount;
-                                else if (sale.paymentMethod === 'CARD') ventasTarjeta += amount;
-                                else if (sale.paymentMethod === 'TRANSFER') ventasTransferencia += amount;
-                            }
-                        });
-
-                        const gastosTotal = shift.expenses.reduce((sum, exp) => sum + parseFloat(exp.monto), 0);
-                        const montoInicial = parseFloat(shift.initialAmount);
-
-                        // Expected Cash = Initial + Cash Sales - Expenses
-                        const montoEsperado = montoInicial + ventasEfectivo - gastosTotal;
-
-                        // Return formatted data matching frontend interface
-                        res.json({
-                            id: shift.id,
-                            montoInicial: montoInicial,
-                            ventasEfectivo: ventasEfectivo,
-                            ventasTarjeta: ventasTarjeta,
-                            ventasTransferencia: ventasTransferencia,
-                            ventasTotales: ventasTotales,
-                            gastos: gastosTotal,
-                            montoEsperado: montoEsperado, // Dynamic calculation
-                            startTime: shift.startTime
-                        });
-
-                    } catch (err) {
-                        console.error(`❌ [GET /api/shifts/current] Error:`, err);
-                        console.error(`   StoreId: ${req.query.storeId || req.storeId}`);
-                        console.error(`   Sequelize Error:`, err.parent || err.original || err.message);
-                        res.status(500).json({ error: 'Error al obtener turno actual', details: err.message });
-                    }
-                });
-
-                // 2. APERTURA DE CAJA
-                app.post('/api/shifts/start', authenticateToken, async (req, res) => {
-                    try {
-                        const { initialAmount, storeId: bodyStoreId } = req.body;
-                        const storeId = req.role === 'SUPER_ADMIN' && bodyStoreId ? bodyStoreId : req.storeId;
-                        const userId = req.user.userId || req.user.id;
-
-                        console.log(`🔵 [POST /api/shifts/start] storeId: ${storeId}, userId: ${userId}, initialAmount: ${initialAmount}`);
-
-                        if (!storeId) return res.status(400).json({ error: 'Falta ID de tienda' });
-
-                        // Check for existing open shift
-                        const existingShift = await Shift.findOne({
-                            where: { storeId, status: 'OPEN' }
-                        });
-
-                        if (existingShift) {
-                            console.log(`ℹ️ [POST /api/shifts/start] Shift ya existe para store ${storeId}. Retornando shift activo ID: ${existingShift.id}`);
-                            return res.status(200).json(existingShift); // 🛡️ BLINDAJE: Retornar shift existente en lugar de error
-                        }
-
-                        const newShift = await Shift.create({
-                            storeId,
-                            openedBy: userId,
-                            initialAmount: initialAmount || 0,
-                            startTime: new Date(),
-                            status: 'OPEN'
-                        });
-
-                        res.status(201).json(newShift);
-
-                    } catch (err) {
-                        console.error(`❌ [POST /api/shifts/start] Error:`, err);
-                        console.error(`   StoreId: ${req.body.storeId || req.storeId}`);
-                        console.error(`   Sequelize Error:`, err.parent || err.original || err.message);
-                        res.status(500).json({ error: 'Error al abrir turno', details: err.message });
-                    }
-                });
-
-                // 3. CIERRE DE CAJA
-                app.post('/api/shifts/end', authenticateToken, async (req, res) => {
-                    try {
-                        const { shiftId, montoReal, notes } = req.body;
-
-                        const shift = await Shift.findByPk(shiftId, {
-                            include: [
-                                { model: Sale, as: 'sales' },
-                                { model: Expense, as: 'expenses' }
-                            ]
-                        });
-
-                        if (!shift) return res.status(404).json({ error: 'Turno no encontrado' });
-                        if (shift.status === 'CLOSED') return res.status(400).json({ error: 'El turno ya está cerrado' });
-
-                        // Strict Recalculation
-                        let ventasEfectivo = 0;
-                        let ventasTarjeta = 0;
-                        let ventasTransferencia = 0;
-
-                        shift.sales.forEach(sale => {
-                            if (sale.status === 'ACTIVE') {
-                                const amount = parseFloat(sale.total);
-                                if (sale.paymentMethod === 'CASH') ventasEfectivo += amount;
-                                else if (sale.paymentMethod === 'CARD') ventasTarjeta += amount;
-                                else if (sale.paymentMethod === 'TRANSFER') ventasTransferencia += amount;
-                            }
-                        });
-
-                        const gastosTotal = shift.expenses.reduce((sum, exp) => sum + parseFloat(exp.monto), 0);
-                        const montoInicial = parseFloat(shift.initialAmount);
-                        const montoEsperado = montoInicial + ventasEfectivo - gastosTotal;
-
-                        const finalReal = parseFloat(montoReal);
-                        const diferencia = finalReal - montoEsperado;
-
-                        await shift.update({
-                            finalAmount: finalReal,
-                            expectedAmount: montoEsperado,
-                            difference: diferencia,
-                            cashSales: ventasEfectivo,
-                            cardSales: ventasTarjeta,
-                            transferSales: ventasTransferencia,
-                            expensesTotal: gastosTotal,
-                            endTime: new Date(),
-                            status: 'CLOSED',
-                            notes: notes
-                        });
-
-                        res.json(shift);
-
-                    } catch (err) {
-                        console.error(`❌ [POST /api/shifts/end] Error:`, err);
-                        console.error(`   ShiftId: ${req.body.shiftId}`);
-                        console.error(`   Sequelize Error:`, err.parent || err.original || err.message);
-                        res.status(500).json({ error: 'Error al cerrar turno', details: err.message });
-                    }
-                });
-
-                // ==========================================
-                // ENDPOINTS DE CONFIGURACIÓN DE TICKETS
-                // ==========================================
-
-                // GET /api/ticket-settings/:storeId - Get ticket settings for a store
-                app.get('/api/ticket-settings/:storeId', authenticateToken, async (req, res) => {
-                    try {
-                        const { storeId } = req.params;
-
-                        // Security: Only SUPER_ADMIN or store owner can view settings
-                        if (req.role !== 'SUPER_ADMIN' && req.storeId !== storeId) {
-                            return res.status(403).json({ error: 'Acceso denegado' });
-                        }
-
-                        let settings = await TicketSettings.findOne({ where: { storeId } });
-
-                        // If no settings exist, return defaults
-                        if (!settings) {
-                            console.log(`📄 No ticket settings found for store ${storeId}, returning defaults`);
-                            return res.json({
-                                storeId,
-                                showLogo: false,
-                                showAddress: true,
-                                showPhone: true,
-                                showTaxes: false,
-                                footerMessage: '¡Gracias por su compra!'
-                            });
-                        }
-
-                        console.log(`✅ Ticket settings found for store ${storeId}`);
-                        res.json(settings);
-                    } catch (error) {
-                        console.error('Error al obtener configuración de tickets:', error);
-                        res.status(500).json({ error: 'Error al obtener configuración' });
-                    }
-                });
-
-                // PUT /api/ticket-settings/:storeId - Update ticket settings
-                app.put('/api/ticket-settings/:storeId', authenticateToken, async (req, res) => {
-                    try {
-                        const { storeId } = req.params;
-                        const { showLogo, showAddress, showPhone, showTaxes, footerMessage } = req.body;
-
-                        // Security: Only SUPER_ADMIN or ADMIN can update settings
-                        if (req.role !== 'SUPER_ADMIN' && req.role !== 'ADMIN') {
-                            return res.status(403).json({ error: 'Solo administradores pueden modificar configuración' });
-                        }
-
-                        // Security: Non-SUPER_ADMIN can only update their own store
-                        if (req.role !== 'SUPER_ADMIN' && req.storeId !== storeId) {
-                            return res.status(403).json({ error: 'Acceso denegado' });
-                        }
-
-                        // Find or create settings
-                        let [settings, created] = await TicketSettings.findOrCreate({
-                            where: { storeId },
-                            defaults: {
-                                showLogo: showLogo ?? false,
-                                showAddress: showAddress ?? true,
-                                showPhone: showPhone ?? true,
-                                showTaxes: showTaxes ?? false,
-                                footerMessage: footerMessage || '¡Gracias por su compra!'
-                            }
-                        });
-
-                        // If exists, update
-                        if (!created) {
-                            await settings.update({
-                                showLogo: showLogo ?? settings.showLogo,
-                                showAddress: showAddress ?? settings.showAddress,
-                                showPhone: showPhone ?? settings.showPhone,
-                                showTaxes: showTaxes ?? settings.showTaxes,
-                                footerMessage: footerMessage || settings.footerMessage
-                            });
-                        }
-
-                        console.log(`✅ Ticket settings ${created ? 'created' : 'updated'} for store ${storeId}`);
-                        res.json(settings);
-                    } catch (error) {
-                        console.error('Error al actualizar configuración de tickets:', error);
-                        res.status(500).json({ error: 'Error al actualizar configuración' });
-                    }
-                });
-
-
-                // ==========================================
-                // SERVIR FRONTEND EN PRODUCCIÓN
-                // ==========================================
-
-                // 1. Servir archivos estáticos generados por Vite (dist/)
-                app.use(express.static(path.join(__dirname, 'dist')));
-
-                // 2. Catch-All: Cualquier ruta que NO sea API, redirige al index.html
-                // Esto permite que React Router maneje las rutas del frontend (SPA)
-                app.get('*', (req, res) => {
-                    res.sendFile(path.join(__dirname, 'dist', 'index.html'));
-                });
-
-                // ==========================================
-                // INICIAR SERVIDOR
-                // ==========================================
-                app.listen(PORT, '0.0.0.0', () => {
-                    console.log(`✅ Servidor corriendo en puerto ${PORT}`);
-                    console.log(`🔧 Ambiente: ${process.env.NODE_ENV || 'development'}`);
-                    console.log(`📊 Dashboard API: http://localhost:${PORT}/api/dashboard/summary`);
-                });
-            } catch (error) {
-                console.error('❌ Error al iniciar servidor:', error);
-                process.exit(1);
-            }
-        };
-
-        startServer();
+        app.listen(PORT, '0.0.0.0', () => {
+            console.log(`✅ Servidor corriendo en puerto ${PORT}`);
+            console.log(`🔧 Ambiente: ${process.env.NODE_ENV || 'development'}`);
+            console.log(`📊 Dashboard API: http://localhost:${PORT}/api/dashboard/summary`);
+        });
+    } catch (error) {
+        console.error('❌ Error al iniciar servidor:', error);
+        process.exit(1);
+    }
+};
+
+startServer();
