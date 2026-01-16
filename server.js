@@ -1693,28 +1693,35 @@ app.post('/api/ventas/sync', authenticateToken, async (req, res) => {
                 // Similar a POST /api/ventas pero con manejo de errores individual
                 let totalCost = 0;
                 const enrichedItems = [];
+                let hasError = false;
+                let errorMessage = '';
 
                 for (const item of ventaData.items) {
                     const product = await Product.findByPk(item.productId);
                     if (!product) {
-                        results.push({ tempId: ventaData.tempId, error: `Producto ${item.productId} no encontrado` });
-                        continue;
+                        errorMessage = `Producto ${item.productId} no encontrado`;
+                        hasError = true;
+                        break;
                     }
 
-                    if (product.stock < item.cantidad) {
-                        results.push({ tempId: ventaData.tempId, error: `Stock insuficiente para ${product.nombre}` });
-                        continue;
-                    }
-
-                    // 🔒 PATCH CRÍTICO 2: Sanitizar valores numéricos para prevenir NaN
-                    const unitPrice = Number(item.unitPrice || item.price || product.salePrice || 0);
+                    // 🔒 SANITIZACIÓN: Convertir a números y prevenir NaN
+                    const unitPrice = Number(item.unitPrice || item.price || 0);
                     const cantidad = Number(item.cantidad || item.quantity || 1);
                     const unitCost = Number(product.costPrice || 0);
 
                     // Validar que no sean NaN
                     if (isNaN(unitPrice) || isNaN(cantidad) || isNaN(unitCost)) {
-                        results.push({ tempId: ventaData.tempId, error: `Item inválido: precio o cantidad NaN` });
-                        continue;
+                        console.error(`Item inválido en venta ${ventaData.tempId}:`, item);
+                        errorMessage = `Item inválido: valores NaN detectados`;
+                        hasError = true;
+                        break;
+                    }
+
+                    // Validar stock DESPUÉS de sanitización
+                    if (product.stock < cantidad) {
+                        errorMessage = `Stock insuficiente para ${product.nombre}`;
+                        hasError = true;
+                        break;
                     }
 
                     const itemCost = unitCost * cantidad;
@@ -1728,6 +1735,12 @@ app.post('/api/ventas/sync', authenticateToken, async (req, res) => {
                         unitCost: unitCost,
                         subtotal: unitPrice * cantidad
                     });
+                }
+
+                // Si hubo error en algún item, saltar esta venta completa
+                if (hasError) {
+                    results.push({ tempId: ventaData.tempId, error: errorMessage });
+                    continue;
                 }
 
                 const netProfit = ventaData.total - totalCost;
