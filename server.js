@@ -2599,7 +2599,7 @@ app.get('/api/test/run', async (req, res) => {
 // ENDPOINT DE DASHBOARD OPTIMIZADO
 // ==========================================
 
-// GET /api/dashboard/summary - Resumen de ventas y progreso de meta (basado en turno activo)
+// GET /api/dashboard/summary - Utilidad Real y Punto de Equilibrio (basado en turno activo)
 app.get('/api/dashboard/summary', authenticateToken, async (req, res) => {
     try {
         const { storeId } = req;
@@ -2618,10 +2618,11 @@ app.get('/api/dashboard/summary', authenticateToken, async (req, res) => {
         // Si NO hay turno abierto, devolvemos todo en 0 inmediatamente.
         if (!currentShift) {
             return res.json({
-                totalItems: 0,
-                totalVentas: 0,
-                meta: 0,
-                porcentaje: 0
+                costoOperativo: 0,
+                ventaTotal: 0,
+                utilidadBruta: 0,
+                utilidadNeta: 0,
+                porcentajeEquilibrio: 0
             });
         }
         // =========================================================
@@ -2629,8 +2630,13 @@ app.get('/api/dashboard/summary', authenticateToken, async (req, res) => {
         // 2. Si SÍ hay turno, procedemos con las consultas usando el ID seguro
         const shiftId = currentShift.id;
 
-        // Calcular total de ventas del turno actual
-        const totalVentas = await Sale.sum('total', {
+        // Obtener Costo Operativo Diario (breakEvenGoal es mensual / 30)
+        const config = await StoreConfig.findOne({ where: { storeId } });
+        const monthlyGoal = config ? Number(config.breakEvenGoal) : 0;
+        const costoOperativo = monthlyGoal / 30;
+
+        // Calcular total de ventas del turno actual (Dinero en caja)
+        const ventaTotal = await Sale.sum('total', {
             where: {
                 storeId: storeId,
                 shiftId: shiftId,
@@ -2638,8 +2644,11 @@ app.get('/api/dashboard/summary', authenticateToken, async (req, res) => {
             }
         }) || 0;
 
-        // Calcular total de items vendidos (Sintonizado con modelo SaleItem: 'cantidad')
-        const totalItems = await SaleItem.sum('cantidad', {
+        // =========================================================
+        // CÁLCULO DE UTILIDAD REAL (Ganancia = Precio Venta - Costo)
+        // =========================================================
+        // Obtener todos los items vendidos en el turno actual
+        const saleItems = await SaleItem.findAll({
             include: [{
                 model: Sale,
                 where: {
@@ -2647,37 +2656,62 @@ app.get('/api/dashboard/summary', authenticateToken, async (req, res) => {
                     shiftId: shiftId,
                     status: 'ACTIVE'
                 },
-                required: true
-            }]
-        }) || 0;
+                required: true,
+                attributes: [] // No necesitamos campos de Sale aquí
+            }, {
+                model: Product,
+                attributes: ['costPrice'], // Necesitamos el costo actual como fallback
+                required: false // LEFT JOIN por si el producto fue eliminado
+            }],
+            attributes: ['cantidad', 'precio', 'costo', 'productId']
+        });
 
-        // Obtener Meta diaria (breakEvenGoal es mensual / 30)
-        const config = await StoreConfig.findOne({ where: { storeId } });
-        const monthlyGoal = config ? Number(config.breakEvenGoal) : 0;
-        const meta = monthlyGoal / 30;
+        let utilidadBruta = 0;
 
-        // Calcular porcentaje
-        let porcentaje = 0;
-        if (meta > 0) {
-            porcentaje = (totalVentas / meta) * 100;
+        for (const item of saleItems) {
+            const cantidad = Number(item.cantidad) || 0;
+            const precioVenta = Number(item.precio) || 0;
+
+            // Usar costo histórico del item, si no existe usar costo actual del producto
+            let costo = Number(item.costo) || 0;
+
+            // Fallback: Si el costo histórico es 0 o null, usar el costo actual del producto
+            if (costo === 0 && item.Product) {
+                costo = Number(item.Product.costPrice) || 0;
+            }
+
+            // Calcular ganancia por item: (Precio Venta - Costo) * Cantidad
+            const gananciaItem = (precioVenta - costo) * cantidad;
+            utilidadBruta += gananciaItem;
+        }
+
+        // Calcular Utilidad Neta (Ganancia - Gastos Operativos)
+        const utilidadNeta = utilidadBruta - costoOperativo;
+
+        // Calcular Porcentaje de Equilibrio (¿Cuánto % de los gastos estamos cubriendo?)
+        let porcentajeEquilibrio = 0;
+        if (costoOperativo > 0) {
+            porcentajeEquilibrio = (utilidadBruta / costoOperativo) * 100;
         }
 
         // 3. Enviar respuesta exitosa
         res.json({
-            totalItems: Number(totalItems),
-            totalVentas: Number(totalVentas),
-            meta: Number(meta.toFixed(2)),
-            porcentaje: Number(porcentaje.toFixed(2))
+            costoOperativo: Number(costoOperativo.toFixed(2)),
+            ventaTotal: Number(ventaTotal.toFixed(2)),
+            utilidadBruta: Number(utilidadBruta.toFixed(2)),
+            utilidadNeta: Number(utilidadNeta.toFixed(2)),
+            porcentajeEquilibrio: Number(porcentajeEquilibrio.toFixed(2))
         });
 
     } catch (error) {
         console.error('Error en Dashboard Summary:', error);
         // Devolvemos estructura válida en ceros para que el frontend NO explote
         res.status(200).json({
-            totalItems: 0,
-            totalVentas: 0,
-            meta: 0,
-            porcentaje: 0,
+            costoOperativo: 0,
+            ventaTotal: 0,
+            utilidadBruta: 0,
+            utilidadNeta: 0,
+            porcentajeEquilibrio: 0,
             error: "Error interno, mostrando datos en cero"
         });
     }
