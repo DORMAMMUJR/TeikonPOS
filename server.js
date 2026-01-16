@@ -1104,7 +1104,30 @@ app.put('/api/productos/:id', authenticateToken, async (req, res) => {
             return res.status(404).json({ error: 'Producto no encontrado' });
         }
 
-        await product.update(req.body);
+        // 🔒 PATCH CRÍTICO 3: Whitelist de campos permitidos para prevenir inyección
+        const allowedFields = {
+            sku: req.body.sku,
+            name: req.body.name,
+            nombre: req.body.nombre,
+            category: req.body.category,
+            categoria: req.body.categoria,
+            costPrice: req.body.costPrice,
+            salePrice: req.body.salePrice,
+            stock: req.body.stock,
+            minStock: req.body.minStock,
+            taxRate: req.body.taxRate,
+            isActive: req.body.isActive,
+            activo: req.body.activo,
+            image: req.body.image,
+            imagen: req.body.imagen
+        };
+
+        // Filtrar campos undefined
+        const updateData = Object.fromEntries(
+            Object.entries(allowedFields).filter(([_, v]) => v !== undefined)
+        );
+
+        await product.update(updateData);
 
         // 🔧 FIX: Map activo -> isActive for frontend compatibility
         const productResponse = product.toJSON();
@@ -1661,6 +1684,12 @@ app.post('/api/ventas/sync', authenticateToken, async (req, res) => {
 
         for (const ventaData of ventas) {
             try {
+                // 🔒 PATCH CRÍTICO 1: Validar que ventaData.items existe y es un array
+                if (!ventaData.items || !Array.isArray(ventaData.items) || ventaData.items.length === 0) {
+                    results.push({ tempId: ventaData.tempId, error: 'Venta ignorada: sin items válidos' });
+                    continue;
+                }
+
                 // Similar a POST /api/ventas pero con manejo de errores individual
                 let totalCost = 0;
                 const enrichedItems = [];
@@ -1677,16 +1706,27 @@ app.post('/api/ventas/sync', authenticateToken, async (req, res) => {
                         continue;
                     }
 
-                    const itemCost = parseFloat(product.costPrice) * item.cantidad;
+                    // 🔒 PATCH CRÍTICO 2: Sanitizar valores numéricos para prevenir NaN
+                    const unitPrice = Number(item.unitPrice || item.price || product.salePrice || 0);
+                    const cantidad = Number(item.cantidad || item.quantity || 1);
+                    const unitCost = Number(product.costPrice || 0);
+
+                    // Validar que no sean NaN
+                    if (isNaN(unitPrice) || isNaN(cantidad) || isNaN(unitCost)) {
+                        results.push({ tempId: ventaData.tempId, error: `Item inválido: precio o cantidad NaN` });
+                        continue;
+                    }
+
+                    const itemCost = unitCost * cantidad;
                     totalCost += itemCost;
 
                     enrichedItems.push({
                         productId: product.id,
                         nombre: product.nombre,
-                        cantidad: item.cantidad,
-                        unitPrice: item.unitPrice || product.salePrice,
-                        unitCost: product.costPrice,
-                        subtotal: item.unitPrice * item.cantidad
+                        cantidad: cantidad,
+                        unitPrice: unitPrice,
+                        unitCost: unitCost,
+                        subtotal: unitPrice * cantidad
                     });
                 }
 
