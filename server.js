@@ -33,7 +33,7 @@ pool.connect()
 
 // Importar controladores
 import { getDashboardSummary } from './controllers/dashboardController.js';
-import { getCashCloseDetails } from './controllers/salesController.js';
+import { getCashCloseDetails, cancelSale } from './controllers/salesController.js';
 import { createStore, getStores, deleteStore } from './controllers/storeController.js';
 
 import {
@@ -2716,6 +2716,12 @@ app.get('/api/dashboard/summary', authenticateToken, async (req, res) => {
         });
     }
 });
+
+// ==========================================
+// ENDPOINT DE CANCELACIÓN DE VENTAS
+// ==========================================
+// PUT /api/sales/:id/cancel - Cancelar venta y restaurar inventario
+app.put('/api/sales/:id/cancel', authenticateToken, cancelSale);
 
 // ==========================================
 // FUNCIÓN DE LIMPIEZA: CERRAR SHIFTS HUÉRFANOS

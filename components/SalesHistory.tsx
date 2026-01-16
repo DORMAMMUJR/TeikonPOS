@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useStore } from '../context/StoreContext';
-import { Search, Printer, X, Calendar, FileText, History as HistoryIcon, Loader2 } from 'lucide-react';
+import { Search, Printer, X, Calendar, FileText, History as HistoryIcon, Loader2, Trash2 } from 'lucide-react';
 import { Modal, Button, TeikonWordmark } from '../src/components/ui';
 import { SaleTicket } from './SaleTicket';
 import { Sale } from '../types';
@@ -28,6 +28,8 @@ const SalesHistory: React.FC<SalesHistoryProps> = ({ targetStoreId }) => {
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
   const [autoPrint, setAutoPrint] = useState(false); // NEW: Track print mode
   const [showSessionExpiredModal, setShowSessionExpiredModal] = useState(false);
+  const [saleToCancel, setSaleToCancel] = useState<Sale | null>(null);
+  const [isCancelling, setIsCancelling] = useState(false);
 
   // IMPROVED: Local state for store-specific sales
   const [storeSales, setStoreSales] = useState<Sale[]>([]);
@@ -97,6 +99,48 @@ const SalesHistory: React.FC<SalesHistoryProps> = ({ targetStoreId }) => {
     setAutoPrint(true); // Signal print mode to SaleTicket
   };
 
+  const handleCancelSale = async () => {
+    if (!saleToCancel) return;
+
+    setIsCancelling(true);
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/sales/${saleToCancel.id}/cancel`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Error al cancelar la venta');
+      }
+
+      const result = await response.json();
+      console.log('✅ Venta cancelada:', result);
+
+      // Update local state
+      if (targetStoreId) {
+        // Refresh store sales
+        const fetchedSales = await salesAPI.getAll({ storeId: targetStoreId });
+        setStoreSales(fetchedSales);
+      } else {
+        // Use context cancelSale if available
+        if (cancelSale) {
+          cancelSale(saleToCancel.id);
+        }
+      }
+
+      setSaleToCancel(null);
+      alert('✅ Venta cancelada exitosamente. El inventario ha sido restaurado.');
+    } catch (error: any) {
+      console.error('❌ Error al cancelar venta:', error);
+      alert(`Error: ${error.message}`);
+    } finally {
+      setIsCancelling(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -184,7 +228,6 @@ const SalesHistory: React.FC<SalesHistoryProps> = ({ targetStoreId }) => {
                     <div className="flex justify-center gap-2">
                       <Button
                         variant="secondary"
-
                         onClick={() => handleViewDetails(sale)}
                         className="h-8 text-[10px]"
                       >
@@ -193,13 +236,22 @@ const SalesHistory: React.FC<SalesHistoryProps> = ({ targetStoreId }) => {
                       </Button>
                       <Button
                         variant="primary"
-
                         onClick={() => handlePrint(sale)}
                         className="h-8 text-[10px] bg-slate-900 text-white hover:bg-slate-800"
                       >
                         <Printer size={14} className="mr-1" />
                         IMPRIMIR
                       </Button>
+                      {sale.status === 'ACTIVE' && (
+                        <Button
+                          variant="secondary"
+                          onClick={() => setSaleToCancel(sale)}
+                          className="h-8 text-[10px] bg-red-500 text-white hover:bg-red-600 border-red-500"
+                        >
+                          <Trash2 size={14} className="mr-1" />
+                          CANCELAR
+                        </Button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -274,6 +326,49 @@ const SalesHistory: React.FC<SalesHistoryProps> = ({ targetStoreId }) => {
             >
               Ir a Inicio de Sesión
             </Button>
+          </div>
+        </Modal>
+      )}
+
+      {/* Modal de Confirmación de Cancelación */}
+      {saleToCancel && (
+        <Modal
+          isOpen={!!saleToCancel}
+          onClose={() => setSaleToCancel(null)}
+          title="⚠️ Cancelar Venta"
+        >
+          <div className="space-y-4">
+            <p className="text-base text-slate-700 dark:text-slate-300">
+              ¿Estás seguro de cancelar la venta <strong>#{saleToCancel.id.slice(0, 8).toUpperCase()}</strong>?
+            </p>
+            <p className="text-sm text-slate-600 dark:text-slate-400">
+              El inventario será restaurado automáticamente y esta acción no se puede deshacer.
+            </p>
+            <div className="flex gap-3 mt-6">
+              <Button
+                variant="secondary"
+                onClick={() => setSaleToCancel(null)}
+                className="flex-1"
+                disabled={isCancelling}
+              >
+                No, mantener venta
+              </Button>
+              <Button
+                variant="primary"
+                onClick={handleCancelSale}
+                className="flex-1 bg-red-500 hover:bg-red-600"
+                disabled={isCancelling}
+              >
+                {isCancelling ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Cancelando...
+                  </>
+                ) : (
+                  'Sí, cancelar venta'
+                )}
+              </Button>
+            </div>
           </div>
         </Modal>
       )}

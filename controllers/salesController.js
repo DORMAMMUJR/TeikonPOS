@@ -1,5 +1,5 @@
 import { Op } from 'sequelize';
-import { Sale, SaleItem, Product, StoreConfig, Shift } from '../models.js';
+import { Sale, SaleItem, Product, StoreConfig, Shift, StockMovement, sequelize } from '../models.js';
 
 export const getCashCloseDetails = async (req, res) => {
     try {
@@ -79,6 +79,130 @@ export const getCashCloseDetails = async (req, res) => {
         res.status(500).json({
             success: false,
             message: "Error calculando corte",
+            error: error.message
+        });
+    }
+};
+
+// ==========================================
+// CANCELAR VENTA (VOID SALE)
+// ==========================================
+export const cancelSale = async (req, res) => {
+    const transaction = await sequelize.transaction();
+
+    try {
+        const { id } = req.params;
+        const { storeId, role } = req;
+
+        console.log(`🔴 [Cancel Sale] Iniciando cancelación de venta ID: ${id}`);
+
+        // 1. Buscar la venta
+        const sale = await Sale.findOne({
+            where: { id },
+            include: [{
+                model: SaleItem,
+                as: 'SaleItems',
+                attributes: ['id', 'productId', 'cantidad', 'precio', 'costo']
+            }],
+            transaction
+        });
+
+        if (!sale) {
+            await transaction.rollback();
+            return res.status(404).json({
+                success: false,
+                message: 'Venta no encontrada'
+            });
+        }
+
+        // 2. Validar permisos (misma tienda o SUPER_ADMIN)
+        if (role !== 'SUPER_ADMIN' && sale.storeId !== storeId) {
+            await transaction.rollback();
+            return res.status(403).json({
+                success: false,
+                message: 'No tienes permiso para cancelar esta venta'
+            });
+        }
+
+        // 3. Verificar que no esté ya cancelada
+        if (sale.status === 'CANCELLED') {
+            await transaction.rollback();
+            return res.status(400).json({
+                success: false,
+                message: 'Esta venta ya fue cancelada previamente'
+            });
+        }
+
+        // 4. Actualizar status de la venta
+        sale.status = 'CANCELLED';
+        await sale.save({ transaction });
+
+        console.log(`✅ [Cancel Sale] Status actualizado a CANCELLED`);
+
+        // 5. Restaurar stock y crear movimientos de kardex
+        const saleItems = sale.SaleItems || [];
+
+        for (const item of saleItems) {
+            if (!item.productId) {
+                console.warn(`⚠️ [Cancel Sale] Item sin productId, saltando: ${item.id}`);
+                continue;
+            }
+
+            // Buscar el producto
+            const product = await Product.findByPk(item.productId, { transaction });
+
+            if (!product) {
+                console.warn(`⚠️ [Cancel Sale] Producto no encontrado: ${item.productId}`);
+                continue;
+            }
+
+            // Guardar stock anterior
+            const stockAnterior = product.stock;
+            const cantidad = parseInt(item.cantidad) || 0;
+
+            // Restaurar stock
+            product.stock = stockAnterior + cantidad;
+            await product.save({ transaction });
+
+            console.log(`📦 [Cancel Sale] Stock restaurado para ${product.nombre}: ${stockAnterior} → ${product.stock}`);
+
+            // Crear movimiento de kardex
+            await StockMovement.create({
+                productId: product.id,
+                storeId: sale.storeId,
+                tipo: 'RETURN',
+                cantidad: cantidad,
+                stockAnterior: stockAnterior,
+                stockNuevo: product.stock,
+                motivo: `Cancelación de Venta #${sale.id}`,
+                referenciaId: sale.id,
+                registradoPor: req.usuario || req.user?.username || 'Sistema'
+            }, { transaction });
+
+            console.log(`📝 [Cancel Sale] Movimiento de kardex registrado para ${product.nombre}`);
+        }
+
+        await transaction.commit();
+
+        console.log(`✅ [Cancel Sale] Venta ${id} cancelada exitosamente`);
+
+        res.json({
+            success: true,
+            message: 'Venta cancelada exitosamente. El inventario ha sido restaurado.',
+            sale: {
+                id: sale.id,
+                status: sale.status,
+                total: sale.total,
+                itemsRestored: saleItems.length
+            }
+        });
+
+    } catch (error) {
+        await transaction.rollback();
+        console.error('❌ [Cancel Sale] Error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error al cancelar la venta',
             error: error.message
         });
     }
