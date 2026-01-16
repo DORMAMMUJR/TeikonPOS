@@ -114,7 +114,8 @@ app.use(cors({
         if (allowedOrigins.indexOf(origin) !== -1) {
             callback(null, true);
         } else {
-            callback(null, true); // Permitir de todas formas (SaaS multi-tenant)
+            console.log('Bloqueado por CORS:', origin);
+            callback(new Error('No permitido por CORS'));
         }
     },
     credentials: true, // Permite cookies y credenciales
