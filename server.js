@@ -1408,7 +1408,6 @@ app.post('/api/ventas', authenticateToken, async (req, res) => {
                 storeId: req.storeId,
                 shiftId: activeShift.id,
                 vendedor: vendedor || req.user.username,
-                vendedor: vendedor || req.user.username,
                 subtotal: calculatedTotal,
                 totalDiscount: 0,
                 taxTotal: 0,
