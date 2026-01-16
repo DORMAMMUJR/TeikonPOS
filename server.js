@@ -2604,14 +2604,19 @@ app.get('/api/dashboard/summary', authenticateToken, async (req, res) => {
     try {
         const { storeId } = req;
 
-        // 1. Buscar turno abierto para la tienda
+        // 1. Buscar el turno activo (OPEN)
         const currentShift = await Shift.findOne({
-            where: { storeId, status: 'OPEN' }
+            where: {
+                storeId: storeId,
+                status: 'OPEN'
+            }
         });
 
-        // 2. EMERGENCIA: Si no hay turno abierto, devolver valores en cero inmediatamente
+        // =========================================================
+        // 🛡️ LÓGICA DEFENSIVA (ANTI-CRASH)
+        // =========================================================
+        // Si NO hay turno abierto, devolvemos todo en 0 inmediatamente.
         if (!currentShift) {
-            console.log(`ℹ️ [Dashboard Protection] No hay turno activo para store ${storeId}.`);
             return res.json({
                 totalItems: 0,
                 totalVentas: 0,
@@ -2619,45 +2624,61 @@ app.get('/api/dashboard/summary', authenticateToken, async (req, res) => {
                 porcentaje: 0
             });
         }
+        // =========================================================
 
-        // 3. SI HAY TURNO: Calcular métricas reales filtrando por shiftId
-        console.log(`📊 [Dashboard] Consultando ventas para Turno ID: ${currentShift.id}`);
+        // 2. Si SÍ hay turno, procedemos con las consultas usando el ID seguro
+        const shiftId = currentShift.id;
 
-        // Obtener configuración de meta (monthly -> daily)
-        const config = await StoreConfig.findOne({ where: { storeId } });
-        const monthlyGoal = config ? parseFloat(config.breakEvenGoal || 0) : 0;
-        const dailyMeta = monthlyGoal > 0 ? (monthlyGoal / 30) : 0;
-
-        // Agregación de ventas del turno actual
-        const salesData = await Sale.findOne({
+        // Calcular total de ventas del turno actual
+        const totalVentas = await Sale.sum('total', {
             where: {
-                shiftId: currentShift.id,
+                storeId: storeId,
+                shiftId: shiftId,
                 status: 'ACTIVE'
-            },
-            attributes: [
-                [sequelize.fn('COUNT', sequelize.col('id')), 'totalItems'],
-                [sequelize.fn('SUM', sequelize.col('total')), 'totalVentas']
-            ],
-            raw: true
-        });
+            }
+        }) || 0;
 
-        const totalItems = parseInt(salesData.totalItems || 0);
-        const totalVentas = parseFloat(salesData.totalVentas || 0);
-        const meta = parseFloat(dailyMeta.toFixed(2));
-        const porcentaje = meta > 0 ? (totalVentas / meta) * 100 : 0;
+        // Calcular total de items vendidos (Sintonizado con modelo SaleItem: 'cantidad')
+        const totalItems = await SaleItem.sum('cantidad', {
+            include: [{
+                model: Sale,
+                where: {
+                    storeId: storeId,
+                    shiftId: shiftId,
+                    status: 'ACTIVE'
+                },
+                required: true
+            }]
+        }) || 0;
 
-        return res.json({
-            totalItems,
-            totalVentas: parseFloat(totalVentas.toFixed(2)),
-            meta,
-            porcentaje: parseFloat(porcentaje.toFixed(2))
+        // Obtener Meta diaria (breakEvenGoal es mensual / 30)
+        const config = await StoreConfig.findOne({ where: { storeId } });
+        const monthlyGoal = config ? Number(config.breakEvenGoal) : 0;
+        const meta = monthlyGoal / 30;
+
+        // Calcular porcentaje
+        let porcentaje = 0;
+        if (meta > 0) {
+            porcentaje = (totalVentas / meta) * 100;
+        }
+
+        // 3. Enviar respuesta exitosa
+        res.json({
+            totalItems: Number(totalItems),
+            totalVentas: Number(totalVentas),
+            meta: Number(meta.toFixed(2)),
+            porcentaje: Number(porcentaje.toFixed(2))
         });
 
     } catch (error) {
-        console.error('❌ Error crítico en Dashboard Summary:', error);
-        res.status(500).json({
-            error: 'Error calculating dashboard metrics',
-            details: error.message
+        console.error('Error en Dashboard Summary:', error);
+        // Devolvemos estructura válida en ceros para que el frontend NO explote
+        res.status(200).json({
+            totalItems: 0,
+            totalVentas: 0,
+            meta: 0,
+            porcentaje: 0,
+            error: "Error interno, mostrando datos en cero"
         });
     }
 });
