@@ -241,7 +241,7 @@ const Sale = sequelize.define('Sale', {
         field: 'store_id'
     },
     shiftId: {
-        type: DataTypes.INTEGER,
+        type: DataTypes.UUID,
         allowNull: true,
         references: {
             model: 'shifts',
@@ -422,7 +422,7 @@ const Expense = sequelize.define('Expense', {
         field: 'store_id'
     },
     shiftId: {
-        type: DataTypes.INTEGER,
+        type: DataTypes.UUID,
         allowNull: true,
         references: {
             model: 'shifts',
@@ -549,8 +549,8 @@ const StockMovement = sequelize.define('StockMovement', {
 // Reemplaza CashShift y CashSession para unificar lógica
 const Shift = sequelize.define('Shift', {
     id: {
-        type: DataTypes.INTEGER,
-        autoIncrement: true,
+        type: DataTypes.UUID,
+        defaultValue: DataTypes.UUIDV4,
         primaryKey: true
     },
     storeId: {
