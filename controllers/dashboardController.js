@@ -5,29 +5,44 @@ export const getDashboardSummary = async (req, res) => {
     try {
         const { storeId } = req; // Extracted from authenticateToken middleware
 
-        // --- 1. Define Time Range (Today) ---
-        // Using server time. For widespread usage, timezone handling should be improved.
-        const startOfDay = new Date();
-        startOfDay.setHours(0, 0, 0, 0);
+        // --- 1. Find ACTIVE Shift ---
+        const activeShift = await Shift.findOne({
+            where: { storeId, status: 'OPEN' }
+        });
 
-        const endOfDay = new Date();
-        endOfDay.setHours(23, 59, 59, 999);
+        if (!activeShift) {
+            console.log(`ℹ️ [Dashboard] No hay turno abierto para store ${storeId}. Retornando métricas en cero.`);
+            const config = await StoreConfig.findOne({ where: { storeId } });
+            const monthlyGoal = config ? parseFloat(config.breakEvenGoal || 0) : 0;
+            const dailyTarget = monthlyGoal / 30;
 
-        // --- 2. Aggregate Sales Data (Today) ---
-        // We calculate metrics based on sales created today
+            return res.json({
+                salesToday: 0,
+                ordersCount: 0,
+                grossProfit: 0,
+                netProfit: -dailyTarget,
+                investment: 0, // Will calculate below if needed, but for now 0 is safer
+                dailyTarget,
+                dailyOperationalCost: dailyTarget,
+                monthlyGoal,
+                goalMonth: new Date().getMonth() + 1,
+                goalYear: new Date().getFullYear()
+            });
+        }
+
+        console.log(`📊 [Dashboard] Calculando métricas para Shift ID: ${activeShift.id}`);
+
+        // --- 2. Aggregate Sales Data (Strictly by Shift) ---
         const salesMetrics = await Sale.findAll({
             where: {
                 storeId,
-                status: 'ACTIVE', // Only active sales
-                createdAt: {
-                    [Op.gte]: startOfDay,
-                    [Op.lte]: endOfDay
-                }
+                shiftId: activeShift.id,
+                status: 'ACTIVE'
             },
             attributes: [
                 [sequelize.fn('COUNT', sequelize.col('id')), 'ordersCount'],
                 [sequelize.fn('SUM', sequelize.col('total')), 'salesToday'],
-                [sequelize.fn('SUM', sequelize.col('net_profit')), 'grossProfit'] // netProfit in DB is actually Gross Profit (Rev - Cost) per sale
+                [sequelize.fn('SUM', sequelize.col('net_profit')), 'grossProfit']
             ],
             raw: true
         });
