@@ -63,7 +63,7 @@ Invoke-RestMethod -Uri "https://web-trh228bezhj8.up-de-fra1-k8s-1.apps.run-on-se
 curl -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." https://web-trh228bezhj8.up-de-fra1-k8s-1.apps.run-on-seenode.com/api/stores
 ```
 
-## Endpoints de la API
+## s de la API
 
 ### Públicos (No requieren autenticación)
 
@@ -76,11 +76,11 @@ curl -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." https://
 - `GET /api/productos` - Lista de productos
 - `GET /api/ventas` - Historial de ventas
 - `POST /api/productos` - Crear producto
-- Todos los demás endpoints de gestión
+- Todos los demás s de gestión
 
 **¿Por qué `/api/dashboard/summary` requiere token?**
 
-Este endpoint devuelve datos sensibles del negocio (ventas, ingresos, estadísticas). Por seguridad, SOLO usuarios autenticados pueden acceder. El error `{"error":"Token no proporcionado"}` es **correcto** y esperado cuando intentas acceder sin login.
+Este  devuelve datos sensibles del negocio (ventas, ingresos, estadísticas). Por seguridad, SOLO usuarios autenticados pueden acceder. El error `{"error":"Token no proporcionado"}` es **correcto** y esperado cuando intentas acceder sin login.
 
 ## Notas de Seguridad
 
