@@ -2599,8 +2599,68 @@ app.get('/api/test/run', async (req, res) => {
 // ENDPOINT DE DASHBOARD OPTIMIZADO
 // ==========================================
 
-// GET /api/dashboard/summary - Resumen de ventas y ganancias (basado en turno activo)
-app.get('/api/dashboard/summary', authenticateToken, getDashboardSummary);
+// GET /api/dashboard/summary - Resumen de ventas y progreso de meta (basado en turno activo)
+app.get('/api/dashboard/summary', authenticateToken, async (req, res) => {
+    try {
+        const { storeId } = req;
+
+        // 1. Buscar turno abierto para la tienda
+        const currentShift = await Shift.findOne({
+            where: { storeId, status: 'OPEN' }
+        });
+
+        // 2. EMERGENCIA: Si no hay turno abierto, devolver valores en cero inmediatamente
+        if (!currentShift) {
+            console.log(`ℹ️ [Dashboard Protection] No hay turno activo para store ${storeId}.`);
+            return res.json({
+                totalItems: 0,
+                totalVentas: 0,
+                meta: 0,
+                porcentaje: 0
+            });
+        }
+
+        // 3. SI HAY TURNO: Calcular métricas reales filtrando por shiftId
+        console.log(`📊 [Dashboard] Consultando ventas para Turno ID: ${currentShift.id}`);
+
+        // Obtener configuración de meta (monthly -> daily)
+        const config = await StoreConfig.findOne({ where: { storeId } });
+        const monthlyGoal = config ? parseFloat(config.breakEvenGoal || 0) : 0;
+        const dailyMeta = monthlyGoal > 0 ? (monthlyGoal / 30) : 0;
+
+        // Agregación de ventas del turno actual
+        const salesData = await Sale.findOne({
+            where: {
+                shiftId: currentShift.id,
+                status: 'ACTIVE'
+            },
+            attributes: [
+                [sequelize.fn('COUNT', sequelize.col('id')), 'totalItems'],
+                [sequelize.fn('SUM', sequelize.col('total')), 'totalVentas']
+            ],
+            raw: true
+        });
+
+        const totalItems = parseInt(salesData.totalItems || 0);
+        const totalVentas = parseFloat(salesData.totalVentas || 0);
+        const meta = parseFloat(dailyMeta.toFixed(2));
+        const porcentaje = meta > 0 ? (totalVentas / meta) * 100 : 0;
+
+        return res.json({
+            totalItems,
+            totalVentas: parseFloat(totalVentas.toFixed(2)),
+            meta,
+            porcentaje: parseFloat(porcentaje.toFixed(2))
+        });
+
+    } catch (error) {
+        console.error('❌ Error crítico en Dashboard Summary:', error);
+        res.status(500).json({
+            error: 'Error calculating dashboard metrics',
+            details: error.message
+        });
+    }
+});
 
 // ==========================================
 // FUNCIÓN DE LIMPIEZA: CERRAR SHIFTS HUÉRFANOS

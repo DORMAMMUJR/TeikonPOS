@@ -1,5 +1,5 @@
 import { Op } from 'sequelize';
-import { Sale, Product, StoreConfig, GoalHistory, sequelize } from '../models.js';
+import { Sale, Product, StoreConfig, GoalHistory, Shift, sequelize } from '../models.js';
 
 export const getDashboardSummary = async (req, res) => {
     try {
