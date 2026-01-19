@@ -148,6 +148,13 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       }
     }
 
+    // GUARD 0: Skip if no currentUser (user is not logged in)
+    if (!currentUser) {
+      console.log('👤 No user logged in, skipping session recovery');
+      setIsRecoveringSession(false);
+      return;
+    }
+
     // GUARD 1: Prevent duplicate calls if already checking
     if (sessionCheckInProgress.current) {
       console.log('⏭️ Session check already in progress, skipping...');

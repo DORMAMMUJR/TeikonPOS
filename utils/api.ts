@@ -128,6 +128,18 @@ export const isTokenValid = (): boolean => {
 
 // Handle session expiration centrally
 const handleSessionExpired = () => {
+    // Determine if we are already on the login page
+    const isLoginPage = window.location.pathname === '/login';
+
+    if (isLoginPage) {
+        // If we are already on the login page, just clear the token silently
+        // This avoids infinite alert loops if API calls fail during login
+        console.warn('🔒 Session invalid, but user is already on login page. Clearing token silently.');
+        clearAuthToken();
+        localStorage.removeItem('cashSession');
+        return;
+    }
+
     console.error('🔒 SESSION EXPIRED - Cleaning up and redirecting to login');
 
     // Get token info before clearing for better error message
