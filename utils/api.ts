@@ -177,7 +177,18 @@ const handleSessionExpired = () => {
     window.location.href = '/login';
 };
 
-// Global API response handler - intercepts 401 errors
+// Response handler for PUBLIC endpoints (login, register)
+// Does NOT trigger session expiration on 401
+const handlePublicApiResponse = async (response: Response): Promise<Response> => {
+    if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || `HTTP Error ${response.status}`);
+    }
+    return response;
+};
+
+// Response handler for PROTECTED endpoints
+// DOES trigger session expiration on 401
 const handleApiResponse = async (response: Response): Promise<Response> => {
     // Detect 401 Unauthorized
     if (response.status === 401) {
@@ -195,39 +206,71 @@ const handleApiResponse = async (response: Response): Promise<Response> => {
     return response;
 };
 
-// Robust wrapper for fetch with error handling
-const safeFetch = async (url: string, options: RequestInit): Promise<Response> => {
-    try {
-        const response = await fetch(url, options);
-        return handleApiResponse(response);
-    } catch (error: any) {
-        // Handle Network Errors (TypeError: Failed to fetch)
-        if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
-            console.error('❌ Network Error (CORS/Server Down):', error);
+// Network error handler (shared by both fetch functions)
+const handleNetworkError = (error: any, url: string) => {
+    if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+        console.error('❌ Network Error (CORS/Server Down):', error);
 
-            // Determine if using relative or absolute URL
-            const isRelativeURL = !API_URL || API_URL === '' || API_URL.startsWith('/');
-            const isHTTPS = API_URL.startsWith('https');
+        // Determine if using relative or absolute URL
+        const isRelativeURL = !API_URL || API_URL === '' || API_URL.startsWith('/');
+        const isHTTPS = API_URL.startsWith('https');
 
-            let msg: string;
-            if (isRelativeURL) {
-                msg = `⚠️ Error de Conexión:\nNo se pudo conectar al servidor.\n\nPosibles causas:\n• El servidor está en mantenimiento\n• Problema de conexión a internet\n• Verifica que el backend esté corriendo`;
-            } else if (isHTTPS) {
-                msg = `⚠️ Error de Conexión con Servidor SaaS:\nNo se pudo conectar a ${API_URL}.\n\nPosibles causas:\n• Mantenimiento del servidor\n• Problema de conexión a internet`;
-            } else {
-                const portMatch = API_URL.match(/:(\d+)/);
-                const port = portMatch ? portMatch[1] : '5000';
-                msg = `⚠️ Error de Conexión: No se pudo contactar al servidor en el puerto ${port}.\n\nPosibles causas:\n• El servidor backend no está corriendo\n• Antivirus/Firewall bloqueando la conexión`;
-            }
-
-            alert(msg);
-            throw new Error('NETWORK_ERROR');
+        let msg: string;
+        if (isRelativeURL) {
+            msg = `⚠️ Error de Conexión:\nNo se pudo conectar al servidor.\n\nPosibles causas:\n• El servidor está en mantenimiento\n• Problema de conexión a internet\n• Verifica que el backend esté corriendo`;
+        } else if (isHTTPS) {
+            msg = `⚠️ Error de Conexión con Servidor SaaS:\nNo se pudo conectar a ${API_URL}.\n\nPosibles causas:\n• Mantenimiento del servidor\n• Problema de conexión a internet`;
+        } else {
+            const portMatch = API_URL.match(/:(\d+)/);
+            const port = portMatch ? portMatch[1] : '5000';
+            msg = `⚠️ Error de Conexión: No se pudo contactar al servidor en el puerto ${port}.\n\nPosibles causas:\n• El servidor backend no está corriendo\n• Antivirus/Firewall bloqueando la conexión`;
         }
-        throw error;
+
+        alert(msg);
+        throw new Error('NETWORK_ERROR');
+    }
+    throw error;
+};
+
+// Fetch for PUBLIC endpoints (login, register) - NO authentication required
+const publicFetch = async (url: string, options: RequestInit = {}): Promise<Response> => {
+    try {
+        const response = await fetch(url, {
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                ...options.headers
+            }
+        });
+        return handlePublicApiResponse(response);
+    } catch (error: any) {
+        return handleNetworkError(error, url);
     }
 };
 
-// Get headers with auth
+// Fetch for PROTECTED endpoints - authentication required
+const authenticatedFetch = async (url: string, options: RequestInit = {}): Promise<Response> => {
+    const token = getAuthToken();
+
+    if (!token) {
+        console.error('❌ No authentication token available');
+        throw new Error('No authentication token available');
+    }
+
+    try {
+        const response = await fetch(url, {
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+                ...options.headers
+            }
+        });
+        return handleApiResponse(response);
+    } catch (error: any) {
+        return handleNetworkError(error, url);
+    }
+};
 export const getHeaders = (): HeadersInit => {
     const token = getAuthToken();
     return {
@@ -249,36 +292,32 @@ export const authAPI = {
         email: string;
         telefono?: string;
     }) => {
-        const response = await safeFetch(`${API_URL}/api/auth/register`, {
+        const response = await publicFetch(`${API_URL}/api/auth/register`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
         });
         return response.json();
     },
 
     login: async (usuario: string, password: string) => {
-        const response = await safeFetch(`${API_URL}/api/auth/login`, {
+        const response = await publicFetch(`${API_URL}/api/auth/login`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ usuario, password })
         });
         return response.json();
     },
 
     requestPasswordReset: async (email: string, phone: string) => {
-        const response = await safeFetch(`${API_URL}/api/auth/request-password-reset`, {
+        const response = await publicFetch(`${API_URL}/api/auth/request-password-reset`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email, phone })
         });
         return response.json();
     },
 
     updateProfile: async (data: { storeName: string, newPassword?: string }) => {
-        const response = await safeFetch(`${API_URL}/api/me/profile`, {
+        const response = await authenticatedFetch(`${API_URL}/api/me/profile`, {
             method: 'PUT',
-            headers: getHeaders(),
             body: JSON.stringify(data)
         });
         return response.json();
@@ -293,9 +332,8 @@ export const authAPI = {
             newPassword?: string;
         }
     ) => {
-        const response = await safeFetch(`${API_URL}/api/admin/update-store`, {
+        const response = await authenticatedFetch(`${API_URL}/api/admin/update-store`, {
             method: 'POST',
-            headers: getHeaders(),
             body: JSON.stringify({ targetStoreId, ...updates })
         });
         return response.json();
@@ -327,9 +365,8 @@ export const productsAPI = {
             const url = `${baseUrl}?${queryParams.join('&')}`;
 
             // Initial Request
-            const response1 = await safeFetch(url, {
-                headers: getHeaders()
-            });
+            const response1 = await authenticatedFetch(url, {
+                });
             const data1 = await response1.json();
 
             // Handle response format (Paginated vs Legacy/Flat)
@@ -341,9 +378,8 @@ export const productsAPI = {
                 // If more pages exist, fetch them sequentially (to be kind to server) or parallel
                 while (page <= totalPages) {
                     const pageUrl = `${baseUrl}?${queryParams.map(p => p.startsWith('page=') ? `page=${page}` : p).join('&')}`;
-                    const res = await safeFetch(pageUrl, {
-                        headers: getHeaders()
-                    });
+                    const res = await authenticatedFetch(pageUrl, {
+                        });
                     const pageData = await res.json();
                     if (pageData.data) {
                         allProducts = [...allProducts, ...pageData.data];
@@ -365,51 +401,45 @@ export const productsAPI = {
     },
 
     create: async (product: any) => {
-        const response = await safeFetch(`${API_URL}/api/productos`, {
+        const response = await authenticatedFetch(`${API_URL}/api/productos`, {
             method: 'POST',
-            headers: getHeaders(),
             body: JSON.stringify(product)
         });
         return response.json();
     },
 
     update: async (id: string, product: any) => {
-        const response = await safeFetch(`${API_URL}/api/productos/${id}`, {
+        const response = await authenticatedFetch(`${API_URL}/api/productos/${id}`, {
             method: 'PUT',
-            headers: getHeaders(),
             body: JSON.stringify(product)
         });
         return response.json();
     },
 
     delete: async (id: string) => {
-        const response = await safeFetch(`${API_URL}/api/productos/${id}`, {
+        const response = await authenticatedFetch(`${API_URL}/api/productos/${id}`, {
             method: 'DELETE',
-            headers: getHeaders()
-        });
+            });
         return response.json();
     }
 };
 
 export const storesAPI = {
     getAll: async () => {
-        const response = await safeFetch(`${API_URL}/api/stores`, {
-            headers: getHeaders()
-        });
+        const response = await authenticatedFetch(`${API_URL}/api/stores`, {
+            });
         return response.json();
     },
     create: async (data: any) => {
-        const response = await safeFetch(`${API_URL}/api/stores/new`, {
+        const response = await authenticatedFetch(`${API_URL}/api/stores/new`, {
             method: 'POST',
-            headers: getHeaders(),
             body: JSON.stringify(data)
         });
         return response.json();
     },
     delete: async (id: string, password: string) => {
-        const response = await safeFetch(`${API_URL}/api/stores/${id}`, {
+        const response = await authenticatedFetch(`${API_URL}/api/stores/${id}`, {
             method: 'DELETE',
-            headers: getHeaders(),
             body: JSON.stringify({ password })
         });
         return response.json();
@@ -430,9 +460,8 @@ export const salesAPI = {
             url += `?storeId=${options.storeId}`;
         }
 
-        const response = await safeFetch(url, {
-            headers: getHeaders()
-        });
+        const response = await authenticatedFetch(url, {
+            });
         const data = await response.json();
         // Map backend createdAt to frontend date property
         return data.map((sale: any) => ({
@@ -442,9 +471,8 @@ export const salesAPI = {
     },
 
     getById: async (id: string) => {
-        const response = await safeFetch(`${API_URL}/api/ventas/${id}`, {
-            headers: getHeaders()
-        });
+        const response = await authenticatedFetch(`${API_URL}/api/ventas/${id}`, {
+            });
         const data = await response.json();
         // Map backend createdAt to frontend date property for consistency
         return {
@@ -454,18 +482,16 @@ export const salesAPI = {
     },
 
     create: async (sale: any) => {
-        const response = await safeFetch(`${API_URL}/api/ventas`, {
+        const response = await authenticatedFetch(`${API_URL}/api/ventas`, {
             method: 'POST',
-            headers: getHeaders(),
             body: JSON.stringify(sale)
         });
         return response.json();
     },
 
     sync: async (pendingSales: any[]) => {
-        const response = await safeFetch(`${API_URL}/api/ventas/sync`, {
+        const response = await authenticatedFetch(`${API_URL}/api/ventas/sync`, {
             method: 'POST',
-            headers: getHeaders(),
             body: JSON.stringify({ sales: pendingSales })
         });
         return response.json();
@@ -478,16 +504,14 @@ export const salesAPI = {
 
 export const expensesAPI = {
     getAll: async () => {
-        const response = await safeFetch(`${API_URL}/api/expenses`, {
-            headers: getHeaders()
-        });
+        const response = await authenticatedFetch(`${API_URL}/api/expenses`, {
+            });
         return response.json();
     },
 
     create: async (expense: any) => {
-        const response = await safeFetch(`${API_URL}/api/expenses`, {
+        const response = await authenticatedFetch(`${API_URL}/api/expenses`, {
             method: 'POST',
-            headers: getHeaders(),
             body: JSON.stringify(expense)
         });
         return response.json();
@@ -504,9 +528,8 @@ export const dashboardAPI = {
         if (storeId) {
             url += `&storeId=${storeId}`;
         }
-        const response = await safeFetch(url, {
-            headers: getHeaders()
-        });
+        const response = await authenticatedFetch(url, {
+            });
         return response.json();
     }
 };
@@ -517,25 +540,22 @@ export const dashboardAPI = {
 
 export const ticketsAPI = {
     getAll: async () => {
-        const response = await safeFetch(`${API_URL}/api/tickets`, {
-            headers: getHeaders()
-        });
+        const response = await authenticatedFetch(`${API_URL}/api/tickets`, {
+            });
         return response.json();
     },
 
     create: async (ticket: any) => {
-        const response = await safeFetch(`${API_URL}/api/tickets`, {
+        const response = await authenticatedFetch(`${API_URL}/api/tickets`, {
             method: 'POST',
-            headers: getHeaders(),
             body: JSON.stringify(ticket)
         });
         return response.json();
     },
 
     update: async (id: string, updates: any) => {
-        const response = await safeFetch(`${API_URL}/api/tickets/${id}`, {
+        const response = await authenticatedFetch(`${API_URL}/api/tickets/${id}`, {
             method: 'PUT',
-            headers: getHeaders(),
             body: JSON.stringify(updates)
         });
         return response.json();
@@ -548,26 +568,23 @@ export const ticketsAPI = {
 
 export const shiftsAPI = {
     start: async (startBalance: number) => {
-        const response = await safeFetch(`${API_URL}/api/shifts/start`, {
+        const response = await authenticatedFetch(`${API_URL}/api/shifts/start`, {
             method: 'POST',
-            headers: getHeaders(),
             body: JSON.stringify({ startBalance })
         });
         return response.json();
     },
 
     getCurrent: async () => {
-        const response = await safeFetch(`${API_URL}/api/shifts/current`, {
-            headers: getHeaders()
-        });
+        const response = await authenticatedFetch(`${API_URL}/api/shifts/current`, {
+            });
         // Backend returns null if no active shift, 200 OK
         return response.json();
     },
 
     end: async (shiftId: string, data: any) => {
-        const response = await safeFetch(`${API_URL}/api/shifts/end`, {
+        const response = await authenticatedFetch(`${API_URL}/api/shifts/end`, {
             method: 'POST',
-            headers: getHeaders(),
             body: JSON.stringify({ shiftId, ...data })
         });
         return response.json();
@@ -580,16 +597,14 @@ export const shiftsAPI = {
 
 export const ticketSettingsAPI = {
     get: async (storeId: string) => {
-        const response = await safeFetch(`${API_URL}/api/ticket-settings/${storeId}`, {
-            headers: getHeaders()
-        });
+        const response = await authenticatedFetch(`${API_URL}/api/ticket-settings/${storeId}`, {
+            });
         return response.json();
     },
 
     update: async (storeId: string, settings: any) => {
-        const response = await safeFetch(`${API_URL}/api/ticket-settings/${storeId}`, {
+        const response = await authenticatedFetch(`${API_URL}/api/ticket-settings/${storeId}`, {
             method: 'PUT',
-            headers: getHeaders(),
             body: JSON.stringify(settings)
         });
         return response.json();

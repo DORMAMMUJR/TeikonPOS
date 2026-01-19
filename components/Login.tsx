@@ -45,6 +45,38 @@ const Login: React.FC = () => {
     setError(null);
     setLoading(true);
 
+    // Clear expired token BEFORE attempting login
+    // This prevents sending expired tokens to the login endpoint
+    const existingToken = localStorage.getItem('token');
+    if (existingToken) {
+      try {
+        // Check if token is expired
+        const base64Url = existingToken.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(
+          atob(base64)
+            .split('')
+            .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+            .join('')
+        );
+        const decoded = JSON.parse(jsonPayload);
+
+        // If token is expired, clear it
+        if (decoded.exp && decoded.exp * 1000 < Date.now()) {
+          console.log('🧹 Clearing expired token before login attempt');
+          localStorage.removeItem('token');
+          localStorage.removeItem('cashSession');
+          localStorage.removeItem('selectedStore');
+        }
+      } catch (err) {
+        // If token is corrupted, clear it
+        console.warn('🧹 Clearing corrupted token before login attempt');
+        localStorage.removeItem('token');
+        localStorage.removeItem('cashSession');
+        localStorage.removeItem('selectedStore');
+      }
+    }
+
     try {
       // REGISTER FLOW REMOVED
 
@@ -71,7 +103,16 @@ const Login: React.FC = () => {
       }
     } catch (err: any) {
       console.error(err);
-      setError(err.message || 'Error de autenticación');
+
+      // Provide specific error messages
+      const errorMessage = err.message || '';
+      if (errorMessage.includes('401') || errorMessage.includes('Credenciales')) {
+        setError('Usuario o contraseña incorrectos');
+      } else if (errorMessage.includes('NETWORK_ERROR')) {
+        setError('No se pudo conectar al servidor. Verifica tu conexión.');
+      } else {
+        setError(errorMessage || 'Error de autenticación');
+      }
     } finally {
       setLoading(false);
     }
