@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { StoreProvider, useStore } from './context/StoreContext';
 import { ThemeProvider } from './context/ThemeContext';
 import Layout from './components/Layout';
@@ -12,10 +12,18 @@ import AdminPanel from './components/AdminPanel';
 import ProtectedRoute from './components/ProtectedRoute';
 import StoreGuard from './components/StoreGuard';
 import { Routes, Route, Navigate } from 'react-router-dom';
+import { checkTokenExpirationWarning } from './utils/api';
 
 const AppContent: React.FC = () => {
   const { currentUser, logout } = useStore();
   const [activeTab, setActiveTab] = useState('dashboard');
+
+  // Check token expiration on mount and warn user if needed
+  useEffect(() => {
+    if (currentUser) {
+      checkTokenExpirationWarning();
+    }
+  }, [currentUser]);
 
   return (
     <Routes>

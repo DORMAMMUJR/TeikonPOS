@@ -65,31 +65,101 @@ export const getCurrentUserFromToken = (): any | null => {
     };
 };
 
+// Check if token will expire soon and warn user
+export const checkTokenExpirationWarning = (): void => {
+    const token = getAuthToken();
+    if (!token) return;
+
+    const decoded = decodeToken(token);
+    if (!decoded?.exp) return;
+
+    const expDate = new Date(decoded.exp * 1000);
+    const now = new Date();
+    const timeLeft = expDate.getTime() - now.getTime();
+    const daysLeft = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
+
+    // Warn if less than 7 days remaining
+    if (daysLeft > 0 && daysLeft <= 7) {
+        console.warn(`⚠️ TOKEN EXPIRATION WARNING: Your session will expire in ${daysLeft} day(s)`);
+        console.warn(`   Expiration date: ${expDate.toLocaleString('es-MX')}`);
+
+        // Show one-time warning to user (using sessionStorage to avoid repeated alerts)
+        const warningShown = sessionStorage.getItem('tokenExpirationWarningShown');
+        if (!warningShown) {
+            setTimeout(() => {
+                alert(`⚠️ Aviso: Tu sesión expirará en ${daysLeft} día(s).\n\nFecha de expiración: ${expDate.toLocaleDateString('es-MX')}\n\nPor favor, guarda tu trabajo y vuelve a iniciar sesión pronto.`);
+                sessionStorage.setItem('tokenExpirationWarningShown', 'true');
+            }, 2000); // Delay to avoid blocking app initialization
+        }
+    }
+};
+
 // Validate if token is still valid (not expired)
 export const isTokenValid = (): boolean => {
     const token = getAuthToken();
-    if (!token) return false;
+    if (!token) {
+        console.log('🔍 Token Validation: No token found');
+        return false;
+    }
 
     const decoded = decodeToken(token);
-    if (!decoded) return false;
+    if (!decoded) {
+        console.error('🔍 Token Validation: Failed to decode token (corrupted)');
+        return false;
+    }
 
     // Check if token is expired (with 30 second buffer)
     if (decoded.exp && decoded.exp * 1000 < Date.now() + 30000) {
+        const expDate = new Date(decoded.exp * 1000);
+        const now = new Date();
+        console.error('🔍 Token Validation: Token expired');
+        console.error(`   Expired at: ${expDate.toLocaleString('es-MX')}`);
+        console.error(`   Current time: ${now.toLocaleString('es-MX')}`);
         return false;
     }
+
+    // Log successful validation with time remaining
+    const timeLeft = decoded.exp * 1000 - Date.now();
+    const daysLeft = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
+    console.log(`🔍 Token Validation: ✅ Valid (${daysLeft} days remaining)`);
 
     return true;
 };
 
 // Handle session expiration centrally
 const handleSessionExpired = () => {
+    console.error('🔒 SESSION EXPIRED - Cleaning up and redirecting to login');
+
+    // Get token info before clearing for better error message
+    const token = getAuthToken();
+    let expirationInfo = '';
+
+    if (token) {
+        try {
+            const decoded = decodeToken(token);
+            if (decoded?.exp) {
+                const expDate = new Date(decoded.exp * 1000);
+                const now = new Date();
+                const daysSinceExpired = Math.floor((now.getTime() - expDate.getTime()) / (1000 * 60 * 60 * 24));
+
+                if (daysSinceExpired > 0) {
+                    expirationInfo = `\n\nTu sesión expiró hace ${daysSinceExpired} día(s).`;
+                } else {
+                    expirationInfo = '\n\nTu sesión ha expirado.';
+                }
+            }
+        } catch (e) {
+            console.warn('Could not decode token for expiration info:', e);
+        }
+    }
+
     clearAuthToken();
 
     // Clear cash session from localStorage on 401
     localStorage.removeItem('cashSession');
 
-    // Show user-friendly alert
-    alert('⚠️ Tu sesión ha expirado. Por favor, inicia sesión nuevamente.');
+    // Show user-friendly alert with more context
+    alert(`⚠️ Tu sesión ha expirado${expirationInfo}\n\nPor favor, inicia sesión nuevamente para continuar.`);
 
     // Redirect to login
     window.location.href = '/login';
