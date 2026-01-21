@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { Navigate } from 'react-router-dom';
 import { useStore } from '../context/StoreContext';
 import { Power } from 'lucide-react';
 import Button from './Button';
@@ -13,21 +12,18 @@ const StoreGuard = ({ children }: StoreGuardProps) => {
     const { currentUser, currentSession, openSession, isRecoveringSession, isOpeningSession } = useStore();
     const [openingBalance, setOpeningBalance] = useState('');
 
-    // IMPROVED: SUPER_ADMIN bypasses ALL checks (onboarding + session)
-    // They can access the system without opening a shift
+    // 1. SUPER_ADMIN tiene pase libre siempre
     if (currentUser?.role === 'SUPER_ADMIN') {
-        console.log('👑 SUPER_ADMIN detected in StoreGuard - Granting full access');
         return <>{children}</>;
     }
 
-    // Check Onboarding (only for ADMIN/USER)
+    // 2. Verificar configuración inicial
     const isStoreConfigured = currentUser?.storeName && currentUser.storeName.trim() !== '';
     if (!isStoreConfigured) {
         return <InitialConfig />;
     }
 
-    // CRITICAL FIX: Wait for session recovery before showing modal
-    // This prevents the "amnesia" bug where the system forgets the open shift on reload
+    // 3. Esperar a que termine la recuperación de sesión para no mostrar el modal por error
     if (isRecoveringSession) {
         return (
             <div className="min-h-screen bg-brand-bg flex items-center justify-center">
@@ -39,10 +35,13 @@ const StoreGuard = ({ children }: StoreGuardProps) => {
         );
     }
 
-    // Check Session (only for ADMIN/USER)
-    // DISABLED PER USER REQUEST: Allow login without opening shift immediately
-    /*
+    // 4. BLOQUEO DE SEGURIDAD: Si no hay sesión, MOSTRAR PANTALLA DE APERTURA
+    // (Este bloque estaba comentado, por eso te dejaba pasar)
     if (!currentSession) {
+        // Limpieza preventiva: Si llegamos aquí, el estado es inconsistente
+        // Eliminamos cualquier sesión corrupta del localStorage para garantizar un inicio limpio
+        localStorage.removeItem('cashSession');
+
         return (
             <div className="min-h-screen bg-brand-bg flex items-center justify-center p-4">
                 <div className="max-w-md w-full bg-white dark:bg-brand-panel border border-slate-200 dark:border-brand-border p-10 cut-corner shadow-2xl animate-in zoom-in duration-500">
@@ -69,6 +68,11 @@ const StoreGuard = ({ children }: StoreGuardProps) => {
                                 placeholder="0.00"
                                 value={openingBalance}
                                 onChange={e => setOpeningBalance(e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                        openSession(parseFloat(openingBalance) || 0);
+                                    }
+                                }}
                             />
                         </div>
                         <Button
@@ -86,8 +90,8 @@ const StoreGuard = ({ children }: StoreGuardProps) => {
             </div>
         );
     }
-    */
 
+    // Si hay sesión abierta, renderizar el contenido protegido (POS)
     return <>{children}</>;
 };
 

@@ -14,9 +14,16 @@ import { CashSession } from '../types';
  * @param userId - Current user ID for ownerId field
  * @returns Mapped CashSession object
  */
-export function mapShiftToSession(backendShift: any, userId?: string): CashSession {
-    if (!backendShift || !backendShift.id) {
-        throw new Error('Invalid shift data: missing required fields');
+export function mapShiftToSession(backendShift: any, userId?: string): CashSession | null {
+    // 1. VALIDACIÓN SEGURA: Si es nulo o vacío, retornamos null (no error)
+    if (!backendShift || Object.keys(backendShift).length === 0) {
+        return null;
+    }
+
+    // 2. Si tiene datos pero le falta el ID, ahí sí es un error de datos
+    if (!backendShift.id) {
+        console.warn('⚠️ Invalid shift data received:', backendShift);
+        return null;
     }
 
     return {

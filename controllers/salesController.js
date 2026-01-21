@@ -269,8 +269,19 @@ export const syncSales = async (req, res) => {
 };
 
 // 2. Creación de Venta Online (Normal)
+// 2. Creación de Venta Online (Normal)
 export const createSale = async (req, res) => {
-    const { total, items, paymentMethod, storeId } = req.body;
+    // 1. EXTRAER TODOS LOS DATOS ENVIADOS POR EL FRONTEND
+    const {
+        total,
+        items,
+        paymentMethod,
+        storeId,
+        netProfit,   // <--- Faltaba esto
+        totalCost,   // <--- Faltaba esto
+        vendedor,    // <--- Faltaba esto
+        subtotal     // <--- Faltaba esto (opcional, pero recomendado)
+    } = req.body;
 
     try {
         // Validar turno
@@ -285,17 +296,39 @@ export const createSale = async (req, res) => {
 
         const shiftId = openShiftResult.rows[0].id;
 
-        // Insertar
+        // 2. INSERTAR INCLUYENDO LOS CAMPOS FINANCIEROS Y EL VENDEDOR
+        // Asumimos que tu tabla usa snake_case (net_profit, total_cost, etc.)
         const newSale = await pool.query(
-            `INSERT INTO sales (total, items, payment_method, date, shift_id, store_id)
-             VALUES ($1, $2, $3, NOW(), $4, $5) RETURNING *`,
-            [total, JSON.stringify(items), paymentMethod, shiftId, storeId]
+            `INSERT INTO sales (
+                total, 
+                items, 
+                payment_method, 
+                date, 
+                shift_id, 
+                store_id,
+                net_profit,    
+                total_cost,
+                vendedor
+            )
+             VALUES ($1, $2, $3, NOW(), $4, $5, $6, $7, $8) 
+             RETURNING *`,
+            [
+                total,
+                JSON.stringify(items),
+                paymentMethod,
+                shiftId,
+                storeId,
+                netProfit || 0,  // Usar 0 si viene nulo para evitar errores
+                totalCost || 0,
+                vendedor || 'Sistema'
+            ]
         );
 
         res.json(newSale.rows[0]);
 
     } catch (error) {
-        console.error('Create Sale Error:', error);
-        res.status(500).json({ error: 'Error creating sale' });
+        console.error('Create Sale Error DETALLADO:', error); // Log mejorado
+        // Devolver el error real al frontend para que sepas qué columna falla si vuelve a pasar
+        res.status(500).json({ error: 'Error creating sale', details: error.message });
     }
 };

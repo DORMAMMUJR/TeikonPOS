@@ -210,50 +210,64 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         clearTimeout(timeoutId);
 
         if (response.ok) {
-          // CRITICAL: Check Content-Type BEFORE parsing JSON
+          // Validar JSON
           const contentType = response.headers.get('content-type');
           if (!contentType || !contentType.includes('application/json')) {
-            console.warn('⚠️ Server returned non-JSON response (likely HTML error page)');
-            console.warn('   Content-Type:', contentType);
-            console.warn('   Assuming no active shift exists');
+            console.warn('⚠️ Server returned non-JSON response');
             setAllSessions([]);
             localStorage.removeItem('cashSession');
-            lastCheckedStoreId.current = storeId || null;
+            setIsRecoveringSession(false);
             return;
           }
 
           const data = await response.json();
           console.log('📦 Session Found:', data);
 
-          // Use standardized mapper
+          // BLINDAJE 1: Si data es null o vacío, la caja está CERRADA.
+          // Borramos cualquier basura local y salimos.
+          if (!data || Object.keys(data).length === 0) {
+            console.log('ℹ️ No active session (Data is null/empty)');
+            setAllSessions([]);
+            localStorage.removeItem('cashSession'); // <--- MATAMOS AL ZOMBIE
+            lastCheckedStoreId.current = storeId || null;
+            setIsRecoveringSession(false);
+            return;
+          }
+
+          // BLINDAJE 2: Usar el mapper seguro
           const session = mapShiftToSession(data, userId);
+
+          // Si el mapper devolvió null (datos inválidos), limpiamos y salimos
+          if (!session) {
+            console.warn('⚠️ Mapper returned null (Invalid Data)');
+            setAllSessions([]);
+            localStorage.removeItem('cashSession');
+            setIsRecoveringSession(false);
+            return;
+          }
 
           // CRITICAL: Check if session is from today
           if (!isSessionFromToday(session)) {
             console.log('🗑️ Backend session is from previous day, clearing...');
-            console.log('   Session date:', new Date(session.startTime).toDateString());
-            console.log('   Today:', new Date().toDateString());
-
-            // Clear old session from localStorage
             localStorage.removeItem('cashSession');
             setAllSessions([]);
             lastCheckedStoreId.current = storeId || null;
-
-            // Note: We don't close it on backend here, just clear frontend
-            // The backend should handle old sessions appropriately
+            setIsRecoveringSession(false);
             return;
           }
 
-          console.log('✅ Active session restored (from today):', session.id);
+          console.log('✅ Active session restored:', session.id);
           setAllSessions([session]);
           localStorage.setItem('cashSession', JSON.stringify(session));
           lastCheckedStoreId.current = storeId || null;
+          setIsRecoveringSession(false);
 
         } else if (response.status === 204 || response.status === 404) {
           console.log('ℹ️ No active session found (User must open shift)');
           setAllSessions([]);
           localStorage.removeItem('cashSession');
           lastCheckedStoreId.current = storeId || null;
+          setIsRecoveringSession(false);
         } else {
           // Handle other error status codes
           console.error(`❌ Session check failed with status: ${response.status}`);
@@ -273,48 +287,68 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
           setAllSessions([]);
           localStorage.removeItem('cashSession');
           lastCheckedStoreId.current = storeId || null;
+          setIsRecoveringSession(false);
         }
 
       } catch (error: any) {
-        // Handle different error types
+        console.error('❌ Error in checkSession:', error);
+
+        // ✅ IMPROVED: Determine if error is network-related or logic-related
+        const isNetworkError =
+          error.name === 'AbortError' ||
+          (error instanceof TypeError && error.message.includes('fetch')) ||
+          !navigator.onLine;
+
+        const isParseError = error instanceof SyntaxError;
+
+        // Log specific error type
         if (error.name === 'AbortError') {
-          console.error('❌ Session recovery timeout (10s exceeded)');
+          console.error('   Type: Session recovery timeout (10s exceeded)');
           console.warn('   Backend may be slow or unreachable');
         } else if (error instanceof TypeError && error.message.includes('fetch')) {
-          console.error('❌ Network error: Cannot reach backend');
+          console.error('   Type: Network error - Cannot reach backend');
           console.warn('   Check if server is running and accessible');
-        } else if (error instanceof SyntaxError) {
-          console.error('❌ JSON parse error: Backend returned invalid data');
+        } else if (isParseError) {
+          console.error('   Type: JSON parse error - Backend returned invalid data');
           console.warn('   Backend may have returned HTML instead of JSON');
         } else {
-          console.error('❌ Unexpected error checking session:', error);
+          console.error('   Type: Unexpected error');
         }
 
-        // Try to fallback to localStorage if available
-        try {
-          const cachedSession = localStorage.getItem('cashSession');
-          if (cachedSession) {
-            const parsed = JSON.parse(cachedSession);
+        // ✅ CRITICAL: Only use localStorage fallback for NETWORK errors
+        if (isNetworkError) {
+          console.log('🔄 Network error detected - Attempting localStorage fallback...');
+          try {
+            const cachedSession = localStorage.getItem('cashSession');
+            if (cachedSession) {
+              const parsed = JSON.parse(cachedSession);
 
-            // CRITICAL: Check if session is from today
-            if (isSessionFromToday(parsed)) {
-              console.log('📦 Loaded session from localStorage fallback (today):', parsed.id);
-              setAllSessions([parsed]);
-              lastCheckedStoreId.current = storeId || null;
-              return;
-            } else {
-              console.log('🗑️ Cached session is from previous day, clearing...');
-              localStorage.removeItem('cashSession');
+              // CRITICAL: Check if session is from today
+              if (isSessionFromToday(parsed)) {
+                console.log('📦 Loaded session from localStorage fallback (today):', parsed.id);
+                setAllSessions([parsed]);
+                lastCheckedStoreId.current = storeId || null;
+                setIsRecoveringSession(false);
+                return;
+              } else {
+                console.log('🗑️ Cached session is from previous day, clearing...');
+                localStorage.removeItem('cashSession');
+              }
             }
+          } catch (cacheError) {
+            console.warn('⚠️ Could not load cached session:', cacheError);
           }
-        } catch (cacheError) {
-          console.warn('⚠️ Could not load cached session:', cacheError);
+        } else {
+          // ✅ CRITICAL: For non-network errors (parse, logic, etc.), CLEAR localStorage
+          console.warn('🗑️ Non-network error detected - Clearing stale localStorage data');
+          localStorage.removeItem('cashSession');
         }
 
-        // Clear session on error to allow fresh start
+        // Clear session state to allow fresh start
         setAllSessions([]);
-        localStorage.removeItem('cashSession');
+        setIsRecoveringSession(false);
       } finally {
+        // ✅ SAFETY: Ensure recovery flag is always cleared
         setIsRecoveringSession(false);
         sessionCheckInProgress.current = false;
       }
@@ -704,6 +738,12 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
               // Use standardized mapper
               const session = mapShiftToSession(existingShift, currentUser.id);
 
+              // SEGURIDAD: Manejar datos corruptos
+              if (!session) {
+                console.error('❌ mapShiftToSession returned null for existing shift');
+                throw new Error('Los datos del turno existente están corruptos.');
+              }
+
               setAllSessions([session]);
               localStorage.setItem('cashSession', JSON.stringify(session));
               console.log('✅ Recovered existing shift:', session.id);
@@ -742,6 +782,13 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
       // Use standardized mapper
       const newSession = mapShiftToSession(backendShift, currentUser.id);
+
+      // SEGURIDAD: Manejar datos corruptos
+      if (!newSession) {
+        console.error('❌ mapShiftToSession returned null for new shift');
+        throw new Error('Los datos del turno recibidos del servidor están corruptos.');
+      }
+
       console.log('✅ Mapped session object:', newSession);
 
       // Update local state
