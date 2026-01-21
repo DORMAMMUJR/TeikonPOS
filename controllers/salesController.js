@@ -237,14 +237,13 @@ export const syncSales = async (req, res) => {
             await client.query('BEGIN');
 
             for (const sale of sales) {
-                // FIX: Usar 'created_at' en lugar de 'date' y agregar campos financieros
+                // CORRECCIÓN: Usamos "createdAt" (entre comillas) y quitamos updated_at
                 await client.query(
                     `INSERT INTO sales (
                         total, 
                         items, 
                         payment_method, 
-                        created_at, 
-                        updated_at,
+                        "createdAt",    -- OJO: Comillas dobles son obligatorias aquí
                         shift_id, 
                         store_id,
                         net_profit,
@@ -252,7 +251,7 @@ export const syncSales = async (req, res) => {
                         vendedor,
                         status
                     )
-                     VALUES ($1, $2, $3, NOW(), NOW(), $4, $5, $6, $7, $8, 'ACTIVE')`,
+                     VALUES ($1, $2, $3, NOW(), $4, $5, $6, $7, $8, 'ACTIVE')`,
                     [
                         sale.total,
                         JSON.stringify(sale.items),
@@ -283,7 +282,6 @@ export const syncSales = async (req, res) => {
 
 // 2. Creación de Venta Online (Normal)
 export const createSale = async (req, res) => {
-    // Extraer todos los datos necesarios
     const {
         total,
         items,
@@ -295,7 +293,6 @@ export const createSale = async (req, res) => {
     } = req.body;
 
     try {
-        // Validar turno
         const openShiftResult = await pool.query(
             "SELECT id FROM shifts WHERE store_id = $1 AND status = 'OPEN' LIMIT 1",
             [storeId]
@@ -307,15 +304,13 @@ export const createSale = async (req, res) => {
 
         const shiftId = openShiftResult.rows[0].id;
 
-        // FIX: Usar 'created_at' en lugar de 'date'
-        // FIX: Incluir net_profit, total_cost y vendedor
+        // CORRECCIÓN: Usamos "createdAt" (entre comillas)
         const newSale = await pool.query(
             `INSERT INTO sales (
                 total, 
                 items, 
                 payment_method, 
-                created_at, 
-                updated_at,
+                "createdAt",     -- OJO: Comillas dobles son obligatorias aquí
                 shift_id, 
                 store_id,
                 net_profit,
@@ -323,7 +318,7 @@ export const createSale = async (req, res) => {
                 vendedor,
                 status
             )
-             VALUES ($1, $2, $3, NOW(), NOW(), $4, $5, $6, $7, $8, 'ACTIVE') 
+             VALUES ($1, $2, $3, NOW(), $4, $5, $6, $7, $8, 'ACTIVE') 
              RETURNING *`,
             [
                 total,
@@ -341,7 +336,6 @@ export const createSale = async (req, res) => {
 
     } catch (error) {
         console.error('Create Sale Error:', error);
-        // Devolver detalle del error para facilitar debugging
         res.status(500).json({
             error: 'Error creating sale',
             details: error.message
