@@ -1167,11 +1167,67 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     }
   };
 
+  const value = React.useMemo<StoreContextType>(() => ({
+    products,
+    sales,
+    allSessions,
+    settings,
+    currentUser,
+    currentUserRole: currentUser?.role,
+    currentSession, // Derived from allSessions
+    isCashRegisterOpen, // Derived boolean
+    isOnline,
+    isLoading,
+    isRecoveringSession,
+    isOpeningSession: isOpeningSessionState,
+    error,
+    login, // Assumed stable (not wrapped in useCallback in this snippet but should be)
+    logout, // Assumed stable
+    updateCurrentUser, // Assumed stable
+    openSession, // Assumed stable
+    closeSession, // Assumed stable
+    addProduct,
+    updateProduct,
+    deleteProduct,
+    processSaleAndContributeToGoal,
+    cancelSale,
+    updateSettings,
+    getDashboardStats,
+    calculateTotalInventoryValue,
+    syncData,
+    searchProductBySKU
+  }), [
+    products,
+    sales,
+    allSessions,
+    settings,
+    currentUser,
+    currentSession,
+    isCashRegisterOpen,
+    isOnline,
+    isLoading,
+    isRecoveringSession,
+    isOpeningSessionState,
+    error,
+    login, // Assumed stable (not wrapped in useCallback in this snippet but should be)
+    logout, // Assumed stable
+    updateCurrentUser, // Assumed stable
+    openSession, // Assumed stable
+    closeSession, // Assumed stable
+    addProduct,
+    updateProduct,
+    deleteProduct,
+    processSaleAndContributeToGoal,
+    cancelSale,
+    updateSettings,
+    getDashboardStats,
+    calculateTotalInventoryValue,
+    syncData,
+    searchProductBySKU
+  ]);
+
   return (
-    <StoreContext.Provider value={{
-      products, sales, allSessions, settings, currentUser, currentUserRole: currentUser?.role, currentSession, isCashRegisterOpen, isOnline, isLoading, isRecoveringSession, isOpeningSession: isOpeningSessionState, error,
-      login, logout, updateCurrentUser, openSession, closeSession, addProduct, updateProduct, deleteProduct, processSaleAndContributeToGoal, cancelSale, updateSettings, getDashboardStats, calculateTotalInventoryValue, syncData, searchProductBySKU
-    }}>
+    <StoreContext.Provider value={value}>
       {children}
     </StoreContext.Provider>
   );

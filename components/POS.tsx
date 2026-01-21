@@ -35,10 +35,8 @@ const POS: React.FC = () => {
   const [isSupportOpen, setIsSupportOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // Auto-Refresh Logic: Sync data whenever POS mounts (tab switch)
-  useEffect(() => {
-    syncData();
-  }, [syncData]);
+  // Auto-Refresh Logic: Removed redundant syncData call to prevent loops.
+  // StoreContext already handles initial and background sync.
 
   // Auto-focus Logic
   useEffect(() => {
