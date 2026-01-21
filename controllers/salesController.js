@@ -1,5 +1,5 @@
 import { Op } from 'sequelize';
-import pool from '../db.js';
+
 import { Sale, SaleItem, Product, StoreConfig, Shift, StockMovement, sequelize } from '../models.js';
 
 export const getCashCloseDetails = async (req, res) => {
@@ -217,64 +217,46 @@ export const syncSales = async (req, res) => {
         return res.status(400).json({ error: 'BAD_REQUEST', message: 'No hay datos de ventas.' });
     }
 
-    try {
-        const openShiftResult = await pool.query(
-            "SELECT id FROM shifts WHERE store_id = $1 AND status = 'OPEN' LIMIT 1",
-            [storeId]
-        );
+    const transaction = await sequelize.transaction();
 
-        if (openShiftResult.rows.length === 0) {
+    try {
+        // A. Validar turno ABIERTO usando Sequelize (más seguro)
+        const activeShift = await Shift.findOne({
+            where: { storeId: storeId, status: 'OPEN' },
+            transaction
+        });
+
+        if (!activeShift) {
+            await transaction.rollback();
             return res.status(403).json({
                 error: 'NO_OPEN_SHIFT',
                 message: 'Caja cerrada. Abre un turno para sincronizar.'
             });
         }
 
-        const currentShiftId = openShiftResult.rows[0].id;
-        const client = await pool.connect();
+        // B. Insertar ventas masivamente
+        // Mapeamos los datos para asegurar que coincidan con el Modelo
+        const salesToCreate = sales.map(sale => ({
+            total: sale.total,
+            items: sale.items, // Sequelize lo convierte a JSON automáticamente
+            paymentMethod: sale.paymentMethod,
+            shiftId: activeShift.id,
+            storeId: storeId,
+            netProfit: sale.netProfit || 0,
+            totalCost: sale.totalCost || 0,
+            vendedor: sale.vendedor || 'Sistema',
+            status: 'ACTIVE',
+            createdAt: new Date(), // Sequelize mapea esto a la columna correcta ("createdAt")
+            updatedAt: new Date()
+        }));
 
-        try {
-            await client.query('BEGIN');
+        await Sale.bulkCreate(salesToCreate, { transaction });
 
-            for (const sale of sales) {
-                // CORRECCIÓN: Usamos "createdAt" (entre comillas) y quitamos updated_at
-                await client.query(
-                    `INSERT INTO sales (
-                        total, 
-                        items, 
-                        payment_method, 
-                        "createdAt",    -- OJO: Comillas dobles son obligatorias aquí
-                        shift_id, 
-                        store_id,
-                        net_profit,
-                        total_cost,
-                        vendedor,
-                        status
-                    )
-                     VALUES ($1, $2, $3, NOW(), $4, $5, $6, $7, $8, 'ACTIVE')`,
-                    [
-                        sale.total,
-                        JSON.stringify(sale.items),
-                        sale.paymentMethod,
-                        currentShiftId,
-                        storeId,
-                        sale.netProfit || 0,
-                        sale.totalCost || 0,
-                        sale.vendedor || 'Sistema'
-                    ]
-                );
-            }
-            await client.query('COMMIT');
-            res.json({ success: true, message: 'Sincronización completada.' });
+        await transaction.commit();
+        res.json({ success: true, message: 'Sincronización completada.' });
 
-        } catch (err) {
-            await client.query('ROLLBACK');
-            console.error('Transaction Error:', err);
-            throw err;
-        } finally {
-            client.release();
-        }
     } catch (error) {
+        await transaction.rollback();
         console.error('Sync Error:', error);
         res.status(500).json({ error: 'INTERNAL_ERROR', details: error.message });
     }
@@ -293,46 +275,33 @@ export const createSale = async (req, res) => {
     } = req.body;
 
     try {
-        const openShiftResult = await pool.query(
-            "SELECT id FROM shifts WHERE store_id = $1 AND status = 'OPEN' LIMIT 1",
-            [storeId]
-        );
+        // 1. Validar Turno (Usando Sequelize)
+        const activeShift = await Shift.findOne({
+            where: { storeId, status: 'OPEN' }
+        });
 
-        if (openShiftResult.rows.length === 0) {
+        if (!activeShift) {
             return res.status(403).json({ error: 'NO_OPEN_SHIFT', message: 'Caja cerrada.' });
         }
 
-        const shiftId = openShiftResult.rows[0].id;
+        // 2. CREAR VENTA USANDO EL MODELO
+        // ¡Aquí está la magia! No escribimos SQL. 
+        // Sequelize sabe automáticamente que 'createdAt' va a la columna "createdAt".
+        const newSale = await Sale.create({
+            total,
+            items, // Se guarda como JSON automáticamente
+            paymentMethod,
+            shiftId: activeShift.id,
+            storeId,
+            netProfit: netProfit || 0,
+            totalCost: totalCost || 0,
+            vendedor: vendedor || 'Sistema',
+            status: 'ACTIVE'
+            // createdAt y updatedAt se crean solos por defecto
+        });
 
-        // CORRECCIÓN: Usamos "createdAt" (entre comillas)
-        const newSale = await pool.query(
-            `INSERT INTO sales (
-                total, 
-                items, 
-                payment_method, 
-                "createdAt",     -- OJO: Comillas dobles son obligatorias aquí
-                shift_id, 
-                store_id,
-                net_profit,
-                total_cost,
-                vendedor,
-                status
-            )
-             VALUES ($1, $2, $3, NOW(), $4, $5, $6, $7, $8, 'ACTIVE') 
-             RETURNING *`,
-            [
-                total,
-                JSON.stringify(items),
-                paymentMethod,
-                shiftId,
-                storeId,
-                netProfit || 0,
-                totalCost || 0,
-                vendedor || 'Sistema'
-            ]
-        );
-
-        res.json(newSale.rows[0]);
+        // Devolvemos el objeto plano (JSON)
+        res.json(newSale.toJSON());
 
     } catch (error) {
         console.error('Create Sale Error:', error);
