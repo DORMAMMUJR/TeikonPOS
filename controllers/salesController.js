@@ -1,5 +1,4 @@
 import { Op } from 'sequelize';
-import { Op } from 'sequelize';
 import pool from '../db.js';
 import { Sale, SaleItem, Product, StoreConfig, Shift, StockMovement, sequelize } from '../models.js';
 
@@ -210,14 +209,71 @@ export const cancelSale = async (req, res) => {
     }
 };
 
-// ==========================================
-// CREAR VENTA (ATOMIC TRANSACTION)
-// ==========================================
+// 1. Sincronización Segura (Offline -> Online)
+export const syncSales = async (req, res) => {
+    const { sales, storeId } = req.body;
+
+    // Validación básica
+    if (!sales || !Array.isArray(sales) || sales.length === 0) {
+        return res.status(400).json({ error: 'BAD_REQUEST', message: 'No hay datos de ventas.' });
+    }
+
+    try {
+        // A. Shift Enforcement: Validar turno ABIERTO
+        const openShiftResult = await pool.query(
+            "SELECT id FROM shifts WHERE store_id = $1 AND status = 'OPEN' LIMIT 1",
+            [storeId]
+        );
+
+        if (openShiftResult.rows.length === 0) {
+            return res.status(409).json({
+                error: 'NO_OPEN_SHIFT',
+                message: 'Caja cerrada. Abre un turno para sincronizar.'
+            });
+        }
+
+        const currentShiftId = openShiftResult.rows[0].id;
+        const client = await pool.connect();
+
+        try {
+            await client.query('BEGIN'); // Iniciar Transacción
+
+            for (const sale of sales) {
+                // B. Insertar forzando shift_id actual y fecha NOW()
+                await client.query(
+                    `INSERT INTO sales (total, items, payment_method, date, shift_id, store_id)
+                     VALUES ($1, $2, $3, NOW(), $4, $5)`,
+                    [
+                        sale.total,
+                        JSON.stringify(sale.items),
+                        sale.paymentMethod,
+                        currentShiftId,
+                        storeId
+                    ]
+                );
+            }
+            await client.query('COMMIT'); // Confirmar cambios
+            res.json({ success: true, message: 'Sincronización completada.' });
+
+        } catch (err) {
+            await client.query('ROLLBACK');
+            console.error('Transaction Error:', err);
+            throw err;
+        } finally {
+            client.release();
+        }
+    } catch (error) {
+        console.error('Sync Error:', error);
+        res.status(500).json({ error: 'INTERNAL_ERROR' });
+    }
+};
+
+// 2. Creación de Venta Online (Normal)
 export const createSale = async (req, res) => {
     const { total, items, paymentMethod, storeId } = req.body;
 
     try {
-        // Verificar turno abierto
+        // Validar turno
         const openShiftResult = await pool.query(
             "SELECT id FROM shifts WHERE store_id = $1 AND status = 'OPEN' LIMIT 1",
             [storeId]
@@ -229,7 +285,7 @@ export const createSale = async (req, res) => {
 
         const shiftId = openShiftResult.rows[0].id;
 
-        // Insertar Venta
+        // Insertar
         const newSale = await pool.query(
             `INSERT INTO sales (total, items, payment_method, date, shift_id, store_id)
              VALUES ($1, $2, $3, NOW(), $4, $5) RETURNING *`,
@@ -241,54 +297,5 @@ export const createSale = async (req, res) => {
     } catch (error) {
         console.error('Create Sale Error:', error);
         res.status(500).json({ error: 'Error creating sale' });
-    }
-};
-
-// ==========================================
-// SINCRONIZACIÓN OFFLINE (CON SHIFT ID OBLIGATORIO)
-// ==========================================
-export const syncSales = async (req, res) => {
-    const { sales, storeId } = req.body;
-
-    if (!sales || !Array.isArray(sales) || sales.length === 0) {
-        return res.status(400).json({ error: 'BAD_REQUEST', message: 'No hay datos de ventas.' });
-    }
-
-    try {
-        // 1. Validar Turno Abierto (Shift Enforcement)
-        const openShiftResult = await pool.query(
-            "SELECT id FROM shifts WHERE store_id = $1 AND status = 'OPEN' LIMIT 1",
-            [storeId]
-        );
-
-        if (openShiftResult.rows.length === 0) {
-            return res.status(409).json({ error: 'NO_OPEN_SHIFT', message: 'No se puede sincronizar sin una caja abierta.' });
-        }
-
-        const currentShiftId = openShiftResult.rows[0].id;
-        const client = await pool.connect();
-
-        try {
-            await client.query('BEGIN');
-            for (const sale of sales) {
-                // Inserción forzando el shift_id actual y fecha NOW()
-                await client.query(
-                    `INSERT INTO sales (total, items, payment_method, date, shift_id, store_id)
-           VALUES ($1, $2, $3, NOW(), $4, $5)`,
-                    [sale.total, JSON.stringify(sale.items), sale.paymentMethod, currentShiftId, storeId]
-                );
-            }
-            await client.query('COMMIT');
-            res.json({ success: true, message: 'Sincronización completada correctamente.' });
-        } catch (err) {
-            await client.query('ROLLBACK');
-            console.error('Transaction Error:', err);
-            throw err;
-        } finally {
-            client.release();
-        }
-    } catch (error) {
-        console.error('Sync Error:', error);
-        res.status(500).json({ error: 'INTERNAL_ERROR' });
     }
 };
