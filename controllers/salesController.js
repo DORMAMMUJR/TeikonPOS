@@ -147,4 +147,125 @@ export const createSale = async (req, res) => {
     }
 };
 
-export { getCashCloseDetails, cancelSale } from './salesController.js';
+// 3. Obtener Detalles de Corte de Caja
+export const getCashCloseDetails = async (req, res) => {
+    try {
+        let storeId = req.storeId;
+        if (req.user && req.user.role === 'SUPER_ADMIN' && req.query.storeId) {
+            storeId = req.query.storeId;
+        }
+
+        if (!storeId) {
+            return res.status(400).json({ success: false, message: 'Store ID required' });
+        }
+
+        const activeShift = await Shift.findOne({
+            where: { storeId, status: 'OPEN' }
+        });
+
+        const whereClause = {
+            storeId,
+            status: 'ACTIVE'
+        };
+
+        let shiftStart = new Date();
+        shiftStart.setHours(0, 0, 0, 0);
+
+        if (activeShift) {
+            whereClause.shiftId = activeShift.id;
+            shiftStart = activeShift.startTime;
+        } else {
+            const now = new Date();
+            // Default to today if no shift
+            whereClause.createdAt = { [sequelize.Op.gte]: shiftStart };
+        }
+
+        const now = new Date();
+
+        const salesTotal = await Sale.sum('total', { where: whereClause }) || 0;
+        const profitTotal = await Sale.sum('netProfit', { where: whereClause }) || 0;
+        const ordersCount = await Sale.count({ where: whereClause });
+
+        // Calculate profit margin
+        const profitMargin = salesTotal > 0 ? ((profitTotal / salesTotal) * 100) : 0;
+
+        res.json({
+            success: true,
+            totalRevenue: parseFloat(salesTotal),
+            totalProfit: parseFloat(profitTotal),
+            totalSales: ordersCount,
+            profitMargin: parseFloat(profitMargin.toFixed(2)),
+            shiftDuration: Math.floor((now - shiftStart) / 1000 / 60),
+            date: now,
+            shouldLogout: true
+        });
+
+    } catch (error) {
+        console.error("❌ Error en Corte de Caja:", error);
+        res.status(500).json({
+            success: false,
+            message: "Error calculando corte",
+            error: error.message
+        });
+    }
+};
+
+// 4. Cancelar Venta
+export const cancelSale = async (req, res) => {
+    const transaction = await sequelize.transaction();
+
+    try {
+        const { id } = req.params;
+        const { storeId, role } = req;
+
+        const sale = await Sale.findOne({
+            where: { id },
+            include: [{ model: Sale.associations.items?.target || Sale, as: 'items' }], // Fallback if association name varies
+            transaction
+        });
+
+        // Note: Use raw query or parsed JSON items if strict association doesn't exist yet
+        // For now, assuming items are stored in JSONB column 'items' as per previous context
+
+        if (!sale) {
+            await transaction.rollback();
+            return res.status(404).json({ success: false, message: 'Venta no encontrada' });
+        }
+
+        if (role !== 'SUPER_ADMIN' && sale.storeId !== storeId) {
+            await transaction.rollback();
+            return res.status(403).json({ success: false, message: 'No tienes permiso' });
+        }
+
+        if (sale.status === 'CANCELLED') {
+            await transaction.rollback();
+            return res.status(400).json({ success: false, message: 'Venta ya cancelada' });
+        }
+
+        sale.status = 'CANCELLED';
+        await sale.save({ transaction });
+
+        // Restore Stock
+        const saleItems = sale.items || []; // JSON field
+        if (Array.isArray(saleItems)) {
+            for (const item of saleItems) {
+                if (item.id || item.productId) {
+                    const prodId = item.id || item.productId;
+                    const product = await Product.findByPk(prodId, { transaction });
+                    if (product) {
+                        const qty = Number(item.quantity) || Number(item.cantidad) || 0;
+                        await product.increment('stock', { by: qty, transaction });
+                    }
+                }
+            }
+        }
+
+        await transaction.commit();
+        res.json({ success: true, message: 'Venta cancelada y stock restaurado.' });
+
+    } catch (error) {
+        await transaction.rollback();
+        console.error('❌ Cancel Sale Error:', error);
+        res.status(500).json({ success: false, message: 'Error cancelando venta', error: error.message });
+    }
+};
