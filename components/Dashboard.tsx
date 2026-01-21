@@ -16,7 +16,7 @@ interface DashboardProps {
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ storeId }) => {
-  const { getDashboardStats, products, isOnline, sales } = useStore();
+  const { getDashboardStats, products, isOnline, sales, settings } = useStore();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -43,10 +43,10 @@ const Dashboard: React.FC<DashboardProps> = ({ storeId }) => {
     fetchStats(false);
   };
 
-  // Initial fetch + auto-refresh on sales changes
+  // Initial fetch + auto-refresh on sales or settings changes
   useEffect(() => {
     fetchStats();
-  }, [getDashboardStats, storeId, sales]);
+  }, [getDashboardStats, storeId, sales, settings]);
 
   const costoOperativo = stats?.costoOperativo || 0;
   const utilidadNeta = stats?.utilidadNeta || 0;
@@ -179,8 +179,8 @@ const Dashboard: React.FC<DashboardProps> = ({ storeId }) => {
         </div>
 
         <div className={`rounded-2xl p-6 text-white shadow-lg hover:scale-105 transition-transform ${lowStockProducts.length > 0
-            ? 'bg-gradient-to-br from-orange-500 to-red-600 shadow-orange-500/30'
-            : 'bg-gradient-to-br from-slate-600 to-slate-700 shadow-slate-500/30'
+          ? 'bg-gradient-to-br from-orange-500 to-red-600 shadow-orange-500/30'
+          : 'bg-gradient-to-br from-slate-600 to-slate-700 shadow-slate-500/30'
           }`}>
           <div className="flex items-center justify-between mb-3">
             <AlertTriangle size={28} className="opacity-90" />
@@ -212,8 +212,8 @@ const Dashboard: React.FC<DashboardProps> = ({ storeId }) => {
         <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-4 overflow-hidden shadow-inner">
           <div
             className={`h-full rounded-full transition-all duration-1000 ease-out shadow-lg ${isCoveringCosts
-                ? 'bg-gradient-to-r from-emerald-500 to-teal-500'
-                : 'bg-gradient-to-r from-red-500 to-orange-500'
+              ? 'bg-gradient-to-r from-emerald-500 to-teal-500'
+              : 'bg-gradient-to-r from-red-500 to-orange-500'
               }`}
             style={{ width: `${Math.min(porcentajeEquilibrio, 100)}%` }}
           ></div>
