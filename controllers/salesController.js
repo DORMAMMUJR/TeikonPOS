@@ -213,13 +213,11 @@ export const cancelSale = async (req, res) => {
 export const syncSales = async (req, res) => {
     const { sales, storeId } = req.body;
 
-    // Validación básica
     if (!sales || !Array.isArray(sales) || sales.length === 0) {
         return res.status(400).json({ error: 'BAD_REQUEST', message: 'No hay datos de ventas.' });
     }
 
     try {
-        // A. Shift Enforcement: Validar turno ABIERTO
         const openShiftResult = await pool.query(
             "SELECT id FROM shifts WHERE store_id = $1 AND status = 'OPEN' LIMIT 1",
             [storeId]
@@ -236,23 +234,38 @@ export const syncSales = async (req, res) => {
         const client = await pool.connect();
 
         try {
-            await client.query('BEGIN'); // Iniciar Transacción
+            await client.query('BEGIN');
 
             for (const sale of sales) {
-                // B. Insertar forzando shift_id actual y fecha NOW()
+                // FIX: Usar 'created_at' en lugar de 'date' y agregar campos financieros
                 await client.query(
-                    `INSERT INTO sales (total, items, payment_method, date, shift_id, store_id)
-                     VALUES ($1, $2, $3, NOW(), $4, $5)`,
+                    `INSERT INTO sales (
+                        total, 
+                        items, 
+                        payment_method, 
+                        created_at, 
+                        updated_at,
+                        shift_id, 
+                        store_id,
+                        net_profit,
+                        total_cost,
+                        vendedor,
+                        status
+                    )
+                     VALUES ($1, $2, $3, NOW(), NOW(), $4, $5, $6, $7, $8, 'ACTIVE')`,
                     [
                         sale.total,
                         JSON.stringify(sale.items),
                         sale.paymentMethod,
                         currentShiftId,
-                        storeId
+                        storeId,
+                        sale.netProfit || 0,
+                        sale.totalCost || 0,
+                        sale.vendedor || 'Sistema'
                     ]
                 );
             }
-            await client.query('COMMIT'); // Confirmar cambios
+            await client.query('COMMIT');
             res.json({ success: true, message: 'Sincronización completada.' });
 
         } catch (err) {
@@ -264,23 +277,21 @@ export const syncSales = async (req, res) => {
         }
     } catch (error) {
         console.error('Sync Error:', error);
-        res.status(500).json({ error: 'INTERNAL_ERROR' });
+        res.status(500).json({ error: 'INTERNAL_ERROR', details: error.message });
     }
 };
 
 // 2. Creación de Venta Online (Normal)
-// 2. Creación de Venta Online (Normal)
 export const createSale = async (req, res) => {
-    // 1. EXTRAER TODOS LOS DATOS ENVIADOS POR EL FRONTEND
+    // Extraer todos los datos necesarios
     const {
         total,
         items,
         paymentMethod,
         storeId,
-        netProfit,   // <--- Faltaba esto
-        totalCost,   // <--- Faltaba esto
-        vendedor,    // <--- Faltaba esto
-        subtotal     // <--- Faltaba esto (opcional, pero recomendado)
+        netProfit,
+        totalCost,
+        vendedor
     } = req.body;
 
     try {
@@ -296,21 +307,23 @@ export const createSale = async (req, res) => {
 
         const shiftId = openShiftResult.rows[0].id;
 
-        // 2. INSERTAR INCLUYENDO LOS CAMPOS FINANCIEROS Y EL VENDEDOR
-        // Asumimos que tu tabla usa snake_case (net_profit, total_cost, etc.)
+        // FIX: Usar 'created_at' en lugar de 'date'
+        // FIX: Incluir net_profit, total_cost y vendedor
         const newSale = await pool.query(
             `INSERT INTO sales (
                 total, 
                 items, 
                 payment_method, 
-                date, 
+                created_at, 
+                updated_at,
                 shift_id, 
                 store_id,
-                net_profit,    
+                net_profit,
                 total_cost,
-                vendedor
+                vendedor,
+                status
             )
-             VALUES ($1, $2, $3, NOW(), $4, $5, $6, $7, $8) 
+             VALUES ($1, $2, $3, NOW(), NOW(), $4, $5, $6, $7, $8, 'ACTIVE') 
              RETURNING *`,
             [
                 total,
@@ -318,7 +331,7 @@ export const createSale = async (req, res) => {
                 paymentMethod,
                 shiftId,
                 storeId,
-                netProfit || 0,  // Usar 0 si viene nulo para evitar errores
+                netProfit || 0,
                 totalCost || 0,
                 vendedor || 'Sistema'
             ]
@@ -327,8 +340,11 @@ export const createSale = async (req, res) => {
         res.json(newSale.rows[0]);
 
     } catch (error) {
-        console.error('Create Sale Error DETALLADO:', error); // Log mejorado
-        // Devolver el error real al frontend para que sepas qué columna falla si vuelve a pasar
-        res.status(500).json({ error: 'Error creating sale', details: error.message });
+        console.error('Create Sale Error:', error);
+        // Devolver detalle del error para facilitar debugging
+        res.status(500).json({
+            error: 'Error creating sale',
+            details: error.message
+        });
     }
 };

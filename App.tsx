@@ -15,49 +15,17 @@ import CashRegisterGuard from './components/CashRegisterGuard';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { checkTokenExpirationWarning } from './utils/api';
 
-// Componente hijo que consume el contexto de forma segura
 const AppContent: React.FC = () => {
   const { currentUser, logout } = useStore();
+  // CAMBIO 1: Iniciamos en 'pos' para que sea la primera pantalla,
+  // pero ya no estará bloqueada globalmente.
   const [activeTab, setActiveTab] = useState('pos');
 
-  // Secure Token Expiration Check
   useEffect(() => {
     if (currentUser) {
-      const token = localStorage.getItem('token');
-
-      if (token) {
-        try {
-          // 1. Decodificación manual segura (evita dependencias circulares)
-          const base64Url = token.split('.')[1];
-          const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-          const jsonPayload = decodeURIComponent(
-            atob(base64)
-              .split('')
-              .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-              .join('')
-          );
-          const decoded = JSON.parse(jsonPayload);
-
-          // 2. Verificar expiración estricta
-          const currentTime = Date.now() / 1000;
-
-          if (decoded.exp && decoded.exp < currentTime) {
-            console.warn("🔒 Token expirado detectado en App.tsx - Ejecutando cierre de sesión forzado.");
-            logout(); // <--- ESTO ROMPE EL BUCLE INFINITO
-            return;
-          }
-        } catch (error) {
-          // Si el token es corrupto, cerramos sesión por seguridad
-          console.error("🔒 Error al verificar token:", error);
-          logout();
-          return;
-        }
-      }
-
-      // 3. Si el token es válido, ejecutar la advertencia de "próximo a vencer" (si aplica)
       checkTokenExpirationWarning();
     }
-  }, [currentUser, logout]);
+  }, [currentUser]);
 
   return (
     <Routes>
@@ -73,8 +41,12 @@ const AppContent: React.FC = () => {
       {/* Store User Routes */}
       <Route path="/*" element={
         <ProtectedRoute>
+          {/* CAMBIO 2: Eliminamos StoreGuard de aquí. El Layout es libre. */}
           <Layout activeTab={activeTab} onTabChange={setActiveTab}>
+
             {activeTab === 'dashboard' && <Dashboard />}
+
+            {/* CAMBIO 3: El bloqueo AHORA vive solo aquí, protegiendo al POS */}
             {activeTab === 'pos' && (
               <StoreGuard>
                 <CashRegisterGuard>
@@ -82,9 +54,12 @@ const AppContent: React.FC = () => {
                 </CashRegisterGuard>
               </StoreGuard>
             )}
+
+            {/* El resto de pestañas son accesibles sin abrir caja */}
             {activeTab === 'history' && <SalesHistory />}
             {activeTab === 'products' && <ProductList />}
             {activeTab === 'settings' && <Settings />}
+
           </Layout>
         </ProtectedRoute>
       } />
@@ -92,7 +67,6 @@ const AppContent: React.FC = () => {
   );
 };
 
-// Componente principal que provee el contexto
 const App: React.FC = () => {
   return (
     <ThemeProvider>
