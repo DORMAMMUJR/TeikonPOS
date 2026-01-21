@@ -238,6 +238,7 @@ export const syncSales = async (req, res) => {
         // Mapeamos los datos para asegurar que coincidan con el Modelo
         const salesToCreate = sales.map(sale => ({
             total: sale.total,
+            subtotal: sale.subtotal || sale.total, // <--- AGREGADO: Subtotal es obligatorio
             items: sale.items, // Sequelize lo convierte a JSON automáticamente
             paymentMethod: sale.paymentMethod,
             shiftId: activeShift.id,
@@ -266,6 +267,7 @@ export const syncSales = async (req, res) => {
 export const createSale = async (req, res) => {
     const {
         total,
+        subtotal, // <--- AGREGADO: Recibimos subtotal del frontend
         items,
         paymentMethod,
         storeId,
@@ -285,10 +287,11 @@ export const createSale = async (req, res) => {
         }
 
         // 2. CREAR VENTA USANDO EL MODELO
-        // ¡Aquí está la magia! No escribimos SQL. 
+        // ¡Aquí está la magia! No escribimos SQL.
         // Sequelize sabe automáticamente que 'createdAt' va a la columna "createdAt".
         const newSale = await Sale.create({
             total,
+            subtotal: subtotal || total, // <--- AGREGADO: Si no viene, usamos total como fallback
             items, // Se guarda como JSON automáticamente
             paymentMethod,
             shiftId: activeShift.id,
