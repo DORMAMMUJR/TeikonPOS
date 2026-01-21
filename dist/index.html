@@ -184,32 +184,35 @@
     }
 
     /* Print Overrides */
+    /* Vista normal */
+    #print-ticket {
+      display: none;
+    }
+
+    /* Vista impresión */
     @media print {
-      @page {
+      body {
         margin: 0;
-        size: auto;
       }
 
-      body * {
-        visibility: hidden !important;
+      #app-root {
+        display: none !important;
       }
 
-      #printable-ticket,
-      #printable-ticket * {
-        visibility: visible !important;
-      }
-
-      #printable-ticket {
-        position: absolute !important;
-        left: 0 !important;
-        top: 0 !important;
-        width: 80mm !important;
-        margin: 0 !important;
-        padding: 10mm 5mm !important;
-        background-color: white !important;
-        color: black !important;
-        z-index: 99999 !important;
+      #print-ticket {
         display: block !important;
+        width: 48mm;
+        font-family: monospace;
+        font-size: 11px;
+        padding: 0;
+        position: absolute;
+        top: 0;
+        left: 0;
+      }
+      
+      /* Ensure visibility of print ticket content */
+      #print-ticket * {
+        visibility: visible;
       }
     }
   </style>
@@ -246,11 +249,12 @@
   }
 }
 </script>
-  <script type="module" crossorigin src="/assets/index-JDwgsYu7.js"></script>
+  <script type="module" crossorigin src="/assets/index-KiCND98c.js"></script>
 </head>
 
 <body class="bg-brand-bg text-brand-text">
-  <div id="root"></div>
+  <div id="app-root"></div>
+  <div id="print-ticket"></div>
 </body>
 
 </html>

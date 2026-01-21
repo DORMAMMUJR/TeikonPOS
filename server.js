@@ -13,15 +13,9 @@ dotenv.config();
 // ==========================================
 // 🔌 CONEXIÓN BASE DE DATOS (PostgreSQL)
 // ==========================================
-import pg from 'pg';
-const { Pool } = pg;
-
-const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: {
-        rejectUnauthorized: false // Necesario para Render/Supabase
-    }
-});
+// 🔌 CONEXIÓN BASE DE DATOS (PostgreSQL)
+// ==========================================
+import pool from './db.js';
 
 // Prueba de conexión al iniciar
 pool.connect()
@@ -33,7 +27,7 @@ pool.connect()
 
 // Importar controladores
 import { getDashboardSummary } from './controllers/dashboardController.js';
-import { getCashCloseDetails, cancelSale } from './controllers/salesController.js';
+import { getCashCloseDetails, cancelSale, createSale, syncSales } from './controllers/salesController.js';
 import { createStore, getStores, deleteStore } from './controllers/storeController.js';
 
 import {
@@ -1281,185 +1275,7 @@ app.get('/api/ventas/:id', authenticateToken, async (req, res) => {
 
 
 // POST /api/ventas - Crear venta (ATOMIC TRANSACTION)
-app.post('/api/ventas', authenticateToken, async (req, res) => {
-    try {
-        const { vendedor, items, paymentMethod, total } = req.body;
-
-        // ==========================================
-        // SANITIZACIÓN ROBUSTA - PREVENIR NaN
-        // ==========================================
-
-        // 1. Validar y Convertir Totales
-        if (total !== undefined) {
-            const totalVenta = Number(total);
-            if (isNaN(totalVenta)) {
-                return res.status(400).json({ error: "El total de la venta es inválido (NaN)" });
-            }
-        }
-
-        // 2. Validar Store ID
-        const storeId = req.storeId;
-        if (!storeId || storeId === 'null' || storeId === 'undefined') {
-            return res.status(400).json({ error: "Falta el ID de la tienda" });
-        }
-
-        // 3. Validar Items
-        if (!items || items.length === 0) {
-            return res.status(400).json({ error: 'El carrito está vacío' });
-        }
-
-        // 4. Validar Turno Abierto (Strict Mode)
-        const activeShift = await Shift.findOne({
-            where: { storeId: req.storeId, status: 'OPEN' }
-        });
-
-        if (!activeShift) {
-            console.warn(`⚠️ [POST /api/ventas] No hay turno abierto para store ${req.storeId}`);
-            console.warn(`   Vendedor: ${vendedor}, Items: ${items.length}, Total: ${total}`);
-            return res.status(403).json({
-                error: 'NO_OPEN_SHIFT',
-                message: 'Debes abrir un turno de caja antes de realizar ventas'
-            });
-        }
-
-        console.log(`✅ [POST /api/ventas] Shift activo: ${activeShift.id} para store ${req.storeId}`);
-        console.log(`   Vendedor: ${vendedor}, Items: ${items.length}, Total: ${total}`);
-
-
-        // 4. Sanitizar Productos (Convertir strings a números y prevenir NaN)
-        const sanitizedItems = items.map((p, index) => {
-            const precio = Number(p.price || p.precio || p.unitPrice || p.sellingPrice || 0);
-            const cantidad = Number(p.quantity || p.cantidad || 1);
-            const costo = Number(p.cost || p.costo || p.unitCost || p.costPrice || 0);
-
-            // Validar que no sean NaN
-            if (isNaN(precio) || isNaN(cantidad) || isNaN(costo)) {
-                throw new Error(`Producto en posición ${index + 1} tiene valores numéricos inválidos (NaN)`);
-            }
-
-            // Validar que sean positivos
-            if (precio < 0 || cantidad <= 0 || costo < 0) {
-                throw new Error(`Producto en posición ${index + 1} tiene valores negativos o cantidad cero`);
-            }
-
-            return {
-                productId: p.productId || p.id,
-                nombre: p.name || p.nombre,
-                cantidad: cantidad,
-                unitPrice: precio,
-                unitCost: costo,
-                sellingPrice: precio, // Alias
-                costPrice: costo      // Alias
-            };
-        });
-
-        // Usar items sanitizados en lugar de los originales
-        const processItems = sanitizedItems;
-
-        const result = await sequelize.transaction(async (t) => {
-            let calculatedTotal = 0;
-            let calculatedCost = 0;
-            const enrichedItems = [];
-
-            // 1. Verificación y Bloqueo (Iterar items para validar antes de escribir nada)
-            for (const item of processItems) {
-                // LOCK: Consultar producto con bloqueo "SELECT ... FOR UPDATE"
-                // Esto impide que dos ventas simultáneas resten el mismo stock causando negativos.
-                const product = await Product.findOne({
-                    where: { id: item.productId, storeId: req.storeId },
-                    lock: t.LOCK.UPDATE,
-                    transaction: t
-                });
-
-                // Seguridad: Validar propiedad de la tienda
-                if (!product) {
-                    throw new Error(`Producto no encontrado o acceso denegado (ID: ${item.productId})`);
-                }
-
-                // Seguridad: Validar Stock (No negativos)
-                if (product.stock < item.cantidad) {
-                    throw new Error(`Stock insuficiente para ${product.nombre} (Disponible: ${product.stock})`);
-                }
-
-                // Calcular financieros (Server-Side Trust)
-                const unitPrice = parseFloat(item.unitPrice) || parseFloat(product.salePrice);
-                const unitCost = parseFloat(product.costPrice);
-                const subtotal = unitPrice * item.cantidad;
-                const itemCost = unitCost * item.cantidad;
-
-                calculatedTotal += subtotal;
-                calculatedCost += itemCost;
-
-                enrichedItems.push({
-                    productId: product.id,
-                    nombre: product.nombre,
-                    cantidad: item.cantidad,
-                    unitPrice,
-                    unitCost,
-                    subtotal,
-                    originalProduct: product // Mantener ref para update
-                });
-            }
-
-            const netProfit = calculatedTotal - calculatedCost;
-
-            // 2. Registro de la Venta (Header)
-            const newSale = await Sale.create({
-                storeId: req.storeId,
-                shiftId: activeShift.id,
-                vendedor: vendedor || req.user.username,
-                subtotal: calculatedTotal,
-                totalDiscount: 0,
-                taxTotal: 0,
-                total: calculatedTotal,
-                totalCost: calculatedCost,
-                netProfit: netProfit,
-                paymentMethod: paymentMethod || 'CASH',
-                status: 'ACTIVE',
-                items: enrichedItems.map(i => ({
-                    productId: i.productId,
-                    nombre: i.nombre,
-                    cantidad: i.cantidad,
-                    unitPrice: i.unitPrice,
-                    subtotal: i.subtotal
-                })),
-                syncedAt: new Date()
-            }, { transaction: t });
-
-            // 3. Actualizar Inventario y Kardex
-            for (const item of enrichedItems) {
-                const product = item.originalProduct;
-                const stockAnterior = product.stock;
-                const stockNuevo = stockAnterior - item.cantidad;
-
-                // Resta de Stock
-                await product.update({ stock: stockNuevo }, { transaction: t });
-
-                // Registro Histórico (Sales History / Movement)
-                await StockMovement.create({
-                    storeId: req.storeId,
-                    productId: product.id,
-                    tipo: 'SALE',
-                    cantidad: -item.cantidad,
-                    stockAnterior,
-                    stockNuevo,
-                    motivo: `Venta #${newSale.id.substring(0, 8)}`,
-                    referenciaId: newSale.id,
-                    registradoPor: vendedor || req.user.username
-                }, { transaction: t });
-            }
-
-            return newSale;
-        });
-
-        res.status(201).json(result);
-
-    } catch (error) {
-        console.error('Transaction Error:', error.message);
-        // Si hay error, Sequelize hace Rollback automático.
-        res.status(400).json({ error: error.message });
-    }
-});
+app.post('/api/ventas', authenticateToken, createSale);
 
 // PUT /api/ventas/:id/cancelar - Cancelar venta
 app.put('/api/ventas/:id/cancelar', authenticateToken, async (req, res) => {
@@ -1592,132 +1408,8 @@ app.post('/api/sales/:id/cancel', authenticateToken, async (req, res) => {
 
 
 // POST /api/ventas/sync - Sincronizar ventas offline
-app.post('/api/ventas/sync', authenticateToken, async (req, res) => {
-    try {
-        const { ventas } = req.body;
-
-        // Validación: Verificar que ventas existe y es un array
-        if (!ventas || !Array.isArray(ventas)) {
-            return res.status(200).json({ message: 'Sin datos' });
-        }
-
-        const results = [];
-
-        for (const ventaData of ventas) {
-            try {
-                // 🔒 PATCH CRÍTICO 1: Validar que ventaData.items existe y es un array
-                if (!ventaData.items || !Array.isArray(ventaData.items) || ventaData.items.length === 0) {
-                    results.push({ tempId: ventaData.tempId, error: 'Venta ignorada: sin items válidos' });
-                    continue;
-                }
-
-                // Similar a POST /api/ventas pero con manejo de errores individual
-                let totalCost = 0;
-                const enrichedItems = [];
-                let hasError = false;
-                let errorMessage = '';
-
-                for (const item of ventaData.items) {
-                    const product = await Product.findByPk(item.productId);
-                    if (!product) {
-                        errorMessage = `Producto ${item.productId} no encontrado`;
-                        hasError = true;
-                        break;
-                    }
-
-                    // 🔒 SANITIZACIÓN: Convertir a números y prevenir NaN
-                    const unitPrice = Number(item.unitPrice || item.price || 0);
-                    const cantidad = Number(item.cantidad || item.quantity || 1);
-                    const unitCost = Number(product.costPrice || 0);
-
-                    // Validar que no sean NaN
-                    if (isNaN(unitPrice) || isNaN(cantidad) || isNaN(unitCost)) {
-                        console.error(`Item inválido en venta ${ventaData.tempId}:`, item);
-                        errorMessage = `Item inválido: valores NaN detectados`;
-                        hasError = true;
-                        break;
-                    }
-
-                    // Validar stock DESPUÉS de sanitización
-                    if (product.stock < cantidad) {
-                        errorMessage = `Stock insuficiente para ${product.nombre}`;
-                        hasError = true;
-                        break;
-                    }
-
-                    const itemCost = unitCost * cantidad;
-                    totalCost += itemCost;
-
-                    enrichedItems.push({
-                        productId: product.id,
-                        nombre: product.nombre,
-                        cantidad: cantidad,
-                        unitPrice: unitPrice,
-                        unitCost: unitCost,
-                        subtotal: unitPrice * cantidad
-                    });
-                }
-
-                // Si hubo error en algún item, saltar esta venta completa
-                if (hasError) {
-                    results.push({ tempId: ventaData.tempId, error: errorMessage });
-                    continue;
-                }
-
-                const netProfit = ventaData.total - totalCost;
-
-                const sale = await sequelize.transaction(async (t) => {
-                    const newSale = await Sale.create({
-                        storeId: req.storeId,
-                        vendedor: ventaData.vendedor,
-                        subtotal: ventaData.total,
-                        totalDiscount: 0,
-                        taxTotal: 0,
-                        total: ventaData.total,
-                        totalCost,
-                        netProfit,
-                        paymentMethod: ventaData.paymentMethod,
-                        status: 'ACTIVE',
-                        items: enrichedItems,
-                        syncedAt: new Date(),
-                        created_at: ventaData.createdAt
-                    }, { transaction: t });
-
-                    for (const item of enrichedItems) {
-                        const product = await Product.findByPk(item.productId, { transaction: t });
-                        const stockAnterior = product.stock;
-                        const stockNuevo = stockAnterior - item.cantidad;
-
-                        await product.update({ stock: stockNuevo }, { transaction: t });
-
-                        await StockMovement.create({
-                            productId: item.productId,
-                            storeId: req.storeId,
-                            tipo: 'SALE',
-                            cantidad: -item.cantidad,
-                            stockAnterior,
-                            stockNuevo,
-                            motivo: `Venta offline #${newSale.id.substring(0, 8)}`,
-                            referenciaId: newSale.id,
-                            registradoPor: ventaData.vendedor
-                        }, { transaction: t });
-                    }
-
-                    return newSale;
-                });
-
-                results.push({ tempId: ventaData.tempId, id: sale.id, success: true });
-            } catch (error) {
-                results.push({ tempId: ventaData.tempId, error: error.message });
-            }
-        }
-
-        res.json({ results });
-    } catch (error) {
-        console.error('Error en sincronización:', error);
-        res.status(500).json({ error: 'Error en sincronización' });
-    }
-});
+// POST /api/ventas/sync - Sincronizar ventas offline
+app.post('/api/ventas/sync', authenticateToken, syncSales);
 
 // ==========================================
 // ENDPOINTS DE GASTOS

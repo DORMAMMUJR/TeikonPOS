@@ -340,9 +340,17 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
           await salesAPI.sync(pendingSales);
           await clearPendingSales();
           console.log('✅ Offline sales synced successfully');
-        } catch (syncError) {
-          console.warn('⚠️ Failed to sync offline sales, will retry later:', syncError);
-          // Don't block the app, just log and continue
+        } catch (syncError: any) {
+          // Handle specific NO_OPEN_SHIFT error (409)
+          if (syncError.message && syncError.message.includes('NO_OPEN_SHIFT')) {
+            console.warn('⚠️ Cannot sync offline sales: No open shift.');
+            // Alert user visually
+            alert('Caja Cerrada: Abre un turno para sincronizar las ventas pendientes.');
+            // We do NOT clear pending sales, preserving them for later
+          } else {
+            console.warn('⚠️ Failed to sync offline sales, will retry later:', syncError);
+          }
+          // Don't block the app, continue loading
         }
       }
 
