@@ -238,7 +238,7 @@ export const syncSales = async (req, res) => {
         // Mapeamos los datos para asegurar que coincidan con el Modelo
         const salesToCreate = sales.map(sale => ({
             total: sale.total,
-            subtotal: sale.subtotal || sale.total, // <--- AGREGADO: Subtotal es obligatorio
+            subtotal: (sale.subtotal !== undefined && sale.subtotal !== null) ? sale.subtotal : sale.total, // <--- CORRECCIÓN DEFENSA: Asegura valor no nulo
             items: sale.items, // Sequelize lo convierte a JSON automáticamente
             paymentMethod: sale.paymentMethod,
             shiftId: activeShift.id,
@@ -291,7 +291,7 @@ export const createSale = async (req, res) => {
         // Sequelize sabe automáticamente que 'createdAt' va a la columna "createdAt".
         const newSale = await Sale.create({
             total,
-            subtotal: subtotal || total, // <--- AGREGADO: Si no viene, usamos total como fallback
+            subtotal: (subtotal !== undefined && subtotal !== null) ? subtotal : total, // <--- CORRECCIÓN DEFENSA: Asegura valor no nulo
             items, // Se guarda como JSON automáticamente
             paymentMethod,
             shiftId: activeShift.id,
