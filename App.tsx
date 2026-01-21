@@ -73,19 +73,19 @@ const AppContent: React.FC = () => {
       {/* Store User Routes */}
       <Route path="/*" element={
         <ProtectedRoute>
-          <StoreGuard>
-            <Layout activeTab={activeTab} onTabChange={setActiveTab}>
-              {activeTab === 'dashboard' && <Dashboard />}
-              {activeTab === 'pos' && (
+          <Layout activeTab={activeTab} onTabChange={setActiveTab}>
+            {activeTab === 'dashboard' && <Dashboard />}
+            {activeTab === 'pos' && (
+              <StoreGuard>
                 <CashRegisterGuard>
                   <POS />
                 </CashRegisterGuard>
-              )}
-              {activeTab === 'history' && <SalesHistory />}
-              {activeTab === 'products' && <ProductList />}
-              {activeTab === 'settings' && <Settings />}
-            </Layout>
-          </StoreGuard>
+              </StoreGuard>
+            )}
+            {activeTab === 'history' && <SalesHistory />}
+            {activeTab === 'products' && <ProductList />}
+            {activeTab === 'settings' && <Settings />}
+          </Layout>
         </ProtectedRoute>
       } />
     </Routes>
