@@ -6,12 +6,16 @@ interface POSHeaderProps {
     searchTerm: string;
     setSearchTerm: (term: string) => void;
     searchInputRef: React.RefObject<HTMLInputElement | null>;
+    onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
+    onCloseShift?: () => void;
 }
 
 const POSHeader: React.FC<POSHeaderProps> = ({
     searchTerm,
     setSearchTerm,
-    searchInputRef
+    searchInputRef,
+    onKeyDown,
+    onCloseShift
 }) => {
     const { getDashboardStats, settings } = useStore();
     const [stats, setStats] = React.useState<any>({ totalRevenue: 0 });
@@ -46,6 +50,7 @@ const POSHeader: React.FC<POSHeaderProps> = ({
                         placeholder="Buscar producto..."
                         value={searchTerm}
                         onChange={e => setSearchTerm(e.target.value)}
+                        onKeyDown={onKeyDown}
                     />
                 </div>
             </div>
@@ -64,6 +69,17 @@ const POSHeader: React.FC<POSHeaderProps> = ({
                         style={{ width: `${progressPercent}%` }}
                     />
                 </div>
+            </div>
+
+            {/* RIGHT: Close Shift Button */}
+            <div>
+                <button
+                    onClick={onCloseShift}
+                    className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400 rounded-full border border-red-200 dark:border-red-800 text-xs font-black uppercase tracking-widest hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
+                >
+                    <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+                    Cerrar Turno
+                </button>
             </div>
 
         </div>

@@ -1,51 +1,33 @@
 import React, { useState } from 'react';
-import { Navigate } from 'react-router-dom';
 import { useStore } from '../context/StoreContext';
-import { Power } from 'lucide-react';
+import { ShoppingBag, Lock, Power } from 'lucide-react';
 import Button from './Button';
-import InitialConfig from './InitialConfig';
 
-interface StoreGuardProps {
+interface CashRegisterGuardProps {
     children: React.ReactNode;
 }
 
-const StoreGuard = ({ children }: StoreGuardProps) => {
-    const { currentUser, currentSession, openSession, isRecoveringSession, isOpeningSession } = useStore();
+const CashRegisterGuard: React.FC<CashRegisterGuardProps> = ({ children }) => {
+    const { isCashRegisterOpen, isLoading, isRecoveringSession, currentUser, isOpeningSession, openSession } = useStore();
     const [openingBalance, setOpeningBalance] = useState('');
 
-    // IMPROVED: SUPER_ADMIN bypasses ALL checks (onboarding + session)
-    // They can access the system without opening a shift
-    if (currentUser?.role === 'SUPER_ADMIN') {
-        console.log('👑 SUPER_ADMIN detected in StoreGuard - Granting full access');
-        return <>{children}</>;
-    }
-
-    // Check Onboarding (only for ADMIN/USER)
-    const isStoreConfigured = currentUser?.storeName && currentUser.storeName.trim() !== '';
-    if (!isStoreConfigured) {
-        return <InitialConfig />;
-    }
-
-    // CRITICAL FIX: Wait for session recovery before showing modal
-    // This prevents the "amnesia" bug where the system forgets the open shift on reload
-    if (isRecoveringSession) {
+    // 1. Mostrar loading mientras recuperamos el estado
+    if (isLoading || isRecoveringSession) {
         return (
-            <div className="min-h-screen bg-brand-bg flex items-center justify-center">
-                <div className="text-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-purple mx-auto mb-4"></div>
-                    <p className="text-sm text-brand-muted">Verificando sesión...</p>
+            <div className="flex h-full items-center justify-center p-8">
+                <div className="flex flex-col items-center gap-4">
+                    <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-brand-emerald"></div>
+                    <p className="text-sm font-medium text-slate-500 animate-pulse">Verificando estado de caja...</p>
                 </div>
             </div>
         );
     }
 
-    // Check Session (only for ADMIN/USER)
-    // DISABLED PER USER REQUEST: Allow login without opening shift immediately
-    /*
-    if (!currentSession) {
+    // 2. Si la caja está cerrada, mostrar Modal de Apertura
+    if (!isCashRegisterOpen) {
         return (
-            <div className="min-h-screen bg-brand-bg flex items-center justify-center p-4">
-                <div className="max-w-md w-full bg-white dark:bg-brand-panel border border-slate-200 dark:border-brand-border p-10 cut-corner shadow-2xl animate-in zoom-in duration-500">
+            <div className="flex h-full items-center justify-center p-4 animate-in fade-in duration-500">
+                <div className="max-w-md w-full bg-white dark:bg-brand-panel border border-slate-200 dark:border-brand-border p-10 cut-corner shadow-2xl">
                     <div className="flex flex-col items-center text-center space-y-6">
                         <div className="p-5 bg-slate-50 dark:bg-white/5 rounded-full border border-slate-200 dark:border-brand-border">
                             <Power className="h-10 w-10 text-slate-900 dark:text-white" />
@@ -69,6 +51,11 @@ const StoreGuard = ({ children }: StoreGuardProps) => {
                                 placeholder="0.00"
                                 value={openingBalance}
                                 onChange={e => setOpeningBalance(e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' && !isOpeningSession) {
+                                        openSession(parseFloat(openingBalance) || 0);
+                                    }
+                                }}
                             />
                         </div>
                         <Button
@@ -86,9 +73,9 @@ const StoreGuard = ({ children }: StoreGuardProps) => {
             </div>
         );
     }
-    */
 
+    // 3. Si todo está en orden, mostrar el contenido (POS)
     return <>{children}</>;
 };
 
-export default StoreGuard;
+export default CashRegisterGuard;

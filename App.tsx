@@ -11,6 +11,7 @@ import Login from './components/Login';
 import AdminPanel from './components/AdminPanel';
 import ProtectedRoute from './components/ProtectedRoute';
 import StoreGuard from './components/StoreGuard';
+import CashRegisterGuard from './components/CashRegisterGuard';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { checkTokenExpirationWarning } from './utils/api';
 
@@ -42,7 +43,11 @@ const AppContent: React.FC = () => {
           <StoreGuard>
             <Layout activeTab={activeTab} onTabChange={setActiveTab}>
               {activeTab === 'dashboard' && <Dashboard />}
-              {activeTab === 'pos' && <POS />}
+              {activeTab === 'pos' && (
+                <CashRegisterGuard>
+                  <POS />
+                </CashRegisterGuard>
+              )}
               {activeTab === 'history' && <SalesHistory />}
               {activeTab === 'products' && <ProductList />}
               {activeTab === 'settings' && <Settings />}

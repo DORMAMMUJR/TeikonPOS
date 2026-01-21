@@ -8,6 +8,7 @@ import SaleTicket from './SaleTicket';
 import POSHeader from './POSHeader';
 import SalesGoalModal from './SalesGoalModal';
 import CashRegisterModal from './CashRegisterModal';
+import CloseShiftModal from './CloseShiftModal';
 import SupportTicketModal from './SupportTicketModal';
 import {
   Trash2,
@@ -22,6 +23,8 @@ const POS: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [cart, setCart] = useState<CartItemState[]>([]);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [isCloseModalOpen, setIsCloseModalOpen] = useState(false);
   const [amountReceived, setAmountReceived] = useState('');
   const [lastAddedId, setLastAddedId] = useState<string | null>(null);
   const [saleSummary, setSaleSummary] = useState<{ revenue: number, profit: number, items: any[], folio: string, id?: string, total?: number, paymentMethod?: string, sellerId?: string, date?: string } | null>(null);
@@ -37,7 +40,7 @@ const POS: React.FC = () => {
     syncData();
   }, [syncData]);
 
-  // Auto-focus Logic con detección de móvil para no abrir teclado virtual
+  // Auto-focus Logic
   useEffect(() => {
     const focusSearch = () => {
       if (!isCheckoutOpen && !showTicket && window.innerWidth > 768) {
@@ -57,6 +60,48 @@ const POS: React.FC = () => {
     }
   }, [cart.length]);
 
+  // GLOBAL HOTKEY: Checkout (Ctrl + Enter)
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.key === 'Enter') {
+        e.preventDefault();
+        // Trigger checkout if cart has items and not already checking out
+        if (cart.length > 0) {
+          setIsCheckoutOpen(true);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, [cart]);
+
+  // INPUT HANDLER: Scan & Go
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.ctrlKey && e.key === 'Enter') {
+      e.preventDefault();
+      if (cart.length > 0) setIsCheckoutOpen(true);
+      return;
+    }
+
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const code = searchTerm.trim();
+
+      if (!code) return;
+
+      const product = products.find(p => p.sku === code || p.sku.toLowerCase() === code.toLowerCase());
+
+      if (product) {
+        addToCart(product);
+        setSearchTerm('');
+      } else {
+        alert("Producto no encontrado");
+        setSearchTerm('');
+      }
+    }
+  };
+
   const filteredProducts = products.filter(p =>
     p.isActive && (p.name.toLowerCase().includes(searchTerm.toLowerCase()) || p.sku.toUpperCase().includes(searchTerm.toUpperCase().trim()))
   );
@@ -71,36 +116,54 @@ const POS: React.FC = () => {
             : item
         );
       }
+      setLastAddedId(product.id);
+      setTimeout(() => setLastAddedId(null), 1000);
       return [...prev, {
         productId: product.id,
         name: product.name,
         quantity: 1,
-        sellingPrice: product.salePrice,
-        unitCost: product.costPrice,
-        subtotal: product.salePrice
+        sellingPrice: Number(product.salePrice),
+        unitCost: Number(product.costPrice),
+        image: product.image,
+        subtotal: Number(product.salePrice)
       }];
     });
-    setLastAddedId(product.id);
-    setTimeout(() => setLastAddedId(null), 1000);
-    setSearchTerm('');
     // En móvil, devolver foco al input es molesto porque re-abre teclado
     if (window.innerWidth > 768) {
       searchInputRef.current?.focus();
     }
   };
 
-  const updateQuantity = (id: string, delta: number) => {
+  const updateQuantity = (productId: string, delta: number) => {
     setCart(prev => prev.map(item => {
-      if (item.productId === id) {
-        const newQty = Math.max(1, item.quantity + delta);
+      if (item.productId === productId) {
+        const newQty = Math.max(0, item.quantity + delta);
         return { ...item, quantity: newQty, subtotal: newQty * item.sellingPrice };
       }
       return item;
-    }));
+    }).filter(item => item.quantity > 0));
   };
 
-  const total = cart.reduce((acc, item) => acc + (item.subtotal || 0), 0);
+  const removeItem = (productId: string) => {
+    setCart(prev => prev.filter(item => item.productId !== productId));
+  };
+
+  const clearCart = () => {
+    setCart([]);
+    setIsCheckoutOpen(false);
+    setAmountReceived('');
+  };
+
+  const subtotal = cart.reduce((sum, item) => sum + (item.sellingPrice * item.quantity), 0);
+  const tax = subtotal * 0.16; // Example tax
+  const total = subtotal; // Assuming inclusive or exclusive? Keeping simple based on previous code.
   const change = (parseFloat(amountReceived) || 0) - total;
+
+  // Checkout Handler
+  const handleCheckout = () => {
+    if (cart.length === 0) return;
+    setIsCheckoutOpen(true);
+  };
 
   const finalize = async () => {
     // 1. Sanitización Defensiva: Conversiones Seguras
@@ -172,6 +235,8 @@ const POS: React.FC = () => {
         searchTerm={searchTerm}
         setSearchTerm={setSearchTerm}
         searchInputRef={searchInputRef}
+        onKeyDown={handleKeyDown}
+        onCloseShift={() => setIsCloseModalOpen(true)}
       />
 
       <div className="flex flex-col lg:flex-row gap-6 flex-1 min-h-0">
@@ -423,6 +488,11 @@ const POS: React.FC = () => {
       <SalesGoalModal isOpen={isGoalModalOpen} onClose={() => setIsGoalModalOpen(false)} />
       <CashRegisterModal isOpen={isCashCloseOpen} onClose={() => setIsCashCloseOpen(false)} />
       <SupportTicketModal isOpen={isSupportOpen} onClose={() => setIsSupportOpen(false)} />
+      <CloseShiftModal
+        isOpen={isCloseModalOpen}
+        onClose={() => setIsCloseModalOpen(false)}
+        onShiftClosed={() => window.location.reload()}
+      />
     </div >
   );
 };

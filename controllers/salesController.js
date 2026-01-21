@@ -226,7 +226,7 @@ export const syncSales = async (req, res) => {
         );
 
         if (openShiftResult.rows.length === 0) {
-            return res.status(409).json({
+            return res.status(403).json({
                 error: 'NO_OPEN_SHIFT',
                 message: 'Caja cerrada. Abre un turno para sincronizar.'
             });
@@ -280,7 +280,7 @@ export const createSale = async (req, res) => {
         );
 
         if (openShiftResult.rows.length === 0) {
-            return res.status(409).json({ error: 'NO_OPEN_SHIFT', message: 'Caja cerrada.' });
+            return res.status(403).json({ error: 'NO_OPEN_SHIFT', message: 'Caja cerrada.' });
         }
 
         const shiftId = openShiftResult.rows[0].id;
