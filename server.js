@@ -1159,6 +1159,129 @@ app.delete('/api/productos/:id', authenticateToken, async (req, res) => {
     }
 });
 
+// POST /api/products/bulk - Importación masiva de productos
+app.post('/api/products/bulk', authenticateToken, async (req, res) => {
+    const t = await sequelize.transaction();
+
+    try {
+        console.log('📦 Iniciando importación masiva de productos');
+        const { products } = req.body;
+
+        if (!products || !Array.isArray(products) || products.length === 0) {
+            await t.rollback();
+            return res.status(400).json({ error: 'Se requiere un array de productos' });
+        }
+
+        // Determinar storeId
+        let targetStoreId = req.storeId;
+        if (req.role === 'SUPER_ADMIN' && req.body.storeId) {
+            targetStoreId = req.body.storeId;
+        }
+
+        if (!targetStoreId) {
+            await t.rollback();
+            return res.status(400).json({ error: 'Store ID es requerido' });
+        }
+
+        let importedCount = 0;
+        let skippedCount = 0;
+        const errors = [];
+
+        for (const productData of products) {
+            try {
+                // Normalizar y validar datos
+                const sku = (productData.sku || '').trim().toUpperCase();
+                const nombre = productData.nombre || productData.name || '';
+                const categoria = (productData.categoria || productData.category || 'General').trim();
+                const costPrice = Number(productData.costPrice || 0);
+                const salePrice = Number(productData.salePrice || 0);
+                const stock = Number(productData.stock || 0);
+                const minStock = Number(productData.minStock || 5);
+                const imagen = productData.imagen || productData.image || null;
+
+                // Validación básica
+                if (!sku || !nombre) {
+                    skippedCount++;
+                    errors.push({ sku, error: 'SKU o nombre faltante' });
+                    continue;
+                }
+
+                // Verificar si el SKU ya existe en esta tienda
+                const existingProduct = await Product.findOne({
+                    where: { sku, storeId: targetStoreId },
+                    transaction: t
+                });
+
+                if (existingProduct) {
+                    skippedCount++;
+                    console.log(`⏭️ SKU duplicado ignorado: ${sku}`);
+                    continue;
+                }
+
+                // Crear producto
+                const newProduct = await Product.create({
+                    storeId: targetStoreId,
+                    sku,
+                    nombre,
+                    categoria,
+                    costPrice,
+                    salePrice,
+                    stock,
+                    minStock,
+                    taxRate: 0,
+                    activo: true,
+                    imagen
+                }, { transaction: t });
+
+                // Crear movimiento de stock si hay stock inicial
+                if (stock > 0) {
+                    await StockMovement.create({
+                        productId: newProduct.id,
+                        storeId: targetStoreId,
+                        tipo: 'PURCHASE',
+                        cantidad: stock,
+                        stockAnterior: 0,
+                        stockNuevo: stock,
+                        motivo: 'Importación Masiva',
+                        registradoPor: req.usuario || 'Sistema'
+                    }, { transaction: t });
+                }
+
+                importedCount++;
+                console.log(`✅ Producto importado: ${nombre} (${sku})`);
+
+            } catch (productError) {
+                console.error(`❌ Error al procesar producto ${productData.sku}:`, productError);
+                errors.push({
+                    sku: productData.sku,
+                    error: productError.message
+                });
+            }
+        }
+
+        // Commit de la transacción
+        await t.commit();
+
+        console.log(`🎉 Importación completada: ${importedCount} productos importados, ${skippedCount} omitidos`);
+
+        res.json({
+            message: 'Importación completada',
+            imported: importedCount,
+            skipped: skippedCount,
+            total: products.length,
+            errors: errors.length > 0 ? errors : undefined
+        });
+
+    } catch (error) {
+        await t.rollback();
+        console.error('❌ Error en importación masiva:', error);
+        res.status(500).json({
+            error: 'Error al importar productos',
+            details: error.message
+        });
+    }
+});
+
 // ==========================================
 // ENDPOINTS DE VENTAS
 // ==========================================

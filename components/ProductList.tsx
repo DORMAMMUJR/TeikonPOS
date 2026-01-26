@@ -3,11 +3,12 @@ import { useStore } from '../context/StoreContext';
 import { Product } from "@/Product";
 import {
   Search, Plus, Edit2, Archive, Package, AlertTriangle, X,
-  DollarSign, PieChart, ImageIcon, TrendingUp, Edit, Upload
+  DollarSign, PieChart, ImageIcon, TrendingUp, Edit, Upload, FileSpreadsheet
 } from 'lucide-react';
 // Asegúrate de que esta ruta sea correcta según tu proyecto
 import { Button, Modal } from '../src/components/ui';
 import { productsAPI } from '../utils/api';
+import BulkImportModal from './BulkImportModal';
 
 interface ProductListProps {
   targetStoreId?: string;
@@ -24,42 +25,43 @@ const ProductList: React.FC<ProductListProps> = ({ products: propProducts, targe
   // IMPROVED: Fetch products for specific store when targetStoreId is provided
   useEffect(() => {
     if (targetStoreId) {
-      const fetchStoreProducts = async () => {
-        setIsLoadingStore(true);
-        try {
-          console.log(`📦 Fetching products for store: ${targetStoreId}`);
-          const fetchedProducts = await productsAPI.getAll({ storeId: targetStoreId });
-
-          // Map backend fields to frontend format
-          const mappedProducts = fetchedProducts.map((p: any) => ({
-            ...p,
-            name: p.nombre || p.name || 'Sin Nombre',
-            category: p.categoria || p.category || 'General',
-            image: p.imagen || p.image,
-            costPrice: Number(p.costPrice || 0),
-            salePrice: Number(p.salePrice || 0),
-            isActive: p.activo !== undefined ? p.activo : (p.isActive !== undefined ? p.isActive : true)
-          }));
-
-          setStoreProducts(mappedProducts);
-          console.log(`✅ Loaded ${mappedProducts.length} products for store`);
-        } catch (error) {
-          console.error('Error fetching store products:', error);
-          setStoreProducts([]);
-        } finally {
-          setIsLoadingStore(false);
-        }
-      };
-
       fetchStoreProducts();
     }
   }, [targetStoreId]);
+
+  const fetchStoreProducts = async () => {
+    setIsLoadingStore(true);
+    try {
+      console.log(`📦 Fetching products for store: ${targetStoreId}`);
+      const fetchedProducts = await productsAPI.getAll({ storeId: targetStoreId });
+
+      // Map backend fields to frontend format
+      const mappedProducts = fetchedProducts.map((p: any) => ({
+        ...p,
+        name: p.nombre || p.name || 'Sin Nombre',
+        category: p.categoria || p.category || 'General',
+        image: p.imagen || p.image,
+        costPrice: Number(p.costPrice || 0),
+        salePrice: Number(p.salePrice || 0),
+        isActive: p.activo !== undefined ? p.activo : (p.isActive !== undefined ? p.isActive : true)
+      }));
+
+      setStoreProducts(mappedProducts);
+      console.log(`✅ Loaded ${mappedProducts.length} products for store`);
+    } catch (error) {
+      console.error('Error fetching store products:', error);
+      setStoreProducts([]);
+    } finally {
+      setIsLoadingStore(false);
+    }
+  };
 
   // 2. Lógica de selección de productos (Props o Contexto o Store-specific)
   const products = propProducts || (targetStoreId ? storeProducts : contextProducts) || [];
 
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Partial<Product>>({});
 
   const handleDelete = async (e: React.MouseEvent, product: Product) => {
@@ -184,6 +186,16 @@ const ProductList: React.FC<ProductListProps> = ({ products: propProducts, targe
     setIsModalOpen(true);
   };
 
+  const handleBulkImportSuccess = () => {
+    // Reload products after successful import
+    if (targetStoreId) {
+      fetchStoreProducts();
+    } else {
+      // Trigger context refresh if needed
+      window.location.reload();
+    }
+  };
+
   const filtered = products.filter(p => p.isActive !== false).filter(p =>
     (p.name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
     (p.sku?.toLowerCase() || '').includes(searchTerm.toLowerCase())
@@ -240,9 +252,17 @@ const ProductList: React.FC<ProductListProps> = ({ products: propProducts, targe
             onChange={e => setSearchTerm(e.target.value)}
           />
         </div>
-        <Button onClick={openNew} className="bg-orange-600 hover:bg-orange-500 text-white rounded-xl shadow-lg shadow-orange-600/20 active:scale-95 transition-all py-3.5">
-          <Plus size={18} className="mr-2" /> AGREGAR ÍTEM
-        </Button>
+        <div className="flex gap-3">
+          <Button
+            onClick={() => setIsBulkImportOpen(true)}
+            className="bg-blue-600 hover:bg-blue-500 text-white rounded-xl shadow-lg shadow-blue-600/20 active:scale-95 transition-all py-3.5 px-4"
+          >
+            <FileSpreadsheet size={18} className="mr-2" /> IMPORTAR EXCEL
+          </Button>
+          <Button onClick={openNew} className="bg-orange-600 hover:bg-orange-500 text-white rounded-xl shadow-lg shadow-orange-600/20 active:scale-95 transition-all py-3.5">
+            <Plus size={18} className="mr-2" /> AGREGAR ÍTEM
+          </Button>
+        </div>
       </div>
 
       {/* MOBILE-FIRST: Vertical List View (visible on mobile, hidden on md+) */}
@@ -548,6 +568,14 @@ const ProductList: React.FC<ProductListProps> = ({ products: propProducts, targe
           </div>
         </form>
       </Modal>
+
+      {/* Bulk Import Modal */}
+      <BulkImportModal
+        isOpen={isBulkImportOpen}
+        onClose={() => setIsBulkImportOpen(false)}
+        onSuccess={handleBulkImportSuccess}
+        targetStoreId={targetStoreId}
+      />
     </div>
   );
 };

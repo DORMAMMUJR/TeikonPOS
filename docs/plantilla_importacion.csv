@@ -1,0 +1,11 @@
+SKU,Nombre,Precio,Costo,Existencia,Categoria
+CAM-001,Camiseta Básica Negra,250.00,120.00,50,Ropa
+TEN-XYZ,Tenis Deportivos,1200.50,800.00,15,Calzado
+GOR-RED,Gorra Roja,300.00,150.00,20,Accesorios
+PAN-001,Pantalón Mezclilla Azul,450.00,250.00,30,Ropa
+ZAP-002,Zapatos Formales,800.00,500.00,12,Calzado
+BOL-003,Bolsa de Mano,600.00,350.00,8,Accesorios
+CAM-002,Camiseta Polo Blanca,280.00,140.00,40,Ropa
+TEN-002,Tenis Casuales,950.00,600.00,18,Calzado
+CIN-001,Cinturón de Cuero,220.00,110.00,25,Accesorios
+SUD-001,Sudadera con Capucha,480.00,280.00,22,Ropa

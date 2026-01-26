@@ -366,7 +366,7 @@ export const productsAPI = {
 
             // Initial Request
             const response1 = await authenticatedFetch(url, {
-                });
+            });
             const data1 = await response1.json();
 
             // Handle response format (Paginated vs Legacy/Flat)
@@ -379,7 +379,7 @@ export const productsAPI = {
                 while (page <= totalPages) {
                     const pageUrl = `${baseUrl}?${queryParams.map(p => p.startsWith('page=') ? `page=${page}` : p).join('&')}`;
                     const res = await authenticatedFetch(pageUrl, {
-                        });
+                    });
                     const pageData = await res.json();
                     if (pageData.data) {
                         allProducts = [...allProducts, ...pageData.data];
@@ -419,7 +419,15 @@ export const productsAPI = {
     delete: async (id: string) => {
         const response = await authenticatedFetch(`${API_URL}/api/productos/${id}`, {
             method: 'DELETE',
-            });
+        });
+        return response.json();
+    },
+
+    bulkImport: async (data: { products: any[], storeId?: string }) => {
+        const response = await authenticatedFetch(`${API_URL}/api/products/bulk`, {
+            method: 'POST',
+            body: JSON.stringify(data)
+        });
         return response.json();
     }
 };
@@ -427,7 +435,7 @@ export const productsAPI = {
 export const storesAPI = {
     getAll: async () => {
         const response = await authenticatedFetch(`${API_URL}/api/stores`, {
-            });
+        });
         return response.json();
     },
     create: async (data: any) => {
@@ -461,7 +469,7 @@ export const salesAPI = {
         }
 
         const response = await authenticatedFetch(url, {
-            });
+        });
         const data = await response.json();
         // Map backend createdAt to frontend date property
         return data.map((sale: any) => ({
@@ -472,7 +480,7 @@ export const salesAPI = {
 
     getById: async (id: string) => {
         const response = await authenticatedFetch(`${API_URL}/api/ventas/${id}`, {
-            });
+        });
         const data = await response.json();
         // Map backend createdAt to frontend date property for consistency
         return {
@@ -505,7 +513,7 @@ export const salesAPI = {
 export const expensesAPI = {
     getAll: async () => {
         const response = await authenticatedFetch(`${API_URL}/api/expenses`, {
-            });
+        });
         return response.json();
     },
 
@@ -529,7 +537,7 @@ export const dashboardAPI = {
             url += `&storeId=${storeId}`;
         }
         const response = await authenticatedFetch(url, {
-            });
+        });
         return response.json();
     }
 };
@@ -541,7 +549,7 @@ export const dashboardAPI = {
 export const ticketsAPI = {
     getAll: async () => {
         const response = await authenticatedFetch(`${API_URL}/api/tickets`, {
-            });
+        });
         return response.json();
     },
 
@@ -577,7 +585,7 @@ export const shiftsAPI = {
 
     getCurrent: async () => {
         const response = await authenticatedFetch(`${API_URL}/api/shifts/current`, {
-            });
+        });
         // Backend returns null if no active shift, 200 OK
         return response.json();
     },
@@ -598,7 +606,7 @@ export const shiftsAPI = {
 export const ticketSettingsAPI = {
     get: async (storeId: string) => {
         const response = await authenticatedFetch(`${API_URL}/api/ticket-settings/${storeId}`, {
-            });
+        });
         return response.json();
     },
 
