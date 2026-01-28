@@ -1,6 +1,54 @@
 import { sequelize, Sale, Shift, Product } from '../models.js';
+import { Op } from 'sequelize';
 
+// ==========================================
+// HELPER: VALIDACIÓN DE STOCK (Pessimistic Locking)
+// ==========================================
+async function validateStockAvailability(items, transaction) {
+    const insufficientStock = [];
+
+    if (!items || !Array.isArray(items)) return [];
+
+    for (const item of items) {
+        const productId = item.id || item.productId;
+        const requestedQty = Number(item.quantity) || Number(item.cantidad) || 1;
+
+        if (!productId) continue;
+
+        // Buscamos el producto y BLOQUEAMOS la fila para que nadie más la modifique
+        // mientras dura esta transacción.
+        const product = await Product.findByPk(productId, {
+            transaction,
+            lock: transaction.LOCK.UPDATE
+        });
+
+        if (!product) {
+            insufficientStock.push({
+                productId,
+                productName: 'Producto no encontrado',
+                reason: 'PRODUCT_NOT_FOUND'
+            });
+            continue;
+        }
+
+        if (product.stock < requestedQty) {
+            insufficientStock.push({
+                productId: product.id,
+                productName: product.nombre,
+                sku: product.sku,
+                requested: requestedQty,
+                available: product.stock,
+                reason: 'INSUFFICIENT_STOCK'
+            });
+        }
+    }
+
+    return insufficientStock;
+}
+
+// ==========================================
 // 1. Sincronización Segura (Offline -> Online)
+// ==========================================
 export const syncSales = async (req, res) => {
     const { sales, storeId } = req.body;
 
@@ -8,74 +56,112 @@ export const syncSales = async (req, res) => {
         return res.status(400).json({ error: 'BAD_REQUEST', message: 'No hay datos de ventas.' });
     }
 
-    const transaction = await sequelize.transaction();
+    // Nota: No usamos una transacción global para todo el lote,
+    // sino una por venta para permitir "Éxito Parcial".
+
+    const results = {
+        success: true,
+        synced: 0,
+        failed: 0,
+        failedSales: []
+    };
 
     try {
+        // Verificar turno activo una sola vez
         const activeShift = await Shift.findOne({
-            where: { storeId: storeId, status: 'OPEN' },
-            transaction
+            where: { storeId: storeId, status: 'OPEN' }
         });
 
         if (!activeShift) {
-            await transaction.rollback();
             return res.status(403).json({
                 error: 'NO_OPEN_SHIFT',
                 message: 'Caja cerrada. Abre un turno para sincronizar.'
             });
         }
 
-        const salesToCreate = sales.map(sale => {
-            let finalTotal = Number(sale.total) || 0;
-            let finalSubtotal = Number(sale.subtotal) || finalTotal;
-
-            if (finalTotal === 0 && Array.isArray(sale.items)) {
-                finalTotal = sale.items.reduce((sum, item) => sum + (Number(item.subtotal) || Number(item.total) || 0), 0);
-                finalSubtotal = finalTotal;
-            }
-
-            return {
-                total: finalTotal,
-                subtotal: finalSubtotal,
-                items: sale.items,
-                paymentMethod: sale.paymentMethod,
-                shiftId: activeShift.id,
-                storeId: storeId,
-                netProfit: sale.netProfit || 0,
-                totalCost: sale.totalCost || 0,
-                vendedor: sale.vendedor || 'Sistema',
-                status: 'ACTIVE',
-                createdAt: new Date(),
-                updatedAt: new Date()
-            };
-        });
-
-        await Sale.bulkCreate(salesToCreate, { transaction });
-
-        // LOGICA DE DESCUENTO DE INVENTARIO (SYNC)
+        // Procesar venta por venta
         for (const sale of sales) {
-            if (sale.items && Array.isArray(sale.items)) {
-                for (const item of sale.items) {
-                    if (item.id) {
-                        const product = await Product.findByPk(item.id, { transaction });
-                        if (product) {
-                            await product.decrement('stock', { by: item.quantity || 1, transaction });
+            const saleTransaction = await sequelize.transaction();
+
+            try {
+                // 1. Validar Stock
+                const stockErrors = await validateStockAvailability(sale.items, saleTransaction);
+
+                if (stockErrors.length > 0) {
+                    throw { status: 'INSUFFICIENT_STOCK', details: stockErrors };
+                }
+
+                // 2. Preparar Datos
+                let finalTotal = Number(sale.total) || 0;
+                let finalSubtotal = Number(sale.subtotal) || finalTotal;
+
+                if (finalTotal === 0 && Array.isArray(sale.items)) {
+                    finalTotal = sale.items.reduce((sum, item) => sum + (Number(item.subtotal) || Number(item.total) || 0), 0);
+                    finalSubtotal = finalTotal;
+                }
+
+                // 3. Crear Venta
+                await Sale.create({
+                    total: finalTotal,
+                    subtotal: finalSubtotal,
+                    items: sale.items,
+                    paymentMethod: sale.paymentMethod,
+                    shiftId: activeShift.id,
+                    storeId: storeId,
+                    netProfit: sale.netProfit || 0,
+                    totalCost: sale.totalCost || 0,
+                    vendedor: sale.vendedor || 'Sistema',
+                    status: 'ACTIVE',
+                    createdAt: new Date(), // Usar fecha actual de sync o la original si se prefiere
+                    updatedAt: new Date()
+                }, { transaction: saleTransaction });
+
+                // 4. Descontar Stock (Ya validado y bloqueado arriba)
+                if (sale.items && Array.isArray(sale.items)) {
+                    for (const item of sale.items) {
+                        const productId = item.id || item.productId;
+                        if (productId) {
+                            const product = await Product.findByPk(productId, { transaction: saleTransaction });
+                            if (product) {
+                                await product.decrement('stock', { by: item.quantity || 1, transaction: saleTransaction });
+                            }
                         }
                     }
                 }
+
+                await saleTransaction.commit();
+                results.synced++;
+
+            } catch (error) {
+                await saleTransaction.rollback();
+                results.failed++;
+
+                // Loguear error específico
+                results.failedSales.push({
+                    saleId: sale.tempId || 'unknown',
+                    reason: error.status || 'SYNC_ERROR',
+                    details: error.details || error.message
+                });
             }
         }
 
-        await transaction.commit();
-        res.json({ success: true, message: 'Sincronización completada.' });
+        res.json({
+            success: true,
+            synced: results.synced,
+            failed: results.failed,
+            message: `Sincronización completada: ${results.synced} exitosas, ${results.failed} fallidas.`,
+            failedSales: results.failedSales
+        });
 
     } catch (error) {
-        await transaction.rollback();
-        console.error('Sync Error:', error);
+        console.error('Sync Error Global:', error);
         res.status(500).json({ error: 'INTERNAL_ERROR', details: error.message });
     }
 };
 
+// ==========================================
 // 2. Creación de Venta Online (Normal)
+// ==========================================
 export const createSale = async (req, res) => {
     const {
         total, subtotal, items, paymentMethod,
@@ -85,6 +171,7 @@ export const createSale = async (req, res) => {
     const transaction = await sequelize.transaction();
 
     try {
+        // 1. Validar Turno
         const activeShift = await Shift.findOne({
             where: { storeId, status: 'OPEN' },
             transaction
@@ -95,6 +182,20 @@ export const createSale = async (req, res) => {
             return res.status(403).json({ error: 'NO_OPEN_SHIFT', message: 'Caja cerrada.' });
         }
 
+        // 2. VALIDACIÓN DE STOCK (NUEVO)
+        // Esto bloqueará las filas de los productos hasta que termine la transacción
+        const stockErrors = await validateStockAvailability(items, transaction);
+
+        if (stockErrors.length > 0) {
+            await transaction.rollback();
+            return res.status(409).json({ // 409 Conflict
+                error: 'INSUFFICIENT_STOCK',
+                message: 'Stock insuficiente para completar la venta',
+                details: stockErrors
+            });
+        }
+
+        // 3. Preparar Totales
         let finalTotal = Number(total);
         let finalSubtotal = Number(subtotal);
 
@@ -108,12 +209,11 @@ export const createSale = async (req, res) => {
             }
         }
         if (!finalSubtotal) finalSubtotal = finalTotal;
-        finalTotal = finalTotal || 0;
-        finalSubtotal = finalSubtotal || 0;
 
+        // 4. Crear Venta
         const newSale = await Sale.create({
-            total: finalTotal,
-            subtotal: finalSubtotal,
+            total: finalTotal || 0,
+            subtotal: finalSubtotal || 0,
             items,
             paymentMethod,
             shiftId: activeShift.id,
@@ -124,11 +224,13 @@ export const createSale = async (req, res) => {
             status: 'ACTIVE'
         }, { transaction });
 
-        // LOGICA DE DESCUENTO DE INVENTARIO (ONLINE)
+        // 5. Descontar Stock
+        // Como ya tenemos el lock desde validateStockAvailability, es seguro descontar aquí
         if (items && Array.isArray(items)) {
             for (const item of items) {
-                if (item.id) {
-                    const product = await Product.findByPk(item.id, { transaction });
+                const productId = item.id || item.productId;
+                if (productId) {
+                    const product = await Product.findByPk(productId, { transaction });
                     if (product) {
                         const qtyToSubtract = Number(item.quantity) || Number(item.cantidad) || 1;
                         await product.decrement('stock', { by: qtyToSubtract, transaction });
@@ -147,7 +249,9 @@ export const createSale = async (req, res) => {
     }
 };
 
+// ==========================================
 // 3. Obtener Detalles de Corte de Caja
+// ==========================================
 export const getCashCloseDetails = async (req, res) => {
     try {
         let storeId = req.storeId;
@@ -177,7 +281,7 @@ export const getCashCloseDetails = async (req, res) => {
         } else {
             const now = new Date();
             // Default to today if no shift
-            whereClause.createdAt = { [sequelize.Op.gte]: shiftStart };
+            whereClause.createdAt = { [Op.gte]: shiftStart };
         }
 
         const now = new Date();
@@ -210,7 +314,9 @@ export const getCashCloseDetails = async (req, res) => {
     }
 };
 
+// ==========================================
 // 4. Cancelar Venta
+// ==========================================
 export const cancelSale = async (req, res) => {
     const transaction = await sequelize.transaction();
 
@@ -220,12 +326,9 @@ export const cancelSale = async (req, res) => {
 
         const sale = await Sale.findOne({
             where: { id },
-            include: [{ model: Sale.associations.items?.target || Sale, as: 'items' }], // Fallback if association name varies
+            include: [{ model: Sale.associations.items?.target || Sale, as: 'items' }],
             transaction
         });
-
-        // Note: Use raw query or parsed JSON items if strict association doesn't exist yet
-        // For now, assuming items are stored in JSONB column 'items' as per previous context
 
         if (!sale) {
             await transaction.rollback();
@@ -245,8 +348,8 @@ export const cancelSale = async (req, res) => {
         sale.status = 'CANCELLED';
         await sale.save({ transaction });
 
-        // Restore Stock
-        const saleItems = sale.items || []; // JSON field
+        // Restaurar Stock
+        const saleItems = sale.items || [];
         if (Array.isArray(saleItems)) {
             for (const item of saleItems) {
                 if (item.id || item.productId) {

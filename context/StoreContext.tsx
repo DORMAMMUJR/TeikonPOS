@@ -18,6 +18,7 @@ interface StoreContextType {
   isLoading: boolean;
   isRecoveringSession: boolean; // NEW: Prevents showing modal before recovery completes
   isOpeningSession: boolean; // NEW: Loading state for session opening
+  isTransactionInProgress: boolean; // NEW: Lock to prevent sync during checkout
   error: string | null;
 
   login: (token: string) => void;
@@ -35,6 +36,7 @@ interface StoreContextType {
   calculateTotalInventoryValue: () => number;
   syncData: () => Promise<void>;
   searchProductBySKU: (sku: string) => Promise<Product | null>;
+  setTransactionInProgress: (inProgress: boolean) => void; // NEW: Control transaction lock
 }
 
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
@@ -89,6 +91,7 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const [isLoading, setIsLoading] = useState(false);
   const [isRecoveringSession, setIsRecoveringSession] = useState(true); // Start as true to prevent premature modal
   const [isOpeningSessionState, setIsOpeningSessionState] = useState(false); // Loading state for UI
+  const [isTransactionInProgress, setIsTransactionInProgress] = useState(false); // Lock to prevent sync during checkout
   const [error, setError] = useState<string | null>(null);
 
   const currentSession = allSessions.find(s => s.status === 'OPEN') || null;
@@ -546,10 +549,17 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
   /**
    * IMPROVED: Background sync - Silent data refresh without blocking UI
-   * Updates product cache every 30 seconds for fresh prices and stock
+   * Updates product cache every 5 minutes for fresh prices and stock
+   * SMART SYNC: Respects transaction lock to prevent conflicts during checkout
    */
   const syncDataSilently = useCallback(async () => {
     if (!currentUser || !isOnline) return;
+
+    // 🔒 CRITICAL: Block sync if transaction is in progress
+    if (isTransactionInProgress) {
+      console.log('⏸️ Background sync skipped: Transaction in progress');
+      return;
+    }
 
     try {
       console.log('🔄 Background sync: Refreshing product data...');
@@ -585,23 +595,23 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       console.warn('⚠️ Background sync failed (will retry):', error);
       // Don't show error to user - this is a silent background operation
     }
-  }, [currentUser, isOnline]);
+  }, [currentUser, isOnline, isTransactionInProgress]);
 
   // Initial sync on mount
   useEffect(() => {
     syncData();
   }, [syncData]);
 
-  // IMPROVED: Background sync every 30 seconds
+  // SMART SYNC: Background sync every 5 minutes (reduced from 30 seconds)
   useEffect(() => {
     if (!currentUser || !isOnline) return;
 
     // Start background sync after initial load
     const interval = setInterval(() => {
       syncDataSilently();
-    }, 30000); // 30 seconds
+    }, 300000); // 5 minutes (300000ms) - was 30 seconds
 
-    console.log('🔄 Background sync enabled (every 30s)');
+    console.log('🔄 Background sync enabled (every 5 min)');
 
     return () => {
       clearInterval(interval);
@@ -889,49 +899,52 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const processSaleAndContributeToGoal = async (cartItems: CartItem[], paymentMethod: 'CASH' | 'CARD' | 'TRANSFER'): Promise<SaleResult> => {
     if (!currentUser) return { totalRevenueAdded: 0, totalProfitAdded: 0, success: false };
 
-    let totalTransactionRevenue = 0;
-    let totalTransactionProfit = 0;
-
-    const saleItems: SaleDetail[] = cartItems.map(item => {
-      const itemRevenue = item.sellingPrice * item.quantity;
-      let itemProfit = 0;
-      if (!item.unitCost || item.unitCost <= 0) {
-        itemProfit = itemRevenue;
-      } else {
-        itemProfit = (item.sellingPrice - item.unitCost) * item.quantity;
-      }
-      totalTransactionRevenue += itemRevenue;
-      totalTransactionProfit += itemProfit;
-
-      return {
-        productId: item.productId || 'unknown',
-        productName: item.name,
-        quantity: item.quantity,
-        unitPrice: item.sellingPrice,
-        unitCost: item.unitCost || 0,
-        discount: 0,
-        subtotal: itemRevenue
-      };
-    });
-
-    const newSale = {
-      storeId: currentUser.storeId || 'unknown',
-      vendedor: currentUser.username,
-      subtotal: totalTransactionRevenue,
-      totalDiscount: 0,
-      taxTotal: 0,
-      total: totalTransactionRevenue,
-      totalCost: totalTransactionRevenue - totalTransactionProfit, // Approximate
-      netProfit: totalTransactionProfit,
-      paymentMethod,
-      status: 'ACTIVE',
-      items: saleItems,
-      syncedAt: isOnline ? new Date() : null
-    };
-
-    let finalSale: Sale | undefined;
+    // 🔒 CRITICAL: Lock to prevent background sync during transaction
+    setIsTransactionInProgress(true);
 
     try {
+      let totalTransactionRevenue = 0;
+      let totalTransactionProfit = 0;
+
+      const saleItems: SaleDetail[] = cartItems.map(item => {
+        const itemRevenue = item.sellingPrice * item.quantity;
+        let itemProfit = 0;
+        if (!item.unitCost || item.unitCost <= 0) {
+          itemProfit = itemRevenue;
+        } else {
+          itemProfit = (item.sellingPrice - item.unitCost) * item.quantity;
+        }
+        totalTransactionRevenue += itemRevenue;
+        totalTransactionProfit += itemProfit;
+
+        return {
+          productId: item.productId || 'unknown',
+          productName: item.name,
+          quantity: item.quantity,
+          unitPrice: item.sellingPrice,
+          unitCost: item.unitCost || 0,
+          discount: 0,
+          subtotal: itemRevenue
+        };
+      });
+
+      const newSale = {
+        storeId: currentUser.storeId || 'unknown',
+        vendedor: currentUser.username,
+        subtotal: totalTransactionRevenue,
+        totalDiscount: 0,
+        taxTotal: 0,
+        total: totalTransactionRevenue,
+        totalCost: totalTransactionRevenue - totalTransactionProfit, // Approximate
+        netProfit: totalTransactionProfit,
+        paymentMethod,
+        status: 'ACTIVE',
+        items: saleItems,
+        syncedAt: isOnline ? new Date() : null
+      };
+
+      let finalSale: Sale | undefined;
+
       if (isOnline) {
         // Try online sync
         const savedSale = await salesAPI.create(newSale);
@@ -995,16 +1008,30 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         }
       }
 
-      return {
+      const result = {
         totalRevenueAdded: totalTransactionRevenue,
         totalProfitAdded: totalTransactionProfit,
         success: true,
         sale: finalSale
       };
 
+      // 🔄 SMART SYNC: Trigger immediate sync after successful sale
+      if (isOnline) {
+        console.log('✅ Sale completed - Triggering immediate sync');
+        // Don't await to avoid blocking the UI
+        syncDataSilently().catch(err =>
+          console.warn('⚠️ Post-sale sync failed:', err)
+        );
+      }
+
+      return result;
+
     } catch (error) {
       console.error('Sale processing error:', error);
       return { totalRevenueAdded: 0, totalProfitAdded: 0, success: false };
+    } finally {
+      // 🔓 CRITICAL: Always release lock, even on error
+      setIsTransactionInProgress(false);
     }
   };
 
@@ -1227,6 +1254,7 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     isLoading,
     isRecoveringSession,
     isOpeningSession: isOpeningSessionState,
+    isTransactionInProgress,
     error,
     login, // Assumed stable (not wrapped in useCallback in this snippet but should be)
     logout, // Assumed stable
@@ -1242,7 +1270,8 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     getDashboardStats,
     calculateTotalInventoryValue,
     syncData,
-    searchProductBySKU
+    searchProductBySKU,
+    setTransactionInProgress: setIsTransactionInProgress
   }), [
     products,
     sales,
