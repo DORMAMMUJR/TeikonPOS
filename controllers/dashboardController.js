@@ -1,73 +1,22 @@
 import { Op } from 'sequelize';
 import { Sale, Product, StoreConfig, GoalHistory, Shift, sequelize } from '../models.js';
 
+// ==========================================
+// DASHBOARD SUMMARY (CORREGIDO - LÓGICA DE FECHA REAL)
+// ==========================================
 export const getDashboardSummary = async (req, res) => {
     try {
         const { storeId } = req; // Extracted from authenticateToken middleware
 
-        // --- 1. Find ACTIVE Shift ---
-        const activeShift = await Shift.findOne({
-            where: { storeId, status: 'OPEN' }
-        });
+        // 1. Calcular rangos de tiempo EXACTOS para "HOY"
+        const startOfDay = new Date();
+        startOfDay.setHours(0, 0, 0, 0);
+        const endOfDay = new Date();
+        endOfDay.setHours(23, 59, 59, 999);
 
-        if (!activeShift) {
-            console.log(`ℹ️ [Dashboard] No hay turno abierto para store ${storeId}. Retornando métricas en cero.`);
-            const config = await StoreConfig.findOne({ where: { storeId } });
-            const monthlyGoal = config ? parseFloat(config.breakEvenGoal || 0) : 0;
-            const dailyTarget = monthlyGoal / 30;
+        console.log(`📊 [Dashboard] Calculando métricas para HOY: ${startOfDay.toISOString()} - ${endOfDay.toISOString()}`);
 
-            return res.json({
-                salesToday: 0,
-                ordersCount: 0,
-                grossProfit: 0,
-                netProfit: -dailyTarget,
-                investment: 0, // Will calculate below if needed, but for now 0 is safer
-                dailyTarget,
-                dailyOperationalCost: dailyTarget,
-                monthlyGoal,
-                goalMonth: new Date().getMonth() + 1,
-                goalYear: new Date().getFullYear()
-            });
-        }
-
-        console.log(`📊 [Dashboard] Calculando métricas para Shift ID: ${activeShift.id}`);
-
-        // --- 2. Aggregate Sales Data (Strictly by Shift) ---
-        const salesMetrics = await Sale.findAll({
-            where: {
-                storeId,
-                shiftId: activeShift.id,
-                status: 'ACTIVE'
-            },
-            attributes: [
-                [sequelize.fn('COUNT', sequelize.col('id')), 'ordersCount'],
-                [sequelize.fn('SUM', sequelize.col('total')), 'salesToday'],
-                [sequelize.fn('SUM', sequelize.col('net_profit')), 'grossProfit']
-            ],
-            raw: true
-        });
-
-        const metrics = salesMetrics[0] || {};
-        const ordersCount = parseInt(metrics.ordersCount || 0);
-        const salesToday = parseFloat(metrics.salesToday || 0);
-        const grossProfit = parseFloat(metrics.grossProfit || 0);
-
-        // --- 3. Calculate Total Investment (Inventory Value) ---
-        // Sum of (costPrice * stock) for all active products
-        const productsInvestment = await Product.findAll({
-            where: {
-                storeId,
-                activo: true
-            },
-            attributes: [
-                [sequelize.literal('SUM("cost_price" * "stock")'), 'totalInvestment']
-            ],
-            raw: true
-        });
-
-        const investment = parseFloat(productsInvestment[0]?.totalInvestment || 0);
-
-        // --- 4. Get Monthly Goal (Historical or Current) ---
+        // 2. Obtener Costo Operativo Diario (Meta mensual / 30 días)
         const now = new Date();
         const currentMonth = now.getMonth() + 1; // 1-12
         const currentYear = now.getFullYear();
@@ -82,43 +31,92 @@ export const getDashboardSummary = async (req, res) => {
         });
 
         // Fallback to current config if no historical goal exists
-        let monthlyOperationalCost = 0;
+        let monthlyGoal = 0;
         if (goalRecord) {
-            monthlyOperationalCost = parseFloat(goalRecord.amount || 0);
-            console.log(`📊 Using historical goal for ${currentMonth}/${currentYear}: $${monthlyOperationalCost}`);
+            monthlyGoal = parseFloat(goalRecord.amount || 0);
+            console.log(`📊 Using historical goal for ${currentMonth}/${currentYear}: $${monthlyGoal}`);
         } else {
             const config = await StoreConfig.findOne({ where: { storeId } });
-            monthlyOperationalCost = config ? parseFloat(config.breakEvenGoal || 0) : 0;
-            console.log(`📊 No historical goal found, using current config: $${monthlyOperationalCost}`);
+            monthlyGoal = config ? parseFloat(config.breakEvenGoal || 0) : 0;
+            console.log(`📊 No historical goal found, using current config: $${monthlyGoal}`);
         }
 
-        // Calculate Daily Operational Cost portion
-        const dailyOperationalCost = monthlyOperationalCost / 30;
+        const costoOperativoDiario = monthlyGoal / 30; // Este es el "333"
 
-        // --- 5. Calculate Net Profit ---
-        // Net Profit = Gross Profit (from sales) - Daily Operational Cost
-        const netProfit = grossProfit - dailyOperationalCost;
+        // 3. Buscar ventas SOLO de hoy (ignorando si el turno es viejo)
+        const ventasHoy = await Sale.findAll({
+            where: {
+                storeId: storeId,
+                status: 'ACTIVE',
+                createdAt: {
+                    [Op.between]: [startOfDay, endOfDay]
+                }
+            }
+        });
 
-        // --- 6. Construct Response ---
-        // dailyTarget: Usually the Break Even Goal is the monthly target, 
-        // so daily target is that / 30.
-        const dailyTarget = monthlyOperationalCost / 30;
+        let ventaTotalHoy = 0;
+        let utilidadBrutaHoy = 0;
+        let ordersCount = ventasHoy.length;
 
+        // 4. Sumar totales
+        for (const venta of ventasHoy) {
+            const totalVenta = parseFloat(venta.total || 0);
+            ventaTotalHoy += totalVenta;
+
+            // Si la venta guardó su ganancia (netProfit), la usamos
+            const utilidadVenta = parseFloat(venta.netProfit || 0);
+            utilidadBrutaHoy += utilidadVenta;
+        }
+
+        console.log(`📊 Ventas HOY: ${ordersCount} órdenes, Total: $${ventaTotalHoy.toFixed(2)}, Utilidad Bruta: $${utilidadBrutaHoy.toFixed(2)}`);
+
+        // 5. Calcular Utilidad Neta Real (Lo que ganaste hoy - Tu costo de existir hoy)
+        const utilidadNetaHoy = utilidadBrutaHoy - costoOperativoDiario;
+
+        // 6. Calcular Porcentaje de la Barra
+        let porcentajeEquilibrio = 0;
+        if (costoOperativoDiario > 0) {
+            // Ejemplo: Si necesitas $333 para salir tablas y llevas $150 de ganancia, llevas 45%
+            porcentajeEquilibrio = (utilidadBrutaHoy / costoOperativoDiario) * 100;
+        }
+
+        // 7. Calculate Total Investment (Inventory Value)
+        const productsInvestment = await Product.findAll({
+            where: {
+                storeId,
+                activo: true
+            },
+            attributes: [
+                [sequelize.literal('SUM("cost_price" * "stock")'), 'totalInvestment']
+            ],
+            raw: true
+        });
+
+        const investment = parseFloat(productsInvestment[0]?.totalInvestment || 0);
+
+        // 8. Enviar datos limpios al frontend
         res.json({
-            salesToday,
-            ordersCount,
-            grossProfit,
-            netProfit,
-            investment,
-            dailyTarget,
-            dailyOperationalCost,
-            monthlyGoal: monthlyOperationalCost, // Added for frontend reference
+            // Nombres compatibles con el frontend actual
+            salesToday: Number(ventaTotalHoy.toFixed(2)),
+            ordersCount: ordersCount,
+            grossProfit: Number(utilidadBrutaHoy.toFixed(2)),
+            netProfit: Number(utilidadNetaHoy.toFixed(2)),
+            investment: Number(investment.toFixed(2)),
+            dailyTarget: Number(costoOperativoDiario.toFixed(2)),
+            dailyOperationalCost: Number(costoOperativoDiario.toFixed(2)),
+            monthlyGoal: Number(monthlyGoal.toFixed(2)),
             goalMonth: currentMonth,
-            goalYear: currentYear
+            goalYear: currentYear,
+            // Campos adicionales para compatibilidad
+            costoOperativo: Number(costoOperativoDiario.toFixed(2)),
+            ventaTotal: Number(ventaTotalHoy.toFixed(2)),
+            utilidadBruta: Number(utilidadBrutaHoy.toFixed(2)),
+            utilidadNeta: Number(utilidadNetaHoy.toFixed(2)),
+            porcentajeEquilibrio: Number(porcentajeEquilibrio.toFixed(2))
         });
 
     } catch (error) {
-        console.error('Error fetching dashboard summary:', error);
-        res.status(500).json({ error: 'Error calculating dashboard metrics' });
+        console.error('❌ Error en Dashboard Summary:', error);
+        res.status(500).json({ error: "Error interno al calcular dashboard" });
     }
 };
