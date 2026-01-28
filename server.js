@@ -3001,6 +3001,231 @@ const startServer = async () => {
 
 
         // ==========================================
+        // ENDPOINTS DE CASH SHIFTS (Gestión de Caja)
+        // ==========================================
+
+        /**
+         * POST /api/shifts/start
+         * Purpose: Initiate a new cash shift for a specific store
+         */
+        app.post('/api/shifts/start', authenticateToken, async (req, res) => {
+            try {
+                const { storeId, initialAmount, openedBy } = req.body;
+
+                // 1. Validate required fields
+                if (!storeId || initialAmount === undefined || !openedBy) {
+                    return res.status(400).json({
+                        error: 'Campos requeridos: storeId, initialAmount, openedBy'
+                    });
+                }
+
+                // 2. Validate initialAmount is positive
+                const parsedAmount = parseFloat(initialAmount);
+                if (isNaN(parsedAmount) || parsedAmount < 0) {
+                    return res.status(400).json({
+                        error: 'El monto inicial debe ser un número positivo o cero'
+                    });
+                }
+
+                // 3. Check for existing OPEN shift for this store
+                const existingOpenShift = await Shift.findOne({
+                    where: {
+                        storeId,
+                        status: 'OPEN'
+                    }
+                });
+
+                if (existingOpenShift) {
+                    return res.status(409).json({
+                        error: 'Ya existe un turno abierto para esta tienda',
+                        existingShift: {
+                            id: existingOpenShift.id,
+                            openedAt: existingOpenShift.startTime,
+                            openedBy: existingOpenShift.openedBy
+                        }
+                    });
+                }
+
+                // 4. Create new shift
+                const newShift = await Shift.create({
+                    storeId,
+                    openedBy,
+                    startTime: new Date(),
+                    initialAmount: parsedAmount,
+                    cashSales: 0,
+                    cardSales: 0,
+                    transferSales: 0,
+                    expensesTotal: 0,
+                    status: 'OPEN'
+                });
+
+                console.log(`✅ Cash shift opened: ${newShift.id} for store ${storeId} by ${openedBy}`);
+
+                // 5. Return created shift
+                res.status(201).json({
+                    id: newShift.id,
+                    storeId: newShift.storeId,
+                    openedBy: newShift.openedBy,
+                    initialAmount: parseFloat(newShift.initialAmount),
+                    startTime: newShift.startTime,
+                    status: newShift.status
+                });
+
+            } catch (error) {
+                console.error('❌ Error al abrir turno de caja:', error);
+                res.status(500).json({ error: 'Error interno al abrir turno de caja' });
+            }
+        });
+
+        /**
+         * POST /api/shifts/end
+         * Purpose: Close an active cash shift
+         */
+        app.post('/api/shifts/end', authenticateToken, async (req, res) => {
+            try {
+                const { shiftId, montoReal, notas } = req.body;
+
+                // 1. Validate required fields
+                if (!shiftId || montoReal === undefined) {
+                    return res.status(400).json({
+                        error: 'Campos requeridos: shiftId, montoReal'
+                    });
+                }
+
+                // 2. Validate amount is positive number
+                const parsedFinalAmount = parseFloat(montoReal);
+
+                if (isNaN(parsedFinalAmount) || parsedFinalAmount < 0) {
+                    return res.status(400).json({
+                        error: 'El monto final debe ser un número positivo o cero'
+                    });
+                }
+
+                // 3. Find the OPEN shift
+                const openShift = await Shift.findOne({
+                    where: {
+                        id: shiftId,
+                        status: 'OPEN'
+                    }
+                });
+
+                if (!openShift) {
+                    return res.status(404).json({
+                        error: 'No se encontró un turno abierto con ese ID'
+                    });
+                }
+
+                // 4. Calculate expected amount (initial + cash sales - expenses)
+                const expectedAmount = parseFloat(openShift.initialAmount) +
+                    parseFloat(openShift.cashSales) -
+                    parseFloat(openShift.expensesTotal);
+
+                // 5. Calculate difference
+                const difference = parsedFinalAmount - expectedAmount;
+
+                // 6. Update shift with closing data
+                openShift.endTime = new Date();
+                openShift.expectedAmount = expectedAmount;
+                openShift.finalAmount = parsedFinalAmount;
+                openShift.difference = difference;
+                openShift.notes = notas || null;
+                openShift.status = 'CLOSED';
+
+                await openShift.save();
+
+                console.log(`✅ Cash shift closed: ${openShift.id}`);
+                console.log(`   Expected: $${expectedAmount}, Real: $${parsedFinalAmount}, Difference: $${difference}`);
+
+                // 7. Return updated shift
+                res.status(200).json({
+                    id: openShift.id,
+                    storeId: openShift.storeId,
+                    openedBy: openShift.openedBy,
+                    initialAmount: parseFloat(openShift.initialAmount),
+                    finalAmount: parseFloat(openShift.finalAmount),
+                    expectedAmount: parseFloat(openShift.expectedAmount),
+                    difference: parseFloat(openShift.difference),
+                    notes: openShift.notes,
+                    startTime: openShift.startTime,
+                    endTime: openShift.endTime,
+                    status: openShift.status,
+                    cashSales: parseFloat(openShift.cashSales),
+                    cardSales: parseFloat(openShift.cardSales),
+                    transferSales: parseFloat(openShift.transferSales),
+                    expenses: parseFloat(openShift.expensesTotal)
+                });
+
+            } catch (error) {
+                console.error('❌ Error al cerrar turno de caja:', error);
+                res.status(500).json({ error: 'Error interno al cerrar turno de caja' });
+            }
+        });
+
+        /**
+         * GET /api/shifts/current
+         * Purpose: Retrieve the currently active cash shift for a store
+         */
+        app.get('/api/shifts/current', authenticateToken, async (req, res) => {
+            try {
+                const { storeId } = req.query;
+
+                // 1. Validate storeId parameter
+                if (!storeId) {
+                    return res.status(400).json({
+                        error: 'El parámetro storeId es requerido'
+                    });
+                }
+
+                // 2. Find OPEN shift for this store
+                const currentShift = await Shift.findOne({
+                    where: {
+                        storeId,
+                        status: 'OPEN'
+                    },
+                    order: [['startTime', 'DESC']] // Get most recent if multiple exist
+                });
+
+                // 3. Return 404 if no open shift found
+                if (!currentShift) {
+                    return res.status(404).json({
+                        error: 'No hay un turno activo para esta tienda'
+                    });
+                }
+
+                // 4. Calculate expected amount (initial + cash sales - expenses)
+                const expectedAmount = parseFloat(currentShift.initialAmount) +
+                    parseFloat(currentShift.cashSales) -
+                    parseFloat(currentShift.expensesTotal);
+
+                // 5. Return current shift details with Spanish field names for frontend
+                res.status(200).json({
+                    id: currentShift.id,
+                    storeId: currentShift.storeId,
+                    openedBy: currentShift.openedBy,
+                    // Frontend expects Spanish field names
+                    montoInicial: parseFloat(currentShift.initialAmount),
+                    ventasEfectivo: parseFloat(currentShift.cashSales),
+                    ventasTarjeta: parseFloat(currentShift.cardSales),
+                    ventasTransferencia: parseFloat(currentShift.transferSales),
+                    gastos: parseFloat(currentShift.expensesTotal),
+                    montoEsperado: expectedAmount,
+                    // Also include English names for compatibility
+                    initialAmount: parseFloat(currentShift.initialAmount),
+                    startTime: currentShift.startTime,
+                    status: currentShift.status,
+                    cashSales: parseFloat(currentShift.cashSales),
+                    cardSales: parseFloat(currentShift.cardSales),
+                    transferSales: parseFloat(currentShift.transferSales),
+                    expenses: parseFloat(currentShift.expensesTotal)
+                });
+
+            } catch (error) {
+                console.error('❌ Error al obtener turno actual:', error);
+                res.status(500).json({ error: 'Error interno al obtener turno actual' });
+            }
+        });
+
+        // ==========================================
         // SERVIR FRONTEND EN PRODUCCIÓN
         // ==========================================
 
@@ -3028,3 +3253,4 @@ const startServer = async () => {
 };
 
 startServer();
+

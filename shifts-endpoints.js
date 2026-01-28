@@ -198,10 +198,23 @@ app.get('/api/shifts/current', authenticateToken, async (req, res) => {
         }
 
         // 4. Return current shift details
+        // Calculate expected amount (initial + cash sales - expenses)
+        const expectedAmount = parseFloat(currentShift.montoInicial) +
+            parseFloat(currentShift.ventasEfectivo) -
+            parseFloat(currentShift.gastos);
+
         res.status(200).json({
             id: currentShift.id,
             storeId: currentShift.storeId,
             openedBy: currentShift.cajero,
+            // Frontend expects Spanish field names
+            montoInicial: parseFloat(currentShift.montoInicial),
+            ventasEfectivo: parseFloat(currentShift.ventasEfectivo),
+            ventasTarjeta: parseFloat(currentShift.ventasTarjeta),
+            ventasTransferencia: parseFloat(currentShift.ventasTransferencia),
+            gastos: parseFloat(currentShift.gastos),
+            montoEsperado: expectedAmount,
+            // Also include English names for compatibility
             initialAmount: parseFloat(currentShift.montoInicial),
             startTime: currentShift.apertura,
             status: currentShift.status,

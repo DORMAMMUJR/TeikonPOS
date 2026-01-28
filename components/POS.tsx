@@ -16,6 +16,9 @@ import {
   Minus,
   ImageOff,
   ShoppingCart,
+  CreditCard,
+  Banknote,
+  ArrowRightLeft,
 } from 'lucide-react';
 
 const POS: React.FC = () => {
@@ -33,6 +36,7 @@ const POS: React.FC = () => {
   const [isGoalModalOpen, setIsGoalModalOpen] = useState(false);
   const [isCashCloseOpen, setIsCashCloseOpen] = useState(false);
   const [isSupportOpen, setIsSupportOpen] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'CARD' | 'TRANSFER'>('CASH');
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Auto-Refresh Logic: Removed redundant syncData call to prevent loops.
@@ -157,6 +161,17 @@ const POS: React.FC = () => {
   const total = subtotal; // Assuming inclusive or exclusive? Keeping simple based on previous code.
   const change = (parseFloat(amountReceived) || 0) - total;
 
+  // Auto-complete amount for non-cash payments
+  useEffect(() => {
+    if (isCheckoutOpen) {
+      if (paymentMethod !== 'CASH') {
+        setAmountReceived(total.toString());
+      } else {
+        setAmountReceived('');
+      }
+    }
+  }, [paymentMethod, isCheckoutOpen, total]);
+
   // Checkout Handler
   const handleCheckout = () => {
     if (cart.length === 0) return;
@@ -176,7 +191,8 @@ const POS: React.FC = () => {
       return;
     }
 
-    if (safeChange < 0) return;
+    // Si es efectivo, validar que no falte dinero. Si es tarjeta/transf, permitimos continuar.
+    if (paymentMethod === 'CASH' && safeChange < 0) return;
 
     // 3. Preparación de Payload Limpio
     const itemsToProcess: CartItem[] = cart.map(i => ({
@@ -188,7 +204,9 @@ const POS: React.FC = () => {
     }));
 
     const cartSnapshot = [...cart];
-    const result = await processSaleAndContributeToGoal(itemsToProcess, 'CASH');
+    // --- EL CAMBIO CLAVE ESTÁ AQUÍ ---
+    // En lugar de 'CASH' fijo, enviamos la variable paymentMethod
+    const result = await processSaleAndContributeToGoal(itemsToProcess, paymentMethod);
 
     if (result.success) {
       // Use the persisted sale from backend/store context
@@ -220,6 +238,7 @@ const POS: React.FC = () => {
       setCart([]);
       setIsCheckoutOpen(false);
       setAmountReceived('');
+      setPaymentMethod('CASH'); // Resetear a efectivo para la siguiente venta
       setShowTicket(true); // Open modal with ticket
 
       // Keep sale summary for modal, don't auto-clear
@@ -404,8 +423,47 @@ const POS: React.FC = () => {
             <p className="text-4xl md:text-6xl font-black text-brand-emerald tracking-tighter">${(total || 0).toLocaleString()}</p>
           </div>
 
+          {/* --- INSERTAR ESTO DESPUÉS DEL TOTAL Y ANTES DEL INPUT --- */}
+          <div className="grid grid-cols-3 gap-2">
+            <button
+              onClick={() => setPaymentMethod('CASH')}
+              className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all min-h-[44px] ${paymentMethod === 'CASH'
+                ? 'border-brand-emerald bg-emerald-50 text-brand-emerald'
+                : 'border-slate-100 bg-white text-slate-400'
+                }`}
+            >
+              <Banknote size={24} className="mb-1" />
+              <span className="text-[10px] font-black uppercase">Efectivo</span>
+            </button>
+
+            <button
+              onClick={() => setPaymentMethod('CARD')}
+              className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all min-h-[44px] ${paymentMethod === 'CARD'
+                ? 'border-blue-500 bg-blue-50 text-blue-600'
+                : 'border-slate-100 bg-white text-slate-400'
+                }`}
+            >
+              <CreditCard size={24} className="mb-1" />
+              <span className="text-[10px] font-black uppercase">Tarjeta</span>
+            </button>
+
+            <button
+              onClick={() => setPaymentMethod('TRANSFER')}
+              className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all min-h-[44px] ${paymentMethod === 'TRANSFER'
+                ? 'border-purple-500 bg-purple-50 text-purple-600'
+                : 'border-slate-100 bg-white text-slate-400'
+                }`}
+            >
+              <ArrowRightLeft size={24} className="mb-1" />
+              <span className="text-[10px] font-black uppercase">Transfer</span>
+            </button>
+          </div>
+          {/* --- FIN DE LA INSERCIÓN --- */}
+
           <div className="space-y-2 px-2">
-            <label className="block text-[10px] font-black uppercase tracking-widest">Efectivo Recibido</label>
+            <label className="block text-[10px] font-black uppercase tracking-widest">
+              {paymentMethod === 'CASH' ? 'Efectivo Recibido' : 'Monto Referencia'}
+            </label>
             <input
               type="number"
               className="w-full py-5 text-4xl font-black bg-slate-50 dark:bg-slate-950 border-4 border-slate-100 dark:border-slate-800 rounded-[2rem] outline-none focus:border-brand-emerald text-center"
@@ -413,18 +471,22 @@ const POS: React.FC = () => {
               onChange={e => setAmountReceived(e.target.value)}
               placeholder="0"
               autoFocus
+              readOnly={paymentMethod !== 'CASH'}
             />
           </div>
 
-          <div className={`p-4 rounded-[1.5rem] border-2 flex justify-between items-center ${change >= 0 ? 'bg-emerald-500/5 border-emerald-500/20' : 'bg-red-500/5 border-red-500/20'}`}>
-            <span className="text-[9px] font-black uppercase tracking-widest">{change >= 0 ? 'Cambio' : 'Faltante'}</span>
-            <span className="text-2xl font-black">${Math.abs(change).toLocaleString()}</span>
-          </div>
+          {/* Ocultar el cambio si no es efectivo, para no confundir */}
+          {paymentMethod === 'CASH' && (
+            <div className={`p-4 rounded-[1.5rem] border-2 flex justify-between items-center ${change >= 0 ? 'bg-emerald-500/5 border-emerald-500/20' : 'bg-red-500/5 border-red-500/20'}`}>
+              <span className="text-[9px] font-black uppercase tracking-widest">{change >= 0 ? 'Cambio' : 'Faltante'}</span>
+              <span className="text-2xl font-black">${Math.abs(change).toLocaleString()}</span>
+            </div>
+          )}
 
           <div className="flex flex-col sm:flex-row gap-4 pt-2">
             {/* Touch-optimized modal buttons: 48px height */}
             <Button variant="secondary" fullWidth onClick={() => setIsCheckoutOpen(false)} className="h-[48px]">MODIFICAR</Button>
-            <Button variant="sales" fullWidth disabled={change < 0} onClick={finalize} className="h-[48px]">FINALIZAR VENTA</Button>
+            <Button variant="sales" fullWidth disabled={paymentMethod === 'CASH' && change < 0} onClick={finalize} className="h-[48px]">FINALIZAR VENTA</Button>
           </div>
         </div>
       </Modal>

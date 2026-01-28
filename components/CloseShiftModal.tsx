@@ -14,6 +14,8 @@ interface ShiftData {
     id: number;
     montoInicial: number;
     ventasEfectivo: number;
+    ventasTarjeta: number;
+    ventasTransferencia: number;
     gastos: number;
     montoEsperado: number;
     ventasTotales?: number;
@@ -121,6 +123,8 @@ const CloseShiftModal: React.FC<CloseShiftModalProps> = ({ isOpen, onClose, onSh
     // Normalize values for rendering
     const fondoInicial = toNumber(shiftData?.montoInicial);
     const ventasEfectivo = toNumber(shiftData?.ventasEfectivo);
+    const ventasTarjeta = toNumber(shiftData?.ventasTarjeta || 0);
+    const ventasTransferencia = toNumber(shiftData?.ventasTransferencia || 0);
     const gastos = toNumber(shiftData?.gastos);
 
     // Use backend-provided expected amount (Single Source of Truth)
@@ -145,24 +149,47 @@ const CloseShiftModal: React.FC<CloseShiftModalProps> = ({ isOpen, onClose, onSh
                 ) : shiftData ? (
                     <>
                         <div className="grid grid-cols-2 gap-4">
+                            {/* 1. Fondo Inicial */}
                             <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
                                 <div className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-1">Fondo Inicial</div>
                                 <div className="text-lg font-mono font-bold text-slate-700 dark:text-slate-300">
                                     {formatMoney(fondoInicial)}
                                 </div>
                             </div>
+
+                            {/* 2. Ventas Efectivo */}
                             <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-xl border border-green-200 dark:border-green-800">
-                                <div className="text-xs text-green-600 dark:text-green-400 font-bold uppercase tracking-wider mb-1">Ventas Efectivo</div>
+                                <div className="text-xs text-green-600 dark:text-green-400 font-bold uppercase tracking-wider mb-1">Efectivo</div>
                                 <div className="text-lg font-mono font-bold text-green-700 dark:text-green-400">
                                     + {formatMoney(ventasEfectivo)}
                                 </div>
                             </div>
+
+                            {/* 3. NUEVO: Tarjetas (Informativo) */}
+                            <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800">
+                                <div className="text-xs text-blue-600 dark:text-blue-400 font-bold uppercase tracking-wider mb-1">Tarjetas</div>
+                                <div className="text-lg font-mono font-bold text-blue-700 dark:text-blue-400">
+                                    {formatMoney(ventasTarjeta)}
+                                </div>
+                            </div>
+
+                            {/* 4. NUEVO: Transferencias (Informativo) */}
+                            <div className="p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-200 dark:border-purple-800">
+                                <div className="text-xs text-purple-600 dark:text-purple-400 font-bold uppercase tracking-wider mb-1">Transferencias</div>
+                                <div className="text-lg font-mono font-bold text-purple-700 dark:text-purple-400">
+                                    {formatMoney(ventasTransferencia)}
+                                </div>
+                            </div>
+
+                            {/* 5. Gastos */}
                             <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-200 dark:border-red-800">
                                 <div className="text-xs text-red-600 dark:text-red-400 font-bold uppercase tracking-wider mb-1">Gastos</div>
                                 <div className="text-lg font-mono font-bold text-red-700 dark:text-red-400">
                                     - {formatMoney(gastos)}
                                 </div>
                             </div>
+
+                            {/* 6. Esperado en Caja */}
                             <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800">
                                 <div className="text-xs text-blue-600 dark:text-blue-400 font-bold uppercase tracking-wider mb-1">Esperado en Caja</div>
                                 <div className="text-xl font-mono font-black text-blue-700 dark:text-blue-400">
