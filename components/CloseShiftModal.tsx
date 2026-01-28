@@ -107,11 +107,18 @@ const CloseShiftModal: React.FC<CloseShiftModalProps> = ({ isOpen, onClose, onSh
             // Clean up local storage if you were using it for backup
             localStorage.removeItem('currentShiftId');
 
+            // --- INICIO DEL CAMBIO ---
+            // 1. Cerrar modales
             if (onShiftClosed) {
                 onShiftClosed();
             } else {
                 onClose();
             }
+
+            // 2. FORZAR RECARGA INMEDIATA
+            // Esto obliga al sistema a traer el stock REAL de la base de datos
+            window.location.reload();
+            // --- FIN DEL CAMBIO ---
 
         } catch (err: any) {
             setError(err.message);
