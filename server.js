@@ -1897,9 +1897,9 @@ app.get('/api/test/run', async (req, res) => {
     };
 
     try {
-        // LIMPIAR BASE DE DATOS - Usar sync con force para recrear todas las tablas
-        await sequelize.sync({ force: true });
-        addResult('Limpieza de base de datos', true, 'Base de datos reiniciada con sync force');
+        // ⚠️ PELIGRO: DESHABILITADO - Este endpoint borraba toda la base de datos
+        // await sequelize.sync({ force: true });
+        addResult('Limpieza de base de datos', false, '⚠️ DESHABILITADO: sync force comentado para evitar pérdida de datos');
 
         // Variables para las pruebas
         let tokenCentro, tokenNorte, storeIdCentro, storeIdNorte, productId, orgId;
