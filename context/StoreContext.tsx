@@ -37,6 +37,8 @@ interface StoreContextType {
   syncData: () => Promise<void>;
   searchProductBySKU: (sku: string) => Promise<Product | null>;
   setTransactionInProgress: (inProgress: boolean) => void; // NEW: Control transaction lock
+  importProducts: (productsData: any[]) => Promise<{ success: boolean; imported: number }>;
+  refreshProducts: () => Promise<void>;
 }
 
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
@@ -1241,6 +1243,60 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     }
   };
 
+  // Helper function to refresh products from server
+  const refreshProducts = async () => {
+    try {
+      const fetchedProducts = await productsAPI.getAll();
+      const mappedProducts = Array.isArray(fetchedProducts)
+        ? fetchedProducts.map(mapBackendProduct)
+        : [];
+      setProducts(mappedProducts as Product[]);
+      console.log('✅ Products refreshed');
+    } catch (error) {
+      console.error('❌ Failed to refresh products:', error);
+      throw error;
+    }
+  };
+
+  // Import products with Spanish-to-English column translation
+  const importProducts = async (productsData: any[]) => {
+    try {
+      // 1. TRADUCCIÓN AUTOMÁTICA (Español -> Inglés)
+      // Esto arregla el error de que "no carga"
+      const mappedData = productsData.map(p => ({
+        sku: p.SKU || p.sku || '',
+        name: p.Nombre || p.nombre || p.name || '',
+        salePrice: parseFloat(p.Precio || p.price || 0),
+        costPrice: parseFloat(p.Costo || p.cost || 0),
+        stock: parseInt(p.Existencia || p.stock || 0),
+        category: p.Categoria || p.category || 'General',
+        minStock: parseInt(p.minStock || 5),
+        image: null
+      })).filter(p => p.sku); // Elimina filas vacías
+
+      if (mappedData.length === 0) {
+        throw new Error("No se encontraron productos válidos en el archivo");
+      }
+
+      // 2. Enviar al Servidor
+      const response = await fetch(`${API_URL}/api/products/bulk`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify(mappedData)
+      });
+
+      if (!response.ok) throw new Error('Error al importar en servidor');
+
+      // 3. Actualizar pantalla al instante
+      await refreshProducts();
+      return { success: true, imported: mappedData.length };
+
+    } catch (error) {
+      console.error("Import Error:", error);
+      throw error;
+    }
+  };
+
   const value = React.useMemo<StoreContextType>(() => ({
     products,
     sales,
@@ -1271,7 +1327,9 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     calculateTotalInventoryValue,
     syncData,
     searchProductBySKU,
-    setTransactionInProgress: setIsTransactionInProgress
+    setTransactionInProgress: setIsTransactionInProgress,
+    importProducts,
+    refreshProducts
   }), [
     products,
     sales,
