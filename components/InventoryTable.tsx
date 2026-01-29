@@ -1,13 +1,45 @@
 
 import React, { useState, useMemo } from 'react';
 import { Product } from "@/Product";
-import { PackageOpen, AlertTriangle, ChevronDown, ChevronRight } from 'lucide-react';
+import { useStore } from '../context/StoreContext';
+import { PackageOpen, AlertTriangle, ChevronDown, ChevronRight, Loader, Upload, Image as ImageIcon } from 'lucide-react';
 
 interface InventoryTableProps {
   inventory: Product[];
 }
 
 const InventoryTable: React.FC<InventoryTableProps> = ({ inventory }) => {
+  const { updateProduct } = useStore();
+  const [uploadingId, setUploadingId] = useState<string | null>(null);
+
+  const handleQuickImageUpload = async (productId: string | number, file: File) => {
+    setUploadingId(String(productId));
+
+    // 1. Convertir a Base64
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = async () => {
+      const base64 = reader.result as string;
+
+      // 2. Guardar en Base de Datos
+      try {
+        // Buscamos el producto actual para no perder otros datos
+        const currentProduct = inventory.find(p => p.id === productId);
+        if (currentProduct) {
+          await updateProduct({
+            ...currentProduct,
+            image: base64 // Actualizamos solo la imagen
+          });
+          console.log("Imagen actualizada");
+        }
+      } catch (error) {
+        alert("Error al subir imagen");
+      } finally {
+        setUploadingId(null);
+      }
+    };
+  };
+
   // Estado para controlar qué categorías están expandidas
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
 
@@ -121,6 +153,9 @@ const InventoryTable: React.FC<InventoryTableProps> = ({ inventory }) => {
                   <thead className="bg-gray-50">
                     <tr>
                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Imagen
+                      </th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         SKU
                       </th>
                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -134,6 +169,47 @@ const InventoryTable: React.FC<InventoryTableProps> = ({ inventory }) => {
                   <tbody className="bg-white divide-y divide-gray-200">
                     {products.map((product) => (
                       <tr key={product.sku} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="relative group cursor-pointer w-12 h-12">
+                            {/* Input oculto pero funcional */}
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="absolute inset-0 w-full h-full opacity-0 z-10 cursor-pointer"
+                              disabled={uploadingId === String(product.id)}
+                              onChange={(e) => {
+                                if (e.target.files?.[0]) {
+                                  handleQuickImageUpload(product.id, e.target.files[0]);
+                                }
+                              }}
+                            />
+
+                            {/* Visualización: Spinner cargando o Imagen */}
+                            {uploadingId === String(product.id) ? (
+                              <div className="w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center animate-pulse">
+                                <Loader size={20} className="animate-spin text-blue-500" />
+                              </div>
+                            ) : product.image ? (
+                              <>
+                                <img
+                                  src={product.image}
+                                  alt={product.name}
+                                  className="w-12 h-12 rounded-lg object-cover border border-slate-200"
+                                />
+                                <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                                  <Upload size={16} className="text-white" />
+                                </div>
+                              </>
+                            ) : (
+                              <div className="w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center border border-slate-200 group-hover:bg-slate-200 transition-colors">
+                                <ImageIcon size={20} className="text-slate-400" />
+                                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                                  <Upload size={16} className="text-slate-600" />
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                           {product.sku}
                         </td>
