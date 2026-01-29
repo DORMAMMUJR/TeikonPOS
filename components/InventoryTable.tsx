@@ -169,45 +169,44 @@ const InventoryTable: React.FC<InventoryTableProps> = ({ inventory }) => {
                   <tbody className="bg-white divide-y divide-gray-200">
                     {products.map((product) => (
                       <tr key={product.sku} className="hover:bg-gray-50 transition-colors">
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="relative group cursor-pointer w-12 h-12">
-                            {/* Input oculto pero funcional */}
-                            <input
-                              type="file"
-                              accept="image/*"
-                              className="absolute inset-0 w-full h-full opacity-0 z-10 cursor-pointer"
-                              disabled={uploadingId === String(product.id)}
-                              onChange={(e) => {
-                                if (e.target.files?.[0]) {
-                                  handleQuickImageUpload(product.id, e.target.files[0]);
-                                }
-                              }}
-                            />
+                        <td className="px-6 py-4 whitespace-nowrap" style={{ minWidth: '150px' }}>
+                          <div className="flex items-center gap-4">
+                            {/* Contenedor con borde rojo para que lo veas sí o sí en la demo */}
+                            <div className="relative w-14 h-14 border-2 border-red-500 rounded-xl overflow-hidden bg-slate-100 flex items-center justify-center">
 
-                            {/* Visualización: Spinner cargando o Imagen */}
-                            {uploadingId === String(product.id) ? (
-                              <div className="w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center animate-pulse">
-                                <Loader size={20} className="animate-spin text-blue-500" />
-                              </div>
-                            ) : product.image ? (
-                              <>
-                                <img
-                                  src={product.image}
-                                  alt={product.name}
-                                  className="w-12 h-12 rounded-lg object-cover border border-slate-200"
-                                />
-                                <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                                  <Upload size={16} className="text-white" />
+                              {/* EL INPUT: Ahora tiene z-[9999] para que nada lo tape */}
+                              <input
+                                type="file"
+                                accept="image/*"
+                                className="absolute inset-0 w-full h-full opacity-0 z-[9999] cursor-pointer"
+                                onChange={(e) => {
+                                  if (e.target.files?.[0]) {
+                                    console.log("Archivo detectado!"); // Ver en consola
+                                    handleQuickImageUpload(product.id, e.target.files[0]);
+                                  }
+                                }}
+                              />
+
+                              {/* LA IMAGEN O ICONO */}
+                              {uploadingId === String(product.id) ? (
+                                <Loader size={24} className="animate-spin text-blue-600" />
+                              ) : product.image ? (
+                                <img src={product.image} className="w-full h-full object-cover" alt="" />
+                              ) : (
+                                <div className="text-center">
+                                  <ImageIcon size={20} className="text-slate-400 mx-auto" />
+                                  <span className="text-[8px] font-bold text-slate-500 uppercase">Subir</span>
                                 </div>
-                              </>
-                            ) : (
-                              <div className="w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center border border-slate-200 group-hover:bg-slate-200 transition-colors">
-                                <ImageIcon size={20} className="text-slate-400" />
-                                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                                  <Upload size={16} className="text-slate-600" />
-                                </div>
+                              )}
+
+                              {/* INDICADOR VISUAL DE CLIC */}
+                              <div className="absolute top-0 right-0 bg-blue-600 text-white p-1 rounded-bl-lg pointer-events-none">
+                                <Upload size={10} />
                               </div>
-                            )}
+                            </div>
+
+                            {/* Texto de ayuda por si el cliente no entiende el cuadro */}
+                            <span className="text-[10px] text-blue-600 font-bold hidden md:block">← Clic para foto</span>
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
