@@ -1258,44 +1258,64 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     }
   };
 
+
   // Import products with Spanish-to-English column translation
   const importProducts = async (productsData: any[]) => {
     try {
-      // 1. TRADUCCIÓN AUTOMÁTICA (Español -> Inglés)
-      // Esto arregla el error de que "no carga"
-      const mappedData = productsData.map(p => ({
-        sku: p.SKU || p.sku || '',
-        name: p.Nombre || p.nombre || p.name || '',
-        salePrice: parseFloat(p.Precio || p.price || 0),
-        costPrice: parseFloat(p.Costo || p.cost || 0),
-        stock: parseInt(p.Existencia || p.stock || 0),
-        category: p.Categoria || p.category || 'General',
-        minStock: parseInt(p.minStock || 5),
-        image: null
-      })).filter(p => p.sku); // Elimina filas vacías
+      console.log("📦 Datos Crudos (Fila 1):", productsData[0]); // Para depurar
+
+      // PASO 1: Normalizador de Llaves (La Solución Mágica)
+      // Convierte "SKU", "sku ", "ï»¿SKU" -> "sku" limpio
+      const normalizeRow = (row: any) => {
+        const newRow: any = {};
+        Object.keys(row).forEach(key => {
+          // Quitamos espacios, BOM y pasamos a minúsculas
+          const cleanKey = key.trim().toLowerCase().replace(/^[\uFEFF]/, '');
+          newRow[cleanKey] = row[key];
+        });
+        return newRow;
+      };
+
+      // PASO 2: Mapeo Seguro
+      const mappedData = productsData.map(rawRow => {
+        const p = normalizeRow(rawRow); // Usamos la fila limpia
+
+        return {
+          sku: p.sku || p.clave || '',
+          name: p.nombre || p.name || p.producto || '',
+          salePrice: parseFloat(p.precio || p.price || p.venta || 0),
+          costPrice: parseFloat(p.costo || p.cost || p.compra || 0),
+          stock: parseInt(p.existencia || p.stock || p.cantidad || 0),
+          category: p.categoria || p.category || 'General',
+          minStock: 5,
+          image: null
+        };
+      }).filter(p => p.sku && p.sku !== ''); // Filtramos filas vacías
+
+      console.log(`✅ Detectados ${mappedData.length} productos válidos.`);
 
       if (mappedData.length === 0) {
-        throw new Error("No se encontraron productos válidos en el archivo");
+        throw new Error("El archivo no tiene columnas reconocibles (SKU, Nombre, Precio)");
       }
 
-      // 2. Enviar al Servidor
+      // PASO 3: Enviar al Servidor
       const response = await fetch(`${API_URL}/api/products/bulk`, {
         method: 'POST',
         headers: getHeaders(),
         body: JSON.stringify(mappedData)
       });
 
-      if (!response.ok) throw new Error('Error al importar en servidor');
+      if (!response.ok) throw new Error('Error al guardar en base de datos');
 
-      // 3. Actualizar pantalla al instante
       await refreshProducts();
       return { success: true, imported: mappedData.length };
 
     } catch (error) {
-      console.error("Import Error:", error);
+      console.error("❌ Error Importación:", error);
       throw error;
     }
   };
+
 
   const value = React.useMemo<StoreContextType>(() => ({
     products,
