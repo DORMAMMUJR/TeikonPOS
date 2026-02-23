@@ -29,6 +29,7 @@ pool.connect()
 import { getDashboardSummary } from './controllers/dashboardController.js';
 import { getCashCloseDetails, cancelSale, createSale, syncSales } from './controllers/salesController.js';
 import { createStore, getStores, deleteStore } from './controllers/storeController.js';
+import { startShift, endShift, getCurrentShift } from './controllers/shiftController.js';
 
 import {
     sequelize,
@@ -731,6 +732,18 @@ app.put('/api/me/profile', authenticateToken, async (req, res) => {
         res.status(500).json({ error: 'Error al actualizar perfil' });
     }
 });
+
+// ==========================================
+// CANCELAR VENTA API
+// ==========================================
+app.put('/api/ventas/:id/cancel', authenticateToken, cancelSale);
+
+// ==========================================
+// SHIFTS (TURNOS DE CAJA) API
+// ==========================================
+app.post('/api/shifts/start', authenticateToken, startShift);
+app.post('/api/shifts/end', authenticateToken, endShift);
+app.get('/api/shifts/current', authenticateToken, getCurrentShift);
 
 // ==========================================
 // ENDPOINTS DE RECUPERACIÓN (PÚBLICO)

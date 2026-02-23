@@ -1127,17 +1127,8 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     try {
       if (isOnline) {
         // Call backend API to cancel sale (restores stock and updates DB)
-        const response = await fetch(`${API_URL}/api/sales/${saleId}/cancel`, {
-          method: 'POST',
-          headers: getHeaders()
-        });
+        const result = await salesAPI.cancel(saleId);
 
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || 'Error al cancelar venta');
-        }
-
-        const result = await response.json();
         console.log('✅ Venta cancelada:', result);
 
         // Update local state after successful backend cancellation
@@ -1154,6 +1145,7 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     } catch (e: any) {
       console.error('Error al cancelar venta:', e);
       alert(`❌ Error al cancelar venta: ${e.message || 'Error desconocido'}`);
+      throw e; // Rethrow to let caller handle it if needed
     }
   };
 

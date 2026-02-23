@@ -104,39 +104,23 @@ const SalesHistory: React.FC<SalesHistoryProps> = ({ targetStoreId }) => {
 
     setIsCancelling(true);
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/sales/${saleToCancel.id}/cancel`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Error al cancelar la venta');
+      if (cancelSale) {
+        await cancelSale(saleToCancel.id);
+      } else {
+        throw new Error('Función cancelSale no disponible');
       }
 
-      const result = await response.json();
-      console.log('✅ Venta cancelada:', result);
-
-      // Update local state
+      // Update local state if we are in admin specific view
       if (targetStoreId) {
         // Refresh store sales
         const fetchedSales = await salesAPI.getAll({ storeId: targetStoreId });
         setStoreSales(fetchedSales);
-      } else {
-        // Use context cancelSale if available
-        if (cancelSale) {
-          cancelSale(saleToCancel.id);
-        }
       }
 
       setSaleToCancel(null);
-      alert('✅ Venta cancelada exitosamente. El inventario ha sido restaurado.');
     } catch (error: any) {
       console.error('❌ Error al cancelar venta:', error);
-      alert(`Error: ${error.message}`);
+      // Note: StoreContext already shows an alert on success/failure
     } finally {
       setIsCancelling(false);
     }
@@ -275,7 +259,6 @@ const SalesHistory: React.FC<SalesHistoryProps> = ({ targetStoreId }) => {
             setAutoPrint(false);
           }}
           title={`Detalles de Venta #${String(selectedSale.id || (selectedSale as any)._id || '').slice(0, 8).toUpperCase()}`}
-          maxWidth="max-w-md" // Ancho controlado para el modal
         >
           <div className="flex flex-col items-center">
             {/* Renderizar el Ticket (Preview + Portal de Impresión) */}

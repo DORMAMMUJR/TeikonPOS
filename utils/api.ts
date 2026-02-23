@@ -489,6 +489,13 @@ export const salesAPI = {
         };
     },
 
+    cancel: async (id: string) => {
+        const response = await authenticatedFetch(`${API_URL}/api/ventas/${id}/cancel`, {
+            method: 'PUT'
+        });
+        return response.json();
+    },
+
     create: async (sale: any) => {
         const response = await authenticatedFetch(`${API_URL}/api/ventas`, {
             method: 'POST',
