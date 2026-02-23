@@ -42,12 +42,17 @@ const PrintableTicket: React.FC<PrintableTicketProps> = ({
         </div>
 
         <div className="space-y-2 mb-4 text-[10px]">
-          {items.map((item, idx) => (
-            <div key={idx} className="flex justify-between gap-2">
-              <span className="flex-1">{item.quantity}x {item.name || item.productName}</span>
-              <span className="font-bold">${(item.subtotal || (item.sellingPrice * item.quantity)).toFixed(2)}</span>
-            </div>
-          ))}
+          {items.map((item, idx) => {
+            const qty = Number(item.quantity) || Number(item.qty) || 1;
+            const unitPrice = Number(item.unitPrice) || Number(item.sellingPrice) || Number(item.price) || 0;
+            const rowTotal = Number(item.subtotal) || qty * unitPrice;
+            return (
+              <div key={idx} className="flex justify-between gap-2">
+                <span className="flex-1">{qty}x {item.name || item.productName}</span>
+                <span className="font-bold">${rowTotal.toFixed(2)}</span>
+              </div>
+            );
+          })}
         </div>
 
         <div className="border-t border-black border-dashed pt-3 flex justify-between font-black text-sm mb-4">
@@ -83,12 +88,18 @@ const PrintableTicket: React.FC<PrintableTicketProps> = ({
         </div>
 
         <div className="space-y-1 mb-4 text-[11px]">
-          {items.map((item, idx) => (
-            <div key={idx} className="flex justify-between gap-2">
-              <span className="flex-1">{item.quantity}x {(item.name || item.productName).toUpperCase()}</span>
-              <span>${(item.subtotal || (item.sellingPrice * item.quantity)).toFixed(2)}</span>
-            </div>
-          ))}
+          {items.map((item, idx) => {
+            const qty = Number(item.quantity) || Number(item.qty) || 1;
+            const unitPrice = Number(item.unitPrice) || Number(item.sellingPrice) || Number(item.price) || 0;
+            const rowTotal = Number(item.subtotal) || qty * unitPrice;
+            const label = (item.name || item.productName || '').toUpperCase();
+            return (
+              <div key={idx} className="flex justify-between gap-2">
+                <span className="flex-1">{qty}x {label}</span>
+                <span>${rowTotal.toFixed(2)}</span>
+              </div>
+            );
+          })}
         </div>
 
         <div className="border-y border-black border-dashed py-2 flex justify-between font-black text-[14px] my-4">

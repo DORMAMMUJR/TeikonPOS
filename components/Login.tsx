@@ -96,9 +96,9 @@ const Login: React.FC = () => {
       // ---------------------------------------------------------
       if (response.user.role === 'SUPER_ADMIN') {
         console.log("👑 Bienvenido Jefe - Redirigiendo a Panel de Tiendas");
-        navigate('/admin/dashboard');
+        navigate('/admin/stores');
       } else {
-        console.log("💼 Bienvenido Cliente - Redirigiendo a su POS");
+        console.log("💼 Bienvenido Cliente - Redirigiendo al Dashboard");
         navigate('/dashboard');
       }
     } catch (err: any) {

@@ -208,7 +208,7 @@ const SalesHistory: React.FC<SalesHistoryProps> = ({ targetStoreId }) => {
                     {new Date(sale.date).toLocaleString()}
                   </td>
                   <td className="px-8 py-5 whitespace-nowrap text-xs font-black text-slate-800 dark:text-brand-text font-mono">
-                    #{sale.id.slice(0, 8).toUpperCase()}
+                    #{String(sale.id || (sale as any)._id || '').slice(0, 8).toUpperCase()}
                   </td>
                   <td className="px-8 py-5 whitespace-nowrap text-xs font-bold text-brand-muted uppercase">
                     {sale.sellerId}
@@ -274,7 +274,7 @@ const SalesHistory: React.FC<SalesHistoryProps> = ({ targetStoreId }) => {
             setSelectedSale(null);
             setAutoPrint(false);
           }}
-          title={`Detalles de Venta #${selectedSale.id.slice(0, 8).toUpperCase()}`}
+          title={`Detalles de Venta #${String(selectedSale.id || (selectedSale as any)._id || '').slice(0, 8).toUpperCase()}`}
           maxWidth="max-w-md" // Ancho controlado para el modal
         >
           <div className="flex flex-col items-center">
@@ -284,7 +284,7 @@ const SalesHistory: React.FC<SalesHistoryProps> = ({ targetStoreId }) => {
               total={selectedSale.total}
               paymentMethod={selectedSale.paymentMethod}
               sellerId={selectedSale.sellerId}
-              folio={selectedSale.id.slice(0, 8)}
+              folio={String(selectedSale.id || (selectedSale as any)._id || '').slice(0, 8)}
               date={selectedSale.date}
               onClose={() => {
                 setSelectedSale(null);
@@ -339,7 +339,7 @@ const SalesHistory: React.FC<SalesHistoryProps> = ({ targetStoreId }) => {
         >
           <div className="space-y-4">
             <p className="text-base text-slate-700 dark:text-slate-300">
-              ¿Estás seguro de cancelar la venta <strong>#{saleToCancel.id.slice(0, 8).toUpperCase()}</strong>?
+              ¿Estás seguro de cancelar la venta <strong>#{String(saleToCancel.id || (saleToCancel as any)._id || '').slice(0, 8).toUpperCase()}</strong>?
             </p>
             <p className="text-sm text-slate-600 dark:text-slate-400">
               El inventario será restaurado automáticamente y esta acción no se puede deshacer.

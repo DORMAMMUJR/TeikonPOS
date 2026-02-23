@@ -23,6 +23,7 @@ interface StoreContextType {
 
   login: (token: string) => void;
   logout: () => void;
+  safeLogout: () => boolean; // Returns false if blocked by open cash shift
   updateCurrentUser: (userData: Partial<User>) => void;
   openSession: (startBalance: number) => Promise<void>;
   closeSession: (endBalance: number) => Promise<void>;
@@ -663,6 +664,30 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     setAllSessions([]); // ✅ CORRECTO: setAllSessions existe, setActiveSession NO
 
     console.log('🚪 Logout: All data cleared');
+  };
+
+  /**
+   * safeLogout: Guard that prevents logout when a cash shift is open.
+   * - Returns TRUE  → logout proceeded (no open shift or SUPER_ADMIN)
+   * - Returns FALSE → logout blocked (open shift found, UI must show warning)
+   */
+  const safeLogout = (): boolean => {
+    // SUPER_ADMIN bypass: no cash shifts to worry about
+    if (currentUser?.role === 'SUPER_ADMIN') {
+      logout();
+      return true;
+    }
+
+    // Check for any open cash session
+    const openSession = allSessions.find(s => s.status === 'OPEN');
+    if (openSession) {
+      console.warn('⚠️ safeLogout: Blocked — active cash shift found:', openSession.id);
+      return false; // Caller should show OpenShiftWarningModal
+    }
+
+    // No open shift — safe to logout
+    logout();
+    return true;
   };
 
   const openSession = async (startBalance: number) => {
@@ -1334,6 +1359,7 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     error,
     login, // Assumed stable (not wrapped in useCallback in this snippet but should be)
     logout, // Assumed stable
+    safeLogout,
     updateCurrentUser, // Assumed stable
     openSession, // Assumed stable
     closeSession, // Assumed stable
@@ -1365,6 +1391,7 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     error,
     login, // Assumed stable (not wrapped in useCallback in this snippet but should be)
     logout, // Assumed stable
+    safeLogout,
     updateCurrentUser, // Assumed stable
     openSession, // Assumed stable
     closeSession, // Assumed stable

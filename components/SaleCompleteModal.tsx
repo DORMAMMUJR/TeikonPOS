@@ -73,7 +73,7 @@ export const SaleCompleteModal: React.FC<SaleCompleteModalProps> = ({
                                 Venta Completada
                             </h2>
                             <p className="text-sm text-emerald-100 font-medium mt-1">
-                                Ticket #{sale.id.slice(0, 8).toUpperCase()}
+                                Ticket #{String(sale.id || (sale as any)._id || '').slice(0, 8).toUpperCase()}
                             </p>
                         </div>
                     </div>
@@ -88,7 +88,7 @@ export const SaleCompleteModal: React.FC<SaleCompleteModalProps> = ({
                             amountPaid={sale.amountPaid}
                             change={sale.change}
                             date={sale.date}
-                            folio={sale.id.slice(0, 8)}
+                            folio={String(sale.id || (sale as any)._id || '').slice(0, 8)}
                             paymentMethod={sale.paymentMethod}
                             sellerId={sale.sellerId}
                             storeInfo={storeInfo}

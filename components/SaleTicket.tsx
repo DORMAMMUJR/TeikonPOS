@@ -12,29 +12,161 @@ const LINE_WIDTH = 32; // 32 caracteres por línea para 58mm
 const SEPARATOR_LINE = '-'.repeat(LINE_WIDTH);
 
 // Helpers para formato de texto
-const centerText = (text: string): string => {
-  const trimmed = text.substring(0, LINE_WIDTH);
+const centerText = (text: any): string => {
+  const str = String(text || '');
+  const trimmed = str.substring(0, LINE_WIDTH);
   const padding = Math.max(0, Math.floor((LINE_WIDTH - trimmed.length) / 2));
   return ' '.repeat(padding) + trimmed;
 };
 
-const justifyText = (left: string, right: string): string => {
-  // Aseguramos que la derecha quepa
-  const rightStr = right.substring(0, LINE_WIDTH / 2); // Seguridad
+const justifyText = (left: any, right: any): string => {
+  const leftStrInit = String(left || '');
+  const rightStrInit = String(right || '');
+  const rightStr = rightStrInit.substring(0, LINE_WIDTH / 2);
   const targetLen = LINE_WIDTH - rightStr.length;
-  // Recortamos izquierda si es necesario para que no empuje
-  const leftStr = left.substring(0, targetLen - 1); // -1 para asegurar al menos un espacio
-
+  // Math.max evita indices negativos si rightStr es muy grande
+  const leftStr = leftStrInit.substring(0, Math.max(0, targetLen - 1));
   return leftStr.padEnd(targetLen, ' ') + rightStr;
 };
 
 // Función auxiliar para dinero
 const formatMoney = (value: any): string => {
   const num = Number(value);
-  if (isNaN(num)) return "0.00";
+  if (isNaN(num)) return '0.00';
   return num.toFixed(2);
 };
 
+// ─────────────────────────────────────────────────────────────────────────────
+// BUG FIX #1: TicketContent is declared OUTSIDE SaleTicket so React never
+// sees a new component type on every re-render, which was causing the
+// subtree to unmount/remount and appear blank inside the Modal.
+// ─────────────────────────────────────────────────────────────────────────────
+interface TicketContentProps {
+  items: any[];
+  total: number;
+  storeInfo: { name: string; address?: string; phone?: string };
+  date: string;
+  folio: string;
+  sellerName: string;
+  paymentMethod?: string;
+  amountPaid: number;
+  change: number;
+  footerMessage: string;
+  isPrint?: boolean;
+}
+
+const TicketContent: React.FC<TicketContentProps> = ({
+  items,
+  total,
+  storeInfo,
+  date,
+  folio,
+  sellerName,
+  paymentMethod,
+  amountPaid,
+  change,
+  footerMessage,
+  isPrint = false,
+}) => {
+  const renderLine = (text: string, key?: number | string) => (
+    <div key={key} style={{ whiteSpace: 'pre', overflow: 'hidden', width: '100%' }}>
+      {text}
+    </div>
+  );
+
+  return (
+    <div
+      className="thermal-ticket-content"
+      style={{
+        width: isPrint ? '100%' : TICKET_WIDTH,
+        fontFamily: FONT_FAMILY,
+        fontSize: FONT_SIZE,
+        lineHeight: '1.2',
+        color: 'black',
+        background: 'white',
+        padding: isPrint ? 0 : '0 2mm',
+        margin: 0,
+        boxSizing: 'border-box',
+        textAlign: 'left',
+      }}
+    >
+      {/* Encabezado */}
+      {renderLine(centerText(storeInfo.name))}
+      {storeInfo.address && renderLine(centerText(storeInfo.address))}
+      {storeInfo.phone && renderLine(centerText(`Tel: ${storeInfo.phone}`))}
+
+      {renderLine(SEPARATOR_LINE)}
+
+      {/* Info Venta */}
+      {renderLine(`Fecha: ${date ? new Date(date).toLocaleString('es-MX') : new Date().toLocaleString('es-MX')}`)}
+      {folio && renderLine(`Folio: ${String(folio).toUpperCase()}`)}
+      {sellerName && renderLine(`Le atendió: ${sellerName}`)}
+
+      {renderLine(SEPARATOR_LINE)}
+
+      {/* Productos */}
+      {(!Array.isArray(items) || items.length === 0) ? (
+        renderLine(centerText('-- Sin productos --'))
+      ) : (
+        items.map((item: any, i: number) => {
+          if (!item) return null;
+          const quantity =
+            Number(item.quantity) ||
+            Number(item.qty) ||
+            Number(item.cantidad) ||
+            Number(item.units) ||
+            1;
+          const unitPrice =
+            Number(item.unitPrice) ||
+            Number(item.price) ||
+            Number(item.salePrice) ||
+            Number(item.sellingPrice) ||
+            Number(item.precio) ||
+            0;
+          const itemSubtotal = quantity * unitPrice;
+
+          const name = String(item.productName || item.name || item.nombre || 'Producto');
+          const detailsLeft = `${quantity} x $${formatMoney(unitPrice)}`;
+          const detailsRight = `$${formatMoney(itemSubtotal)}`;
+          const detailsLine = justifyText(detailsLeft, detailsRight);
+
+          return (
+            <div key={i}>
+              {renderLine(name.substring(0, LINE_WIDTH))}
+              {renderLine(detailsLine)}
+            </div>
+          );
+        })
+      )}
+
+      {renderLine(SEPARATOR_LINE)}
+
+      {/* Totales */}
+      {renderLine(justifyText('TOTAL:', `$${formatMoney(total)}`))}
+
+      {amountPaid > 0 && (
+        <>
+          {renderLine(justifyText('Efectivo:', `$${formatMoney(amountPaid)}`))}
+          {renderLine(justifyText('Cambio:', `$${formatMoney(change)}`))}
+        </>
+      )}
+
+      {paymentMethod && renderLine(`Pago: ${paymentMethod === 'CASH' ? 'EFECTIVO' : paymentMethod}`)}
+
+      {renderLine(SEPARATOR_LINE)}
+
+      {/* Pie de página */}
+      <div style={{ paddingTop: '8px' }}>
+        {renderLine(centerText(footerMessage))}
+        {renderLine(centerText('** Gracias por su preferencia **'))}
+      </div>
+    </div>
+  );
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Main component
+// ─────────────────────────────────────────────────────────────────────────────
 interface SaleTicketProps {
   saleId?: string;
   items?: any[];
@@ -64,19 +196,27 @@ export const SaleTicket: React.FC<SaleTicketProps> = ({
   change = 0,
   date: propDate,
   storeInfo: propStoreInfo,
-  footerMessage = "¡Gracias por su compra!",
+  footerMessage = '¡Gracias por su compra!',
   folio: propFolio,
   paymentMethod: propPaymentMethod,
   sellerId: propSellerId,
   onClose,
   shouldAutoPrint = false,
-  hideControls = false
+  hideControls = false,
 }) => {
   const [fetchedSale, setFetchedSale] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Lógica de carga de datos
+  // BUG FIX #2: Look up the portal container after mount (not at render time)
+  // so it is guaranteed to exist and never be null during the portal creation.
+  const [printContainer, setPrintContainer] = useState<HTMLElement | null>(null);
+  useEffect(() => {
+    const el = document.getElementById('print-ticket');
+    setPrintContainer(el);
+  }, []);
+
+  // Lógica de carga de datos remota
   useEffect(() => {
     const needsToFetch = saleId && (!propItems || !propTotal || !propDate);
     if (needsToFetch) {
@@ -84,7 +224,7 @@ export const SaleTicket: React.FC<SaleTicketProps> = ({
         setIsLoading(true);
         setError(null);
         try {
-          const sale = await salesAPI.getById(saleId);
+          const sale = await salesAPI.getById(saleId!);
           setFetchedSale(sale);
         } catch (err: any) {
           setError(err.message || 'Error al cargar venta');
@@ -105,19 +245,18 @@ export const SaleTicket: React.FC<SaleTicketProps> = ({
 
   // Limpieza de sellerId
   let rawSeller = propSellerId || fetchedSale?.vendedor || fetchedSale?.sellerId || 'SISTEMA';
-  if (typeof rawSeller === 'object') {
+  if (typeof rawSeller === 'object' && rawSeller !== null) {
     rawSeller = rawSeller.username || rawSeller.name || 'SISTEMA';
   }
 
-  const cleanSellerName = (input: string) => {
-    if (input.includes('(')) {
-      return input.split('(')[0].trim();
-    }
-    if (input.includes('@')) {
-      const namePart = input.split('@')[0];
+  const cleanSellerName = (input: any) => {
+    const str = String(input || '');
+    if (str.includes('(')) return str.split('(')[0].trim();
+    if (str.includes('@')) {
+      const namePart = str.split('@')[0];
       return namePart.charAt(0).toUpperCase() + namePart.slice(1);
     }
-    return input;
+    return str;
   };
 
   const sellerName = cleanSellerName(rawSeller);
@@ -125,15 +264,18 @@ export const SaleTicket: React.FC<SaleTicketProps> = ({
   const storeInfo = propStoreInfo || {
     name: fetchedSale?.store?.nombre || 'TEIKON POS',
     address: 'Sistema de Punto de Venta',
-    phone: 'N/A'
+    phone: 'N/A',
   };
 
   // Lógica de autoprint
   const hasPrintedRef = useRef(false);
   useEffect(() => {
-    // Si onClose está definido (modo modal/preview), solo imprimimos si shouldAutoPrint es true
-    // Si onClose NO está definido (modo background/auto), imprimimos si shouldAutoPrint es false (comportamiento legacy) o true
-    const shouldTriggerPrint = shouldAutoPrint && !isLoading && !error && !hasPrintedRef.current && items.length > 0;
+    const shouldTriggerPrint =
+      shouldAutoPrint &&
+      !isLoading &&
+      !error &&
+      !hasPrintedRef.current &&
+      items.length > 0;
 
     if (shouldTriggerPrint) {
       hasPrintedRef.current = true;
@@ -141,150 +283,75 @@ export const SaleTicket: React.FC<SaleTicketProps> = ({
     }
   }, [shouldAutoPrint, isLoading, error, items.length]);
 
-  // Componente de contenido del ticket
-  const TicketContent = ({ isPrint = false }: { isPrint?: boolean }) => {
-    // Generación de líneas de texto plano
-    const renderLine = (text: string, key?: number | string) => (
-      <div key={key} style={{ whiteSpace: 'pre', overflow: 'hidden', width: '100%' }}>
-        {text}
-      </div>
-    );
-
-    return (
-      <div className="thermal-ticket-content" style={{
-        width: isPrint ? '100%' : TICKET_WIDTH,
-        fontFamily: FONT_FAMILY,
-        fontSize: FONT_SIZE,
-        lineHeight: '1.2',
-        color: 'black',
-        background: 'white',
-        padding: isPrint ? 0 : '0 2mm', // Padding visual en preview
-        margin: 0,
-        boxSizing: 'border-box',
-        textAlign: 'left'
-      }}>
-        {/* Encabezado */}
-        {renderLine(centerText(storeInfo.name))}
-        {storeInfo.address && renderLine(centerText(storeInfo.address))}
-        {storeInfo.phone && renderLine(centerText(`Tel: ${storeInfo.phone}`))}
-
-        {renderLine(SEPARATOR_LINE)}
-
-        {/* Info Venta */}
-        {renderLine(`Fecha: ${new Date(date).toLocaleString('es-MX')}`)}
-        {folio && renderLine(`Folio: ${folio.toUpperCase()}`)}
-        {sellerName && renderLine(`Le atendió: ${sellerName}`)}
-
-        {renderLine(SEPARATOR_LINE)}
-
-        {/* Productos */}
-        {items.length === 0 ? (
-          renderLine(centerText("-- Sin productos --"))
-        ) : (
-          items.map((item: any, i: number) => {
-            // Lógica ESTRICTA de cálculo
-            // Expanded property search for items coming from different sources (Backend, Cart, History)
-            const quantity = Number(item.quantity) || Number(item.qty) || Number(item.cantidad) || Number(item.units) || 1;
-            const unitPrice = Number(item.unitPrice) || Number(item.price) || Number(item.salePrice) || Number(item.sellingPrice) || Number(item.precio) || 0;
-            const itemSubtotal = quantity * unitPrice;
-
-            // Línea 1: Nombre del producto
-            // Línea 2: Qty x Price ... Subtotal
-            const name = item.productName || item.name || item.nombre || '';
-            const detailsLeft = `${quantity} x $${formatMoney(unitPrice)}`;
-            const detailsRight = `$${formatMoney(itemSubtotal)}`;
-            const detailsLine = justifyText(detailsLeft, detailsRight);
-
-            return (
-              <div key={i}>
-                {renderLine(name.substring(0, LINE_WIDTH))}
-                {renderLine(detailsLine)}
-              </div>
-            );
-          })
-        )}
-
-        {renderLine(SEPARATOR_LINE)}
-
-        {/* Totales */}
-        {renderLine(justifyText("TOTAL:", `$${formatMoney(total)}`))}
-
-        {amountPaid > 0 && (
-          <>
-            {renderLine(justifyText("Efectivo:", `$${formatMoney(amountPaid)}`))}
-            {renderLine(justifyText("Cambio:", `$${formatMoney(change)}`))}
-          </>
-        )}
-
-        {paymentMethod && (
-          renderLine(`Pago: ${paymentMethod === 'CASH' ? 'EFECTIVO' : paymentMethod}`)
-        )}
-
-        {renderLine(SEPARATOR_LINE)}
-
-        {/* Pie de página */}
-        <div style={{ paddingTop: '8px' }}>
-          {renderLine(centerText(footerMessage))}
-          {renderLine(centerText("** Gracias por su preferencia **"))}
-        </div>
-      </div>
-    );
+  // Props shared between preview and print portal
+  const ticketProps: TicketContentProps = {
+    items,
+    total,
+    storeInfo,
+    date,
+    folio,
+    sellerName,
+    paymentMethod,
+    amountPaid,
+    change,
+    footerMessage,
   };
 
-  if (isLoading) return <div style={{ fontFamily: FONT_FAMILY, padding: '20px' }}>Cargando ticket...</div>;
-  if (error) return <div style={{ fontFamily: FONT_FAMILY, padding: '20px', color: 'red' }}>Error: {error}</div>;
-
-  const printContainer = document.getElementById('print-ticket');
+  if (isLoading)
+    return <div style={{ fontFamily: FONT_FAMILY, padding: '20px' }}>Cargando ticket...</div>;
+  if (error)
+    return (
+      <div style={{ fontFamily: FONT_FAMILY, padding: '20px', color: 'red' }}>Error: {error}</div>
+    );
 
   return (
     <>
       {/* 1. VISTA PREVIA */}
-      <div className="ticket-preview-container print:hidden" style={{
-        background: '#fff',
-        border: '1px solid #eee',
-        padding: '10px',
-        display: 'inline-block'
-      }}>
-        <TicketContent isPrint={false} />
+      <div
+        className="ticket-preview-container print:hidden"
+        style={{
+          background: '#fff',
+          border: '1px solid #eee',
+          padding: '10px',
+          display: 'inline-block',
+        }}
+      >
+        <TicketContent {...ticketProps} isPrint={false} />
       </div>
 
-      {/* 2. IMPRESIÓN (Portal) */}
-      {printContainer && ReactDOM.createPortal(
-        <>
-          <style>{`
-            @media print {
-              body {
-                margin: 0;
-                padding: 0;
+      {/* 2. IMPRESIÓN (Portal) — safe: only rendered after mount when container exists */}
+      {printContainer &&
+        ReactDOM.createPortal(
+          <>
+            <style>{`
+              @media print {
+                body { margin: 0; padding: 0; }
+                .print-wrapper { width: 100%; display: block; }
+                .ticket { width: 58mm; margin: 0 auto; padding: 0; font-family: monospace; font-size: 12px; }
+                .thermal-ticket-content { width: 100% !important; }
               }
-              .print-wrapper {
-                width: 100%;
-                display: block;
-              }
-              .ticket {
-                width: 58mm;
-                margin: 0 auto;
-                padding: 0; /* Padding controlado por espacios */
-                font-family: monospace;
-                font-size: 12px;
-              }
-              .thermal-ticket-content {
-                 width: 100% !important;
-              }
-            }
-          `}</style>
-          <div className="print-wrapper">
-            <div className="ticket">
-              <TicketContent isPrint={true} />
+            `}</style>
+            <div className="print-wrapper">
+              <div className="ticket">
+                <TicketContent {...ticketProps} isPrint={true} />
+              </div>
             </div>
-          </div>
-        </>,
-        printContainer
-      )}
+          </>,
+          printContainer,
+        )}
 
       {/* Controles UI */}
       {onClose && !hideControls && (
-        <div className="no-print" style={{ textAlign: 'center', marginTop: '10px', display: 'flex', gap: '10px', justifyContent: 'center' }}>
+        <div
+          className="no-print"
+          style={{
+            textAlign: 'center',
+            marginTop: '10px',
+            display: 'flex',
+            gap: '10px',
+            justifyContent: 'center',
+          }}
+        >
           <button
             onClick={() => window.print()}
             style={{
@@ -295,7 +362,7 @@ export const SaleTicket: React.FC<SaleTicketProps> = ({
               borderRadius: '6px',
               cursor: 'pointer',
               fontWeight: 'bold',
-              fontFamily: 'sans-serif'
+              fontFamily: 'sans-serif',
             }}
           >
             IMPRIMIR
@@ -310,7 +377,7 @@ export const SaleTicket: React.FC<SaleTicketProps> = ({
               borderRadius: '6px',
               cursor: 'pointer',
               fontWeight: 'bold',
-              fontFamily: 'sans-serif'
+              fontFamily: 'sans-serif',
             }}
           >
             CERRAR
