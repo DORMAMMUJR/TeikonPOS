@@ -2,13 +2,15 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useStore } from '../context/StoreContext';
 import { Product } from "@/Product";
 import {
-  Search, Plus, Edit2, Archive, Package, AlertTriangle, X,
+  Search, Plus, Edit2, Archive, Package, AlertTriangle, X, History,
   DollarSign, PieChart, ImageIcon, TrendingUp, Edit, Upload, FileSpreadsheet
 } from 'lucide-react';
 // Asegúrate de que esta ruta sea correcta según tu proyecto
 import { Button, Modal } from '../src/components/ui';
 import { productsAPI } from '../utils/api';
 import BulkImportModal from './BulkImportModal';
+import AdjustStockModal from './AdjustStockModal';
+import InventoryHistory from './InventoryHistory';
 
 interface ProductListProps {
   targetStoreId?: string;
@@ -63,6 +65,11 @@ const ProductList: React.FC<ProductListProps> = ({ products: propProducts, targe
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Partial<Product>>({});
+  const [isAdjustStockOpen, setIsAdjustStockOpen] = useState(false);
+  const [adjustingProduct, setAdjustingProduct] = useState<Product | null>(null);
+
+  // View toggle
+  const [activeView, setActiveView] = useState<'CATALOG' | 'HISTORY'>('CATALOG');
 
   const handleDelete = async (e: React.MouseEvent, product: Product) => {
     e.stopPropagation();
@@ -186,6 +193,11 @@ const ProductList: React.FC<ProductListProps> = ({ products: propProducts, targe
     setIsModalOpen(true);
   };
 
+  const openAdjustStock = (p: Product) => {
+    setAdjustingProduct(p);
+    setIsAdjustStockOpen(true);
+  };
+
   const handleBulkImportSuccess = () => {
     // Reload products after successful import
     if (targetStoreId) {
@@ -240,225 +252,265 @@ const ProductList: React.FC<ProductListProps> = ({ products: propProducts, targe
         </div>
       </div>
 
-      {/* SEARCH BAR & ACTIONS */}
-      <div className="flex flex-col md:flex-row justify-between items-stretch md:items-center gap-4 bg-orange-50 dark:bg-orange-950/20 p-4 rounded-2xl border border-orange-100 dark:border-orange-900/30">
-        <div className="relative w-full md:w-96">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-orange-500 h-5 w-5" />
-          <input
-            type="text"
-            placeholder="Buscar por SKU o Nombre..."
-            className="w-full pl-12 pr-4 py-3.5 bg-white dark:bg-slate-900 border border-orange-200 dark:border-orange-800/40 rounded-xl text-sm font-bold text-slate-900 dark:text-white focus:outline-none focus:border-orange-500 shadow-sm transition-all"
-            value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
-          />
-        </div>
-        <div className="flex gap-3">
-          <Button
-            onClick={() => setIsBulkImportOpen(true)}
-            className="bg-blue-600 hover:bg-blue-500 text-white rounded-xl shadow-lg shadow-blue-600/20 active:scale-95 transition-all py-3.5 px-4"
-          >
-            <FileSpreadsheet size={18} className="mr-2" /> IMPORTAR EXCEL
-          </Button>
-          <Button onClick={openNew} className="bg-orange-600 hover:bg-orange-500 text-white rounded-xl shadow-lg shadow-orange-600/20 active:scale-95 transition-all py-3.5">
-            <Plus size={18} className="mr-2" /> AGREGAR ÍTEM
-          </Button>
-        </div>
+      {/* VIEW TOGGLE */}
+      <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl max-w-sm self-center md:self-start">
+        <button
+          onClick={() => setActiveView('CATALOG')}
+          className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-lg text-xs font-bold transition-all ${activeView === 'CATALOG'
+            ? 'bg-white dark:bg-slate-700 text-orange-600 shadow-sm'
+            : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+            }`}
+        >
+          <Package size={14} /> Catálogo
+        </button>
+        <button
+          onClick={() => setActiveView('HISTORY')}
+          className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-lg text-xs font-bold transition-all ${activeView === 'HISTORY'
+            ? 'bg-white dark:bg-slate-700 text-orange-600 shadow-sm'
+            : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+            }`}
+        >
+          <History size={14} /> Historial
+        </button>
       </div>
 
-      {/* MOBILE-FIRST: Vertical List View (visible on mobile, hidden on md+) */}
-      <div className="block md:hidden space-y-3">
-        {filtered.map((p) => {
-          const margin = p.salePrice > 0 ? ((p.salePrice - p.costPrice) / p.salePrice) * 100 : 0;
-          const profit = p.salePrice - p.costPrice;
+      {activeView === 'HISTORY' ? (
+        <InventoryHistory targetStoreId={targetStoreId} />
+      ) : (
+        <>
+          {/* SEARCH BAR & ACTIONS */}
+          <div className="flex flex-col md:flex-row justify-between items-stretch md:items-center gap-4 bg-orange-50 dark:bg-orange-950/20 p-4 rounded-2xl border border-orange-100 dark:border-orange-900/30">
+            <div className="relative w-full md:w-96">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-orange-500 h-5 w-5" />
+              <input
+                type="text"
+                placeholder="Buscar por SKU o Nombre..."
+                className="w-full pl-12 pr-4 py-3.5 bg-white dark:bg-slate-900 border border-orange-200 dark:border-orange-800/40 rounded-xl text-sm font-bold text-slate-900 dark:text-white focus:outline-none focus:border-orange-500 shadow-sm transition-all"
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+              />
+            </div>
+            <div className="flex gap-3">
+              <Button
+                onClick={() => setIsBulkImportOpen(true)}
+                className="bg-blue-600 hover:bg-blue-500 text-white rounded-xl shadow-lg shadow-blue-600/20 active:scale-95 transition-all py-3.5 px-4"
+              >
+                <FileSpreadsheet size={18} className="mr-2" /> IMPORTAR EXCEL
+              </Button>
+              <Button onClick={openNew} className="bg-orange-600 hover:bg-orange-500 text-white rounded-xl shadow-lg shadow-orange-600/20 active:scale-95 transition-all py-3.5">
+                <Plus size={18} className="mr-2" /> AGREGAR ÍTEM
+              </Button>
+            </div>
+          </div>
 
-          return (
-            <div
-              key={p.id}
-              className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-4 active:scale-[0.98] transition-all"
-            >
-              {/* Horizontal Layout: Image | Content | Action */}
-              <div className="flex items-center gap-4">
-                {/* Left: Item Image */}
-                <div className="w-16 h-16 rounded-xl overflow-hidden bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shrink-0">
-                  {p.image ? (
-                    <img src={p.image} className="w-full h-full object-cover" alt={p.name} />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-slate-300">
-                      <ImageIcon size={20} />
-                    </div>
-                  )}
-                </div>
+          {/* MOBILE-FIRST: Vertical List View (visible on mobile, hidden on md+) */}
+          <div className="block md:hidden space-y-3">
+            {filtered.map((p) => {
+              const margin = p.salePrice > 0 ? ((p.salePrice - p.costPrice) / p.salePrice) * 100 : 0;
+              const profit = p.salePrice - p.costPrice;
 
-                {/* Center: Item Name, Price, Stock */}
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-bold text-sm text-slate-800 dark:text-white truncate mb-1">
-                    {p.name}
-                  </h3>
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-base font-black text-orange-500">
-                      ${p.salePrice.toLocaleString()}
-                    </span>
-                    <span className={`px-2 py-1 rounded-lg font-bold ${p.stock === 0
-                      ? 'text-red-500 bg-red-50 ring-2 ring-red-500'
-                      : p.stock <= p.minStock
-                        ? 'bg-red-100 dark:bg-red-950/30 text-red-600 dark:text-red-400'
-                        : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
-                      }`}>
-                      Stock: <span className="text-2xl font-bold">{p.stock}</span>
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <TrendingUp size={10} className={profit > 0 ? 'text-emerald-500' : 'text-red-500'} />
-                    <span className={`text-[10px] font-bold ${profit > 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                      {margin.toFixed(0)}% MG
-                    </span>
-                  </div>
-                </div>
-
-                {/* Right: Action Button */}
-                <button
-                  onClick={() => openEdit(p)}
-                  className="flex items-center justify-center w-12 h-12 bg-orange-500 hover:bg-orange-600 text-white rounded-xl transition-all active:scale-95 shadow-sm shrink-0"
-                  aria-label={`Ver detalles de ${p.name}`}
+              return (
+                <div
+                  key={p.id}
+                  className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-4 active:scale-[0.98] transition-all"
                 >
-                  <Edit size={18} />
-                </button>
+                  {/* Horizontal Layout: Image | Content | Action */}
+                  <div className="flex items-center gap-4">
+                    {/* Left: Item Image */}
+                    <div className="w-16 h-16 rounded-xl overflow-hidden bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shrink-0">
+                      {p.image ? (
+                        <img src={p.image} className="w-full h-full object-cover" alt={p.name} />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-slate-300">
+                          <ImageIcon size={20} />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Center: Item Name, Price, Stock */}
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-bold text-sm text-slate-800 dark:text-white truncate mb-1">
+                        {p.name}
+                      </h3>
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-base font-black text-orange-500">
+                          ${p.salePrice.toLocaleString()}
+                        </span>
+                        <span className={`px-2 py-1 rounded-lg font-bold ${p.stock === 0
+                          ? 'text-red-500 bg-red-50 ring-2 ring-red-500'
+                          : p.stock <= p.minStock
+                            ? 'bg-red-100 dark:bg-red-950/30 text-red-600 dark:text-red-400'
+                            : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+                          }`}>
+                          Stock: <span className="text-2xl font-bold">{p.stock}</span>
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <TrendingUp size={10} className={profit > 0 ? 'text-emerald-500' : 'text-red-500'} />
+                        <span className={`text-[10px] font-bold ${profit > 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                          {margin.toFixed(0)}% MG
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Right: Action Buttons */}
+                    <div className="flex flex-col gap-2 shrink-0">
+                      <button
+                        onClick={() => openEdit(p)}
+                        className="flex items-center justify-center w-10 h-10 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl transition-all active:scale-95"
+                        aria-label={`Editar ${p.name}`}
+                      >
+                        <Edit size={16} />
+                      </button>
+                      <button
+                        onClick={() => openAdjustStock(p)}
+                        className="flex items-center justify-center w-10 h-10 bg-amber-100 hover:bg-amber-200 text-amber-600 rounded-xl transition-all active:scale-95"
+                        aria-label={`Ajustar ${p.name}`}
+                      >
+                        <Package size={16} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* DESKTOP: Professional Table View (hidden on mobile, visible on md+) */}
+          <div className="hidden md:block w-full max-w-7xl mx-auto">
+            <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
+              <div className="table-scroll-container">
+                <table className="w-full text-left border-collapse">
+                  <thead className="bg-orange-50/50 dark:bg-orange-950/10 border-b-2 border-orange-200 dark:border-orange-900/20">
+                    <tr>
+                      <th className="px-6 py-4 text-[10px] font-black text-orange-600 dark:text-orange-400 uppercase tracking-widest">
+                        ÍTEM
+                      </th>
+                      <th className="px-6 py-4 text-[10px] font-black text-orange-600 dark:text-orange-400 uppercase tracking-widest">
+                        SKU
+                      </th>
+                      <th className="px-6 py-4 text-right text-[10px] font-black text-orange-600 dark:text-orange-400 uppercase tracking-widest">
+                        PRECIO
+                      </th>
+                      <th className="px-6 py-4 text-right text-[10px] font-black text-orange-600 dark:text-orange-400 uppercase tracking-widest">
+                        RENTABILIDAD
+                      </th>
+                      <th className="px-6 py-4 text-center text-[10px] font-black text-orange-600 dark:text-orange-400 uppercase tracking-widest">
+                        STOCK
+                      </th>
+                      <th className="px-6 py-4 text-center text-[10px] font-black text-orange-600 dark:text-orange-400 uppercase tracking-widest">
+                        ACCIÓN
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                    {filtered.map((p) => {
+                      const margin = p.salePrice > 0 ? ((p.salePrice - p.costPrice) / p.salePrice) * 100 : 0;
+                      const profit = p.salePrice - p.costPrice;
+
+                      return (
+                        <tr key={p.id} className="hover:bg-orange-50/30 dark:hover:bg-orange-950/5 transition-colors group">
+                          {/* ÍTEM Column - Image + Name */}
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-4">
+                              <div className="w-12 h-12 rounded-xl overflow-hidden bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shrink-0">
+                                {p.image ? (
+                                  <img src={p.image} className="w-full h-full object-cover" alt={p.name} />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center text-slate-300">
+                                    <ImageIcon size={18} />
+                                  </div>
+                                )}
+                              </div>
+                              <span className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate max-w-[200px]" title={p.name}>
+                                {p.name}
+                              </span>
+                            </div>
+                          </td>
+
+                          {/* SKU Column */}
+                          <td className="px-6 py-4">
+                            <span className="text-xs font-black text-slate-400 uppercase tracking-tight">
+                              {p.sku}
+                            </span>
+                          </td>
+
+                          {/* PRECIO Column */}
+                          <td className="px-6 py-4 text-right">
+                            <div className="flex flex-col items-end">
+                              <span className="text-base font-black text-slate-900 dark:text-white">
+                                ${p.salePrice.toLocaleString()}
+                              </span>
+                              {p.costPrice > 0 && (
+                                <span className="text-[10px] text-slate-400 line-through">
+                                  Costo: ${p.costPrice.toLocaleString()}
+                                </span>
+                              )}
+                            </div>
+                          </td>
+
+                          {/* RENTABILIDAD Column */}
+                          <td className="px-6 py-4 text-right">
+                            <div className="flex flex-col items-end gap-1">
+                              <span className={`text-sm font-black ${profit > 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                                ${profit.toLocaleString()}
+                              </span>
+                              <div className="flex items-center gap-1">
+                                <TrendingUp size={12} className={profit > 0 ? 'text-emerald-500' : 'text-red-500'} />
+                                <span className={`text-[10px] font-bold ${profit > 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                                  {margin.toFixed(1)}% MG
+                                </span>
+                              </div>
+                            </div>
+                          </td>
+
+                          {/* STOCK Column - Badge Style */}
+                          <td className="px-6 py-4 text-center">
+                            <span className={`inline-flex items-center justify-center px-4 py-2 rounded-lg font-bold uppercase border-2 ${p.stock === 0
+                              ? 'text-red-500 border-red-500 bg-red-50 text-2xl ring-2 ring-red-300'
+                              : p.stock <= p.minStock
+                                ? 'bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 border-red-200 dark:border-red-900/50 text-2xl'
+                                : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 text-2xl'
+                              }`}>
+                              {p.stock}
+                            </span>
+                          </td>
+
+                          {/* ACCIÓN Column - Spaced Buttons */}
+                          <td className="px-6 py-4">
+                            <div className="flex items-center justify-center gap-2">
+                              <button
+                                onClick={() => openAdjustStock(p)}
+                                className="flex items-center gap-1 px-3 py-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-400 rounded-lg text-[10px] font-bold uppercase transition-all"
+                                title="Ajustar Stock"
+                              >
+                                <Package size={14} /> Ajustar
+                              </button>
+                              <button
+                                onClick={() => openEdit(p)}
+                                className="flex items-center gap-1 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-[10px] font-bold uppercase transition-all"
+                              >
+                                <Edit size={14} /> Editar
+                              </button>
+                              <button
+                                onClick={(e) => handleDelete(e, p)}
+                                className="flex items-center gap-1 px-3 py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg text-[10px] font-bold uppercase transition-all"
+                                title="Archivar"
+                              >
+                                <Archive size={14} /> Archivar
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
             </div>
-          );
-        })}
-      </div>
-
-      {/* DESKTOP: Professional Table View (hidden on mobile, visible on md+) */}
-      <div className="hidden md:block w-full max-w-7xl mx-auto">
-        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
-          <div className="table-scroll-container">
-            <table className="w-full text-left border-collapse">
-              <thead className="bg-orange-50/50 dark:bg-orange-950/10 border-b-2 border-orange-200 dark:border-orange-900/20">
-                <tr>
-                  <th className="px-6 py-4 text-[10px] font-black text-orange-600 dark:text-orange-400 uppercase tracking-widest">
-                    ÍTEM
-                  </th>
-                  <th className="px-6 py-4 text-[10px] font-black text-orange-600 dark:text-orange-400 uppercase tracking-widest">
-                    SKU
-                  </th>
-                  <th className="px-6 py-4 text-right text-[10px] font-black text-orange-600 dark:text-orange-400 uppercase tracking-widest">
-                    PRECIO
-                  </th>
-                  <th className="px-6 py-4 text-right text-[10px] font-black text-orange-600 dark:text-orange-400 uppercase tracking-widest">
-                    RENTABILIDAD
-                  </th>
-                  <th className="px-6 py-4 text-center text-[10px] font-black text-orange-600 dark:text-orange-400 uppercase tracking-widest">
-                    STOCK
-                  </th>
-                  <th className="px-6 py-4 text-center text-[10px] font-black text-orange-600 dark:text-orange-400 uppercase tracking-widest">
-                    ACCIÓN
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                {filtered.map((p) => {
-                  const margin = p.salePrice > 0 ? ((p.salePrice - p.costPrice) / p.salePrice) * 100 : 0;
-                  const profit = p.salePrice - p.costPrice;
-
-                  return (
-                    <tr key={p.id} className="hover:bg-orange-50/30 dark:hover:bg-orange-950/5 transition-colors group">
-                      {/* ÍTEM Column - Image + Name */}
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 rounded-xl overflow-hidden bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shrink-0">
-                            {p.image ? (
-                              <img src={p.image} className="w-full h-full object-cover" alt={p.name} />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center text-slate-300">
-                                <ImageIcon size={18} />
-                              </div>
-                            )}
-                          </div>
-                          <span className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate max-w-[200px]" title={p.name}>
-                            {p.name}
-                          </span>
-                        </div>
-                      </td>
-
-                      {/* SKU Column */}
-                      <td className="px-6 py-4">
-                        <span className="text-xs font-black text-slate-400 uppercase tracking-tight">
-                          {p.sku}
-                        </span>
-                      </td>
-
-                      {/* PRECIO Column */}
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex flex-col items-end">
-                          <span className="text-base font-black text-slate-900 dark:text-white">
-                            ${p.salePrice.toLocaleString()}
-                          </span>
-                          {p.costPrice > 0 && (
-                            <span className="text-[10px] text-slate-400 line-through">
-                              Costo: ${p.costPrice.toLocaleString()}
-                            </span>
-                          )}
-                        </div>
-                      </td>
-
-                      {/* RENTABILIDAD Column */}
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex flex-col items-end gap-1">
-                          <span className={`text-sm font-black ${profit > 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                            ${profit.toLocaleString()}
-                          </span>
-                          <div className="flex items-center gap-1">
-                            <TrendingUp size={12} className={profit > 0 ? 'text-emerald-500' : 'text-red-500'} />
-                            <span className={`text-[10px] font-bold ${profit > 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                              {margin.toFixed(1)}% MG
-                            </span>
-                          </div>
-                        </div>
-                      </td>
-
-                      {/* STOCK Column - Badge Style */}
-                      <td className="px-6 py-4 text-center">
-                        <span className={`inline-flex items-center justify-center px-4 py-2 rounded-lg font-bold uppercase border-2 ${p.stock === 0
-                          ? 'text-red-500 border-red-500 bg-red-50 text-2xl ring-2 ring-red-300'
-                          : p.stock <= p.minStock
-                            ? 'bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 border-red-200 dark:border-red-900/50 text-2xl'
-                            : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 text-2xl'
-                          }`}>
-                          {p.stock}
-                        </span>
-                      </td>
-
-                      {/* ACCIÓN Column - Spaced Buttons */}
-                      <td className="px-6 py-4">
-                        <div className="flex items-center justify-center gap-4">
-                          <button
-                            onClick={() => openEdit(p)}
-                            className="flex items-center gap-2 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-xs font-bold uppercase transition-all active:scale-95 shadow-sm hover:shadow-md"
-                            aria-label={`Editar ${p.name}`}
-                          >
-                            <Edit size={14} />
-                            Editar
-                          </button>
-                          <button
-                            onClick={(e) => handleDelete(e, p)}
-                            className="flex items-center gap-2 px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded-lg text-xs font-bold uppercase transition-all active:scale-95 shadow-sm hover:shadow-md"
-                            aria-label={`Archivar ${p.name}`}
-                          >
-                            <Archive size={14} />
-                            ARCHIVAR
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
           </div>
-        </div>
-      </div>
-
+        </>
+      )}
 
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingProduct.id ? "Modificar" : "Nuevo Ítem"}>
         <form onSubmit={handleSave} className="space-y-6">
@@ -574,6 +626,14 @@ const ProductList: React.FC<ProductListProps> = ({ products: propProducts, targe
         isOpen={isBulkImportOpen}
         onClose={() => setIsBulkImportOpen(false)}
         onSuccess={handleBulkImportSuccess}
+        targetStoreId={targetStoreId}
+      />
+
+      <AdjustStockModal
+        isOpen={isAdjustStockOpen}
+        onClose={() => setIsAdjustStockOpen(false)}
+        product={adjustingProduct}
+        onSuccess={handleBulkImportSuccess} // Reusing this to reload products and trigger context refresh
         targetStoreId={targetStoreId}
       />
     </div>

@@ -110,16 +110,33 @@ export interface Sale {
   total: number;
   totalCost: number; // Nuevo: costo total
   netProfit: number; // Nuevo: utilidad bruta
-  status: 'ACTIVE' | 'CANCELLED' | 'PENDING_SYNC'; // Agregado PENDING_SYNC
+  status: 'ACTIVE' | 'CANCELLED' | 'PENDING_SYNC' | 'PENDING' | 'PROCESSING' | 'SHIPPED' | 'DELIVERED' | 'COMPLETED';
   paymentMethod: 'CASH' | 'CARD' | 'TRANSFER';
   items: SaleDetail[];
   storeId: string; // Cambiado de ownerId
   syncedAt?: string; // Nuevo: timestamp de sincronización
+  // Omnichannel fields
+  clientId?: string;
+  saleType?: 'RETAIL' | 'WHOLESALE' | 'ECOMMERCE';
+  deliveryDate?: string;
+  shippingAddress?: string;
+  ecommerceOrderId?: string;
 }
 
 // ==========================================
 // NUEVAS INTERFACES PARA GESTIÓN DE NEGOCIO
 // ==========================================
+
+export interface Client {
+  id: string;
+  storeId: string;
+  nombre: string;
+  email?: string;
+  telefono?: string;
+  direccion?: string;
+  rfc?: string;
+  activo: boolean;
+}
 
 export interface Expense {
   id: string;
@@ -178,4 +195,87 @@ export interface PendingSale {
 
 export interface FinancialSettings {
   monthlyFixedCosts: number;
+}
+
+// ==========================================
+// MÓDULOS FINANCIEROS Y COMPRAS
+// ==========================================
+
+export interface Supplier {
+  id: string;
+  storeId: string;
+  nombre: string;
+  rfc?: string;
+  telefono?: string;
+  email?: string;
+  direccion?: string;
+  diasCredito: number;
+  limiteCredito: number;
+  activo: boolean;
+}
+
+export interface PurchaseOrderItem {
+  id?: string;
+  purchaseOrderId?: string;
+  inventoryItemId?: string;
+  nombre: string;
+  cantidad: number;
+  cantidadRecibida?: number;
+  precioUnitario: number;
+  subtotal: number;
+}
+
+export interface PurchaseOrder {
+  id: string;
+  storeId: string;
+  supplierId: string;
+  supplier?: Supplier; // Para includes
+  fechaEmision: string;
+  fechaEsperada?: string;
+  estado: 'PENDING' | 'PARTIAL' | 'COMPLETED' | 'CANCELLED';
+  subtotal: number;
+  totalImpuestos: number;
+  total: number;
+  estadoPago: 'UNPAID' | 'PARTIAL' | 'PAID';
+  items?: PurchaseOrderItem[];
+}
+
+export interface AccountReceivable {
+  id: string;
+  storeId: string;
+  clientId: string;
+  client?: Client;
+  saleId: string;
+  sale?: Sale;
+  montoTotal: number;
+  saldoPendiente: number;
+  fechaVencimiento: string;
+  estado: 'PENDING' | 'PARTIAL' | 'PAID' | 'OVERDUE';
+}
+
+export interface AccountPayable {
+  id: string;
+  storeId: string;
+  supplierId?: string;
+  supplier?: Supplier;
+  referenciaId: string;
+  tipoReferencia: 'PURCHASE' | 'EXPENSE' | 'OTHER';
+  montoTotal: number;
+  saldoPendiente: number;
+  fechaVencimiento: string;
+  estado: 'PENDING' | 'PARTIAL' | 'PAID' | 'OVERDUE';
+}
+
+export interface PaymentTransaction {
+  id: string;
+  storeId: string;
+  cuentaId: string;
+  tipoCuenta: 'RECEIVABLE' | 'PAYABLE';
+  monto: number;
+  metodoPago: 'CASH' | 'CARD' | 'TRANSFER';
+  fecha: string;
+  comprobante?: string;
+  referencia?: string;
+  registradoPor: string;
+  shiftId?: number;
 }

@@ -432,6 +432,37 @@ export const productsAPI = {
     }
 };
 
+// ==========================================
+// INVENTORY API
+// ==========================================
+
+export const inventoryAPI = {
+    getMovements: async (params?: { storeId?: string; productId?: string | number; type?: string; page?: number; limit?: number }) => {
+        let url = `${API_URL}/api/inventory/movements`;
+        if (params) {
+            const queryParts = [];
+            if (params.storeId) queryParts.push(`storeId=${params.storeId}`);
+            if (params.productId) queryParts.push(`productId=${params.productId}`);
+            if (params.type) queryParts.push(`type=${params.type}`);
+            if (params.page) queryParts.push(`page=${params.page}`);
+            if (params.limit) queryParts.push(`limit=${params.limit}`);
+            if (queryParts.length > 0) {
+                url += `?${queryParts.join('&')}`;
+            }
+        }
+        const response = await authenticatedFetch(url);
+        return response.json();
+    },
+
+    createMovement: async (data: { productId: string | number; type: 'IN' | 'OUT' | 'ADJUST'; reason: string; quantity: number; notes?: string; storeId?: string }) => {
+        const response = await authenticatedFetch(`${API_URL}/api/inventory/movements`, {
+            method: 'POST',
+            body: JSON.stringify(data)
+        });
+        return response.json();
+    }
+};
+
 export const storesAPI = {
     getAll: async () => {
         const response = await authenticatedFetch(`${API_URL}/api/stores`, {
@@ -508,6 +539,14 @@ export const salesAPI = {
         const response = await authenticatedFetch(`${API_URL}/api/ventas/sync`, {
             method: 'POST',
             body: JSON.stringify({ sales: pendingSales })
+        });
+        return response.json();
+    },
+
+    updateStatus: async (id: string, status: string) => {
+        const response = await authenticatedFetch(`${API_URL}/api/ventas/${id}/status`, {
+            method: 'PUT',
+            body: JSON.stringify({ status })
         });
         return response.json();
     }
@@ -621,6 +660,91 @@ export const ticketSettingsAPI = {
         const response = await authenticatedFetch(`${API_URL}/api/ticket-settings/${storeId}`, {
             method: 'PUT',
             body: JSON.stringify(settings)
+        });
+        return response.json();
+    }
+};
+
+// ==========================================
+// MÓDULOS FINANCIEROS Y COMPRAS
+// ==========================================
+
+export const suppliersAPI = {
+    getAll: async () => {
+        const response = await authenticatedFetch(`${API_URL}/api/suppliers`);
+        return response.json();
+    },
+    getById: async (id: string) => {
+        const response = await authenticatedFetch(`${API_URL}/api/suppliers/${id}`);
+        return response.json();
+    },
+    create: async (supplier: any) => {
+        const response = await authenticatedFetch(`${API_URL}/api/suppliers`, {
+            method: 'POST',
+            body: JSON.stringify(supplier)
+        });
+        return response.json();
+    },
+    update: async (id: string, updates: any) => {
+        const response = await authenticatedFetch(`${API_URL}/api/suppliers/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify(updates)
+        });
+        return response.json();
+    },
+    delete: async (id: string) => {
+        const response = await authenticatedFetch(`${API_URL}/api/suppliers/${id}`, {
+            method: 'DELETE'
+        });
+        return response.json();
+    }
+};
+
+export const purchasesAPI = {
+    getAll: async () => {
+        const response = await authenticatedFetch(`${API_URL}/api/purchases`);
+        return response.json();
+    },
+    getById: async (id: string) => {
+        const response = await authenticatedFetch(`${API_URL}/api/purchases/${id}`);
+        return response.json();
+    },
+    create: async (purchase: any) => {
+        const response = await authenticatedFetch(`${API_URL}/api/purchases`, {
+            method: 'POST',
+            body: JSON.stringify(purchase)
+        });
+        return response.json();
+    },
+    receive: async (id: string, options: { createPayable: boolean, dueDate?: string }) => {
+        const response = await authenticatedFetch(`${API_URL}/api/purchases/${id}/receive`, {
+            method: 'PUT',
+            body: JSON.stringify(options)
+        });
+        return response.json();
+    }
+};
+
+export const financialsAPI = {
+    getReceivables: async () => {
+        const response = await authenticatedFetch(`${API_URL}/api/financials/receivables`);
+        return response.json();
+    },
+    getPayables: async () => {
+        const response = await authenticatedFetch(`${API_URL}/api/financials/payables`);
+        return response.json();
+    },
+    payReceivable: async (id: string, paymentData: any) => {
+        const response = await authenticatedFetch(`${API_URL}/api/financials/receivables/${id}/pay`, {
+            method: 'POST',
+            body: JSON.stringify(paymentData)
+        });
+        return response.json();
+    },
+    payPayable: async (id: string, paymentData: any) => {
+        const response = await authenticatedFetch(`${API_URL}/api/financials/payables/${id}/pay`, {
+            method: 'POST',
+            body: JSON.stringify(paymentData)
         });
         return response.json();
     }

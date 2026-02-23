@@ -37,6 +37,15 @@ const POS: React.FC = () => {
   const [isCashCloseOpen, setIsCashCloseOpen] = useState(false);
   const [isSupportOpen, setIsSupportOpen] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'CARD' | 'TRANSFER'>('CASH');
+
+  // Omnichannel states
+  const [saleType, setSaleType] = useState<'RETAIL' | 'WHOLESALE' | 'ECOMMERCE'>('RETAIL');
+  const [saleStatus, setSaleStatus] = useState<'ACTIVE' | 'PENDING'>('ACTIVE');
+  const [clientId, setClientId] = useState<string>('');
+  const [deliveryDate, setDeliveryDate] = useState<string>('');
+  const [shippingAddress, setShippingAddress] = useState<string>('');
+  const [ecommerceOrderId, setEcommerceOrderId] = useState<string>('');
+
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Auto-Refresh Logic: Removed redundant syncData call to prevent loops.
@@ -154,6 +163,12 @@ const POS: React.FC = () => {
     setCart([]);
     setIsCheckoutOpen(false);
     setAmountReceived('');
+    setSaleType('RETAIL');
+    setSaleStatus('ACTIVE');
+    setClientId('');
+    setDeliveryDate('');
+    setShippingAddress('');
+    setEcommerceOrderId('');
   };
 
   const subtotal = cart.reduce((sum, item) => sum + (item.sellingPrice * item.quantity), 0);
@@ -205,8 +220,15 @@ const POS: React.FC = () => {
 
     const cartSnapshot = [...cart];
     // --- EL CAMBIO CLAVE ESTÁ AQUÍ ---
-    // En lugar de 'CASH' fijo, enviamos la variable paymentMethod
-    const result = await processSaleAndContributeToGoal(itemsToProcess, paymentMethod);
+    // En lugar de 'CASH' fijo, enviamos la variable paymentMethod y las opciones omnicanales
+    const result = await processSaleAndContributeToGoal(itemsToProcess, paymentMethod, {
+      clientId: clientId || undefined,
+      saleType,
+      deliveryDate: deliveryDate || undefined,
+      shippingAddress: shippingAddress || undefined,
+      ecommerceOrderId: ecommerceOrderId || undefined,
+      status: saleStatus
+    });
 
     if (result.success) {
       // Use the persisted sale from backend/store context
@@ -239,6 +261,12 @@ const POS: React.FC = () => {
       setIsCheckoutOpen(false);
       setAmountReceived('');
       setPaymentMethod('CASH'); // Resetear a efectivo para la siguiente venta
+      setSaleType('RETAIL');
+      setSaleStatus('ACTIVE');
+      setClientId('');
+      setDeliveryDate('');
+      setShippingAddress('');
+      setEcommerceOrderId('');
       setShowTicket(true); // Open modal with ticket
 
       // Keep sale summary for modal, don't auto-clear
@@ -459,6 +487,56 @@ const POS: React.FC = () => {
             </button>
           </div>
           {/* --- FIN DE LA INSERCIÓN --- */}
+
+          {/* OMNICHANNEL OPTIONS (Solo simplificado para Retail/Wholesale y Pedidos Pendientes) */}
+          <div className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-[10px] font-black uppercase text-brand-muted">Tipo de Venta</label>
+                <select
+                  className="w-full p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-xs font-bold"
+                  value={saleType}
+                  onChange={(e) => setSaleType(e.target.value as any)}
+                >
+                  <option value="RETAIL">Venta Directa (Retail)</option>
+                  <option value="WHOLESALE">Venta Mayorista</option>
+                  <option value="ECOMMERCE">Pedido E-commerce</option>
+                </select>
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-black uppercase text-brand-muted">Estado del Pedido</label>
+                <select
+                  className="w-full p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-xs font-bold"
+                  value={saleStatus}
+                  onChange={(e) => setSaleStatus(e.target.value as any)}
+                >
+                  <option value="ACTIVE">Completado / Entregado</option>
+                  <option value="PENDING">Pendiente / Por Entregar</option>
+                </select>
+              </div>
+            </div>
+
+            {saleStatus === 'PENDING' && (
+              <div className="space-y-3 pt-3 border-t border-slate-200 dark:border-slate-800">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black uppercase text-brand-muted">Fecha de Entrega (Opcional)</label>
+                  <input type="datetime-local"
+                    className="w-full p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-xs"
+                    value={deliveryDate}
+                    onChange={(e) => setDeliveryDate(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black uppercase text-brand-muted">Dirección de Envío (Opcional)</label>
+                  <input type="text" placeholder="Ej. Calle 123, Colonia Centro..."
+                    className="w-full p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-xs"
+                    value={shippingAddress}
+                    onChange={(e) => setShippingAddress(e.target.value)}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
 
           <div className="space-y-2 px-2">
             <label className="block text-[10px] font-black uppercase tracking-widest">

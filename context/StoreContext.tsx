@@ -30,7 +30,18 @@ interface StoreContextType {
   addProduct: (product: Omit<Product, 'ownerId' | 'id'>, activeStoreId?: string) => Promise<void>;
   updateProduct: (product: Product) => Promise<void>;
   deleteProduct: (id: string) => Promise<void>;
-  processSaleAndContributeToGoal: (cartItems: CartItem[], paymentMethod: 'CASH' | 'CARD' | 'TRANSFER') => Promise<SaleResult>;
+  processSaleAndContributeToGoal: (
+    cartItems: CartItem[],
+    paymentMethod: 'CASH' | 'CARD' | 'TRANSFER',
+    options?: {
+      clientId?: string;
+      saleType?: 'RETAIL' | 'WHOLESALE' | 'ECOMMERCE';
+      deliveryDate?: string;
+      shippingAddress?: string;
+      ecommerceOrderId?: string;
+      status?: 'ACTIVE' | 'PENDING';
+    }
+  ) => Promise<SaleResult>;
   cancelSale: (saleId: string) => Promise<void>;
   updateSettings: (settings: FinancialSettings) => void;
   getDashboardStats: (period: 'day' | 'month', storeId?: string) => Promise<any>;
@@ -923,7 +934,18 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     }, 0);
   };
 
-  const processSaleAndContributeToGoal = async (cartItems: CartItem[], paymentMethod: 'CASH' | 'CARD' | 'TRANSFER'): Promise<SaleResult> => {
+  const processSaleAndContributeToGoal = async (
+    cartItems: CartItem[],
+    paymentMethod: 'CASH' | 'CARD' | 'TRANSFER',
+    options?: {
+      clientId?: string;
+      saleType?: 'RETAIL' | 'WHOLESALE' | 'ECOMMERCE';
+      deliveryDate?: string;
+      shippingAddress?: string;
+      ecommerceOrderId?: string;
+      status?: 'ACTIVE' | 'PENDING';
+    }
+  ): Promise<SaleResult> => {
     if (!currentUser) return { totalRevenueAdded: 0, totalProfitAdded: 0, success: false };
 
     // 🔒 CRITICAL: Lock to prevent background sync during transaction
@@ -965,7 +987,12 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         totalCost: totalTransactionRevenue - totalTransactionProfit, // Approximate
         netProfit: totalTransactionProfit,
         paymentMethod,
-        status: 'ACTIVE',
+        status: options?.status || 'ACTIVE',
+        clientId: options?.clientId,
+        saleType: options?.saleType || 'RETAIL',
+        deliveryDate: options?.deliveryDate,
+        shippingAddress: options?.shippingAddress,
+        ecommerceOrderId: options?.ecommerceOrderId,
         items: saleItems,
         syncedAt: isOnline ? new Date() : null
       };

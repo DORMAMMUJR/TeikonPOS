@@ -152,7 +152,116 @@ const User = sequelize.define('User', {
 });
 
 // ==========================================
-// MODELO: Product (Producto)
+// MODELO: CatalogProduct (Catálogo Global Estático)
+// ==========================================
+const CatalogProduct = sequelize.define('CatalogProduct', {
+    id: {
+        type: DataTypes.UUID,
+        defaultValue: DataTypes.UUIDV4,
+        primaryKey: true
+    },
+    sku: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        unique: true,
+        comment: 'GTIN/UPC/SKU Universal'
+    },
+    nombre: {
+        type: DataTypes.STRING,
+        allowNull: false
+    },
+    categoria: {
+        type: DataTypes.STRING,
+        allowNull: false
+    },
+    description: {
+        type: DataTypes.TEXT,
+        allowNull: true
+    },
+    imagen: {
+        type: DataTypes.TEXT,
+        allowNull: true
+    }
+}, {
+    tableName: 'catalog_products',
+    timestamps: true
+});
+
+// ==========================================
+// MODELO: InventoryItem (Inventario Dinámico por Tienda)
+// ==========================================
+const InventoryItem = sequelize.define('InventoryItem', {
+    id: {
+        type: DataTypes.UUID,
+        defaultValue: DataTypes.UUIDV4,
+        primaryKey: true
+    },
+    storeId: {
+        type: DataTypes.UUID,
+        allowNull: false,
+        references: {
+            model: 'stores',
+            key: 'id'
+        },
+        field: 'store_id'
+    },
+    catalogProductId: {
+        type: DataTypes.UUID,
+        allowNull: false,
+        references: {
+            model: 'catalog_products',
+            key: 'id'
+        },
+        field: 'catalog_product_id'
+    },
+    costPrice: {
+        type: DataTypes.DECIMAL(10, 2),
+        allowNull: false,
+        field: 'cost_price'
+    },
+    salePrice: {
+        type: DataTypes.DECIMAL(10, 2),
+        allowNull: false,
+        field: 'sale_price'
+    },
+    stock: {
+        type: DataTypes.INTEGER,
+        defaultValue: 0
+    },
+    minStock: {
+        type: DataTypes.INTEGER,
+        defaultValue: 0,
+        field: 'min_stock'
+    },
+    taxRate: {
+        type: DataTypes.DECIMAL(5, 2),
+        defaultValue: 0,
+        field: 'tax_rate'
+    },
+    activo: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: true
+    }
+}, {
+    tableName: 'inventory_items',
+    timestamps: true,
+    indexes: [
+        {
+            fields: ['store_id']
+        },
+        {
+            fields: ['catalog_product_id']
+        },
+        {
+            // Un producto del catálogo solo deberia tener un item de inventario por tienda
+            unique: true,
+            fields: ['store_id', 'catalog_product_id']
+        }
+    ]
+});
+
+// ==========================================
+// MODELO: Product (LEGACY - Para Migración)
 // ==========================================
 const Product = sequelize.define('Product', {
     id: {
@@ -286,8 +395,37 @@ const Sale = sequelize.define('Sale', {
         allowNull: false,
         field: 'payment_method'
     },
+    clientId: {
+        type: DataTypes.UUID,
+        allowNull: true,
+        references: {
+            model: 'clients',
+            key: 'id'
+        },
+        field: 'client_id'
+    },
+    saleType: {
+        type: DataTypes.STRING,
+        defaultValue: 'RETAIL',
+        field: 'sale_type'
+    },
+    deliveryDate: {
+        type: DataTypes.DATE,
+        allowNull: true,
+        field: 'delivery_date'
+    },
+    shippingAddress: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+        field: 'shipping_address'
+    },
+    ecommerceOrderId: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        field: 'ecommerce_order_id'
+    },
     status: {
-        type: DataTypes.ENUM('ACTIVE', 'CANCELLED', 'PENDING_SYNC'),
+        type: DataTypes.ENUM('ACTIVE', 'CANCELLED', 'PENDING_SYNC', 'PENDING', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'COMPLETED'),
         defaultValue: 'ACTIVE'
     },
     items: {
@@ -501,7 +639,7 @@ const StockMovement = sequelize.define('StockMovement', {
         field: 'store_id'
     },
     tipo: {
-        type: DataTypes.ENUM('SALE', 'PURCHASE', 'ADJUSTMENT', 'THEFT', 'RETURN', 'TRANSFER'),
+        type: DataTypes.ENUM('SALE', 'PURCHASE', 'ADJUSTMENT', 'THEFT', 'RETURN', 'TRANSFER', 'SHRINKAGE', 'ADMIN_CORRECTION'),
         allowNull: false
     },
     cantidad: {
@@ -640,8 +778,137 @@ const Shift = sequelize.define('Shift', {
 });
 
 // ==========================================
+// MODELOS FINANCIEROS Y COMPRAS
+// ==========================================
+
+// 1. Supplier (Proveedor)
+const Supplier = sequelize.define('Supplier', {
+    id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
+    storeId: { type: DataTypes.UUID, allowNull: false, field: 'store_id' },
+    nombre: { type: DataTypes.STRING, allowNull: false },
+    rfc: { type: DataTypes.STRING, allowNull: true },
+    telefono: { type: DataTypes.STRING, allowNull: true },
+    email: { type: DataTypes.STRING, allowNull: true },
+    direccion: { type: DataTypes.TEXT, allowNull: true },
+    diasCredito: { type: DataTypes.INTEGER, defaultValue: 0, field: 'dias_credito' },
+    limiteCredito: { type: DataTypes.DECIMAL(10, 2), defaultValue: 0, field: 'limite_credito' },
+    activo: { type: DataTypes.BOOLEAN, defaultValue: true }
+}, { tableName: 'suppliers', timestamps: true, indexes: [{ fields: ['store_id'] }] });
+
+// 2. PurchaseOrder (Orden de Compra)
+const PurchaseOrder = sequelize.define('PurchaseOrder', {
+    id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
+    storeId: { type: DataTypes.UUID, allowNull: false, field: 'store_id' },
+    supplierId: { type: DataTypes.UUID, allowNull: false, field: 'supplier_id' },
+    fechaEmision: { type: DataTypes.DATEONLY, allowNull: false, defaultValue: DataTypes.NOW, field: 'fecha_emision' },
+    fechaEsperada: { type: DataTypes.DATEONLY, allowNull: true, field: 'fecha_esperada' },
+    estado: { type: DataTypes.ENUM('PENDING', 'PARTIAL', 'COMPLETED', 'CANCELLED'), defaultValue: 'PENDING' },
+    subtotal: { type: DataTypes.DECIMAL(10, 2), defaultValue: 0 },
+    totalImpuestos: { type: DataTypes.DECIMAL(10, 2), defaultValue: 0, field: 'total_impuestos' },
+    total: { type: DataTypes.DECIMAL(10, 2), defaultValue: 0 },
+    estadoPago: { type: DataTypes.ENUM('UNPAID', 'PARTIAL', 'PAID'), defaultValue: 'UNPAID', field: 'estado_pago' }
+}, { tableName: 'purchase_orders', timestamps: true, indexes: [{ fields: ['store_id'] }, { fields: ['supplier_id'] }] });
+
+// 3. PurchaseOrderItem (Detalle de Orden de Compra)
+const PurchaseOrderItem = sequelize.define('PurchaseOrderItem', {
+    id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
+    purchaseOrderId: { type: DataTypes.UUID, allowNull: false, field: 'purchase_order_id' },
+    inventoryItemId: { type: DataTypes.UUID, allowNull: true, field: 'inventory_item_id' },
+    nombre: { type: DataTypes.STRING, allowNull: false },
+    cantidad: { type: DataTypes.INTEGER, allowNull: false },
+    cantidadRecibida: { type: DataTypes.INTEGER, defaultValue: 0, field: 'cantidad_recibida' },
+    precioUnitario: { type: DataTypes.DECIMAL(10, 2), allowNull: false, field: 'precio_unitario' },
+    subtotal: { type: DataTypes.DECIMAL(10, 2), allowNull: false }
+}, { tableName: 'purchase_order_items', timestamps: true });
+
+// 4. AccountReceivable (Cuentas por Cobrar - CxC)
+const AccountReceivable = sequelize.define('AccountReceivable', {
+    id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
+    storeId: { type: DataTypes.UUID, allowNull: false, field: 'store_id' },
+    clientId: { type: DataTypes.UUID, allowNull: false, field: 'client_id' },
+    saleId: { type: DataTypes.UUID, allowNull: false, field: 'sale_id' },
+    montoTotal: { type: DataTypes.DECIMAL(10, 2), allowNull: false, field: 'monto_total' },
+    saldoPendiente: { type: DataTypes.DECIMAL(10, 2), allowNull: false, field: 'saldo_pendiente' },
+    fechaVencimiento: { type: DataTypes.DATEONLY, allowNull: false, field: 'fecha_vencimiento' },
+    estado: { type: DataTypes.ENUM('PENDING', 'PARTIAL', 'PAID', 'OVERDUE'), defaultValue: 'PENDING' }
+}, { tableName: 'accounts_receivable', timestamps: true, indexes: [{ fields: ['store_id'] }, { fields: ['client_id'] }] });
+
+// 5. AccountPayable (Cuentas por Pagar - CxP)
+const AccountPayable = sequelize.define('AccountPayable', {
+    id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
+    storeId: { type: DataTypes.UUID, allowNull: false, field: 'store_id' },
+    supplierId: { type: DataTypes.UUID, allowNull: true, field: 'supplier_id' }, // Nullable if it's an expense without supplier
+    referenciaId: { type: DataTypes.UUID, allowNull: false, field: 'referencia_id' }, // Can be PurchaseOrder ID or Expense ID
+    tipoReferencia: { type: DataTypes.ENUM('PURCHASE', 'EXPENSE', 'OTHER'), allowNull: false, field: 'tipo_referencia' },
+    montoTotal: { type: DataTypes.DECIMAL(10, 2), allowNull: false, field: 'monto_total' },
+    saldoPendiente: { type: DataTypes.DECIMAL(10, 2), allowNull: false, field: 'saldo_pendiente' },
+    fechaVencimiento: { type: DataTypes.DATEONLY, allowNull: false, field: 'fecha_vencimiento' },
+    estado: { type: DataTypes.ENUM('PENDING', 'PARTIAL', 'PAID', 'OVERDUE'), defaultValue: 'PENDING' }
+}, { tableName: 'accounts_payable', timestamps: true, indexes: [{ fields: ['store_id'] }] });
+
+// 6. PaymentTransaction (Abonos y Pagos)
+const PaymentTransaction = sequelize.define('PaymentTransaction', {
+    id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
+    storeId: { type: DataTypes.UUID, allowNull: false, field: 'store_id' },
+    cuentaId: { type: DataTypes.UUID, allowNull: false, field: 'cuenta_id' }, // Reference to AccountReceivable or AccountPayable
+    tipoCuenta: { type: DataTypes.ENUM('RECEIVABLE', 'PAYABLE'), allowNull: false, field: 'tipo_cuenta' },
+    monto: { type: DataTypes.DECIMAL(10, 2), allowNull: false },
+    metodoPago: { type: DataTypes.ENUM('CASH', 'CARD', 'TRANSFER'), allowNull: false, field: 'metodo_pago' },
+    fecha: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
+    comprobante: { type: DataTypes.STRING, allowNull: true },
+    referencia: { type: DataTypes.STRING, allowNull: true },
+    registradoPor: { type: DataTypes.STRING, allowNull: false, field: 'registrado_por' },
+    shiftId: { type: DataTypes.INTEGER, allowNull: true, field: 'shift_id' } // Link to cash shift
+}, { tableName: 'payment_transactions', timestamps: true, indexes: [{ fields: ['store_id'] }] });
+
+// ==========================================
 // RELACIONES
 // ==========================================
+
+// CatalogProduct -> InventoryItem (1:N)
+CatalogProduct.hasMany(InventoryItem, { foreignKey: 'catalogProductId', as: 'inventoryItems', onDelete: 'CASCADE' });
+InventoryItem.belongsTo(CatalogProduct, { foreignKey: 'catalogProductId', as: 'catalogProduct' });
+
+// Nuevas Relaciones Módulos Financieros y Compras
+Store.hasMany(Supplier, { foreignKey: 'storeId', as: 'suppliers' });
+Supplier.belongsTo(Store, { foreignKey: 'storeId', as: 'store' });
+
+Store.hasMany(PurchaseOrder, { foreignKey: 'storeId', as: 'purchaseOrders' });
+PurchaseOrder.belongsTo(Store, { foreignKey: 'storeId', as: 'store' });
+
+Supplier.hasMany(PurchaseOrder, { foreignKey: 'supplierId', as: 'purchaseOrders' });
+PurchaseOrder.belongsTo(Supplier, { foreignKey: 'supplierId', as: 'supplier' });
+
+PurchaseOrder.hasMany(PurchaseOrderItem, { foreignKey: 'purchaseOrderId', as: 'items', onDelete: 'CASCADE' });
+PurchaseOrderItem.belongsTo(PurchaseOrder, { foreignKey: 'purchaseOrderId', as: 'purchaseOrder' });
+
+InventoryItem.hasMany(PurchaseOrderItem, { foreignKey: 'inventoryItemId' });
+PurchaseOrderItem.belongsTo(InventoryItem, { foreignKey: 'inventoryItemId', as: 'inventoryItem' });
+
+Store.hasMany(AccountReceivable, { foreignKey: 'storeId', as: 'accountsReceivable' });
+AccountReceivable.belongsTo(Store, { foreignKey: 'storeId', as: 'store' });
+
+Client.hasMany(AccountReceivable, { foreignKey: 'clientId', as: 'accountsReceivable' });
+AccountReceivable.belongsTo(Client, { foreignKey: 'clientId', as: 'client' });
+
+Sale.hasOne(AccountReceivable, { foreignKey: 'saleId', as: 'accountReceivable' });
+AccountReceivable.belongsTo(Sale, { foreignKey: 'saleId', as: 'sale' });
+
+Store.hasMany(AccountPayable, { foreignKey: 'storeId', as: 'accountsPayable' });
+AccountPayable.belongsTo(Store, { foreignKey: 'storeId', as: 'store' });
+
+Supplier.hasMany(AccountPayable, { foreignKey: 'supplierId', as: 'accountsPayable' });
+AccountPayable.belongsTo(Supplier, { foreignKey: 'supplierId', as: 'supplier' });
+
+Store.hasMany(PaymentTransaction, { foreignKey: 'storeId', as: 'paymentTransactions' });
+PaymentTransaction.belongsTo(Store, { foreignKey: 'storeId', as: 'store' });
+
+Shift.hasMany(PaymentTransaction, { foreignKey: 'shiftId', as: 'paymentTransactions' });
+PaymentTransaction.belongsTo(Shift, { foreignKey: 'shiftId', as: 'shift' });
+
+// Store -> InventoryItem (1:N)
+Store.hasMany(InventoryItem, { foreignKey: 'storeId', as: 'inventory', onDelete: 'CASCADE' });
+InventoryItem.belongsTo(Store, { foreignKey: 'storeId', as: 'store' });
 
 // Organization -> Store (1:N)
 Organization.hasMany(Store, { foreignKey: 'organizationId', as: 'stores' });
@@ -654,6 +921,10 @@ Product.belongsTo(Store, { foreignKey: 'storeId', as: 'store' });
 // Store -> Sale (1:N)
 Store.hasMany(Sale, { foreignKey: 'storeId', as: 'sales', onDelete: 'CASCADE' });
 Sale.belongsTo(Store, { foreignKey: 'storeId', as: 'store' });
+
+// Client -> Sale (1:N)
+Client.hasMany(Sale, { foreignKey: 'clientId', as: 'sales', onDelete: 'SET NULL' });
+Sale.belongsTo(Client, { foreignKey: 'clientId', as: 'client' });
 
 // Sale <-> SaleItem (1:N)
 Sale.hasMany(SaleItem, { foreignKey: 'saleId' });
@@ -905,7 +1176,9 @@ export {
     Organization,
     Store,
     User,
-    Product,
+    CatalogProduct,
+    InventoryItem,
+    Product, // LEGACY
     Sale,
     SaleItem,
     Expense,
@@ -915,5 +1188,11 @@ export {
     Ticket,
     StoreConfig,
     GoalHistory,
-    TicketSettings
+    TicketSettings,
+    Supplier,
+    PurchaseOrder,
+    PurchaseOrderItem,
+    AccountReceivable,
+    AccountPayable,
+    PaymentTransaction
 };

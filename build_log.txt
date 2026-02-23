@@ -1,0 +1,23 @@
+
+> teikon@0.0.0 build
+> vite build
+
+[36mvite v6.4.1 [32mbuilding for production...[36m[39m
+transforming...
+[32m✓[39m 61 modules transformed.
+[31m✗[39m Build failed in 1.65s
+[31merror during build:
+[31m[vite]: Rollup failed to resolve import "xlsx" from "C:/Users/DELL CORE I7/Downloads/Teikongg/TeikonPOS/components/BulkImportModal.tsx".
+This is most likely unintended because it can break your application at runtime.
+If you do want to externalize this module explicitly add it to
+`build.rollupOptions.external`[31m
+    at viteLog (file:///C:/Users/DELL%20CORE%20I7/Downloads/Teikongg/TeikonPOS/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:46374:15)
+    at file:///C:/Users/DELL%20CORE%20I7/Downloads/Teikongg/TeikonPOS/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:46432:18
+    at onwarn (file:///C:/Users/DELL%20CORE%20I7/Downloads/Teikongg/TeikonPOS/node_modules/@vitejs/plugin-react/dist/index.js:76:7)
+    at file:///C:/Users/DELL%20CORE%20I7/Downloads/Teikongg/TeikonPOS/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:46430:7
+    at onRollupLog (file:///C:/Users/DELL%20CORE%20I7/Downloads/Teikongg/TeikonPOS/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:46422:5)
+    at onLog (file:///C:/Users/DELL%20CORE%20I7/Downloads/Teikongg/TeikonPOS/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:46072:7)
+    at file:///C:/Users/DELL%20CORE%20I7/Downloads/Teikongg/TeikonPOS/node_modules/rollup/dist/es/shared/node-entry.js:21032:32
+    at Object.logger [as onLog] (file:///C:/Users/DELL%20CORE%20I7/Downloads/Teikongg/TeikonPOS/node_modules/rollup/dist/es/shared/node-entry.js:22919:9)
+    at ModuleLoader.handleInvalidResolvedId (file:///C:/Users/DELL%20CORE%20I7/Downloads/Teikongg/TeikonPOS/node_modules/rollup/dist/es/shared/node-entry.js:21663:26)
+    at file:///C:/Users/DELL%20CORE%20I7/Downloads/Teikongg/TeikonPOS/node_modules/rollup/dist/es/shared/node-entry.js:21621:26[39m

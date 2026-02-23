@@ -23,11 +23,13 @@ export const startShift = async (req, res) => {
             });
         }
 
+        const startBal = initialAmount !== undefined ? initialAmount : (req.body.startBalance || 0);
+
         // Crear nuevo turno
         const newShift = await Shift.create({
             storeId,
             startTime: new Date(),
-            startBalance: initialAmount || 0,
+            startBalance: startBal,
             status: 'OPEN',
             openedBy: openedBy || 'Sistema'
         });
@@ -42,7 +44,10 @@ export const startShift = async (req, res) => {
 // POST /api/shifts/end
 export const endShift = async (req, res) => {
     try {
-        const { shiftId, endBalance, expectedBalance, totalSales, totalCash, totalCard, totalTransfer, difference, notes, closedBy } = req.body;
+        const { shiftId, endBalance, finalAmount, expectedBalance, expectedAmount, totalSales, totalCash, totalCard, totalTransfer, difference, notes, closedBy } = req.body;
+
+        const actualEndBalance = endBalance !== undefined ? endBalance : (finalAmount || 0);
+        const actualExpectedBalance = expectedBalance !== undefined ? expectedBalance : (expectedAmount || 0);
 
         // Obtener el turno abierto de la tienda o por el shiftId proporcionado
         let shift;
@@ -62,8 +67,8 @@ export const endShift = async (req, res) => {
 
         // Actualizar datos del turno al cerrar
         shift.endTime = new Date();
-        shift.endBalance = endBalance;
-        shift.expectedBalance = expectedBalance || shift.startBalance + totalCash;
+        shift.endBalance = actualEndBalance;
+        shift.expectedBalance = actualExpectedBalance || shift.startBalance + totalCash;
         shift.totalSales = totalSales;
         shift.cashReceived = totalCash;
         shift.cardReceived = totalCard;

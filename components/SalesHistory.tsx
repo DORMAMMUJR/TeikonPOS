@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useStore } from '../context/StoreContext';
-import { Search, Printer, X, Calendar, FileText, History as HistoryIcon, Loader2, Trash2 } from 'lucide-react';
+import { Search, Printer, X, Calendar, FileText, History as HistoryIcon, Loader2, Trash2, Package } from 'lucide-react';
 import { Modal, Button, TeikonWordmark } from '../src/components/ui';
 import { SaleTicket } from './SaleTicket';
 import { Sale } from '../types';
@@ -126,6 +126,28 @@ const SalesHistory: React.FC<SalesHistoryProps> = ({ targetStoreId }) => {
     }
   };
 
+  const handleUpdateStatus = async (sale: Sale, newStatus: string) => {
+    if (!window.confirm(`¿Seguro que deseas marcar este pedido como ${newStatus}?`)) return;
+
+    setIsLoadingStore(true);
+    try {
+      await salesAPI.updateStatus(sale.id, newStatus);
+
+      // Update local state if we are in admin specific view
+      if (targetStoreId) {
+        const fetchedSales = await salesAPI.getAll({ storeId: targetStoreId });
+        setStoreSales(fetchedSales);
+      } else {
+        // Just reload the page for simplicity instead of mutating global context arrays manually
+        window.location.reload();
+      }
+    } catch (e: any) {
+      alert("Error al actualizar estado: " + e.message);
+    } finally {
+      setIsLoadingStore(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-center gap-4 bg-pink-50 dark:bg-pink-950/10 p-8 rounded-3xl border border-pink-100 dark:border-pink-900/30 shadow-sm border-t-4 border-t-brand-pink">
@@ -201,12 +223,23 @@ const SalesHistory: React.FC<SalesHistoryProps> = ({ targetStoreId }) => {
                     ${formatMoney(sale.total)}
                   </td>
                   <td className="px-8 py-5 whitespace-nowrap text-center">
-                    <span className={`px-4 py-1 rounded-full text-[9px] font-black uppercase ${sale.status === 'ACTIVE'
-                      ? 'bg-emerald-500/10 text-emerald-500'
-                      : 'bg-red-500/10 text-red-500'
-                      }`}>
-                      {sale.status === 'ACTIVE' ? 'Aprobada' : 'Devolución'}
-                    </span>
+                    <div className="flex flex-col items-center gap-1">
+                      <span className={`px-4 py-1 rounded-full text-[9px] font-black uppercase ${sale.status === 'ACTIVE' ? 'bg-emerald-500/10 text-emerald-500' :
+                          sale.status === 'PENDING' ? 'bg-amber-500/10 text-amber-500' :
+                            sale.status === 'DELIVERED' || sale.status === 'COMPLETED' ? 'bg-blue-500/10 text-blue-500' :
+                              'bg-red-500/10 text-red-500'
+                        }`}>
+                        {sale.status === 'ACTIVE' ? 'Aprobada' :
+                          sale.status === 'PENDING' ? 'Pendiente' :
+                            sale.status === 'DELIVERED' ? 'Entregado' :
+                              sale.status === 'COMPLETED' ? 'Completado' : 'Cancelada'}
+                      </span>
+                      {sale.saleType && sale.saleType !== 'RETAIL' && (
+                        <span className="text-[8px] font-bold text-slate-500 uppercase bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">
+                          {sale.saleType}
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-8 py-5 whitespace-nowrap text-center">
                     <div className="flex justify-center gap-2">
@@ -226,7 +259,17 @@ const SalesHistory: React.FC<SalesHistoryProps> = ({ targetStoreId }) => {
                         <Printer size={14} className="mr-1" />
                         IMPRIMIR
                       </Button>
-                      {sale.status === 'ACTIVE' && (
+                      {sale.status === 'PENDING' && (
+                        <Button
+                          variant="primary"
+                          onClick={() => handleUpdateStatus(sale, 'DELIVERED')}
+                          className="h-8 text-[10px] bg-emerald-500 text-white hover:bg-emerald-600 border-none px-3"
+                        >
+                          <Package size={14} className="mr-1" />
+                          ENTREGAR
+                        </Button>
+                      )}
+                      {(sale.status === 'ACTIVE' || sale.status === 'PENDING') && (
                         <Button
                           variant="secondary"
                           onClick={() => setSaleToCancel(sale)}

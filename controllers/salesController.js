@@ -1,4 +1,4 @@
-import { sequelize, Sale, Shift, Product } from '../models.js';
+import { sequelize, Sale, Shift, Product, StockMovement } from '../models.js';
 import { Op } from 'sequelize';
 
 // ==========================================
@@ -101,7 +101,7 @@ export const syncSales = async (req, res) => {
                 }
 
                 // 3. Crear Venta
-                await Sale.create({
+                const createdSale = await Sale.create({
                     total: finalTotal,
                     subtotal: finalSubtotal,
                     items: sale.items,
@@ -116,14 +116,30 @@ export const syncSales = async (req, res) => {
                     updatedAt: new Date()
                 }, { transaction: saleTransaction });
 
-                // 4. Descontar Stock (Ya validado y bloqueado arriba)
+                // 4. Descontar Stock y Registrar Movimiento (Ya validado y bloqueado arriba)
                 if (sale.items && Array.isArray(sale.items)) {
                     for (const item of sale.items) {
                         const productId = item.id || item.productId;
                         if (productId) {
                             const product = await Product.findByPk(productId, { transaction: saleTransaction });
                             if (product) {
-                                await product.decrement('stock', { by: item.quantity || 1, transaction: saleTransaction });
+                                const qtyToSubtract = item.quantity || 1;
+                                const stockAnterior = product.stock;
+                                const stockNuevo = stockAnterior - qtyToSubtract;
+
+                                await product.decrement('stock', { by: qtyToSubtract, transaction: saleTransaction });
+
+                                await StockMovement.create({
+                                    productId: product.id,
+                                    storeId: storeId,
+                                    tipo: 'SALE',
+                                    cantidad: qtyToSubtract,
+                                    stockAnterior: stockAnterior,
+                                    stockNuevo: stockNuevo,
+                                    motivo: `Venta Sincronizada #${createdSale.id.substring(0, 8)}`,
+                                    referenciaId: createdSale.id,
+                                    registradoPor: sale.vendedor || 'Sistema'
+                                }, { transaction: saleTransaction });
                             }
                         }
                     }
@@ -165,7 +181,8 @@ export const syncSales = async (req, res) => {
 export const createSale = async (req, res) => {
     const {
         total, subtotal, items, paymentMethod,
-        storeId, netProfit, totalCost, vendedor
+        storeId, netProfit, totalCost, vendedor,
+        clientId, saleType, deliveryDate, shippingAddress, ecommerceOrderId, status
     } = req.body;
 
     const transaction = await sequelize.transaction();
@@ -221,10 +238,15 @@ export const createSale = async (req, res) => {
             netProfit: netProfit || 0,
             totalCost: totalCost || 0,
             vendedor: vendedor || 'Sistema',
-            status: 'ACTIVE'
+            status: status || 'ACTIVE',
+            clientId: clientId || null,
+            saleType: saleType || 'RETAIL',
+            deliveryDate: deliveryDate || null,
+            shippingAddress: shippingAddress || null,
+            ecommerceOrderId: ecommerceOrderId || null
         }, { transaction });
 
-        // 5. Descontar Stock
+        // 5. Descontar Stock y Registrar Movimiento
         // Como ya tenemos el lock desde validateStockAvailability, es seguro descontar aquí
         if (items && Array.isArray(items)) {
             for (const item of items) {
@@ -233,7 +255,22 @@ export const createSale = async (req, res) => {
                     const product = await Product.findByPk(productId, { transaction });
                     if (product) {
                         const qtyToSubtract = Number(item.quantity) || Number(item.cantidad) || 1;
+                        const stockAnterior = product.stock;
+                        const stockNuevo = stockAnterior - qtyToSubtract;
+
                         await product.decrement('stock', { by: qtyToSubtract, transaction });
+
+                        await StockMovement.create({
+                            productId: product.id,
+                            storeId: storeId,
+                            tipo: 'SALE',
+                            cantidad: qtyToSubtract,
+                            stockAnterior: stockAnterior,
+                            stockNuevo: stockNuevo,
+                            motivo: `Venta #${newSale.id.substring(0, 8)}`,
+                            referenciaId: newSale.id,
+                            registradoPor: vendedor || 'Sistema'
+                        }, { transaction });
                     }
                 }
             }
@@ -348,7 +385,7 @@ export const cancelSale = async (req, res) => {
         sale.status = 'CANCELLED';
         await sale.save({ transaction });
 
-        // Restaurar Stock
+        // Restaurar Stock y Registrar Movimiento
         const saleItems = sale.items || [];
         if (Array.isArray(saleItems)) {
             for (const item of saleItems) {
@@ -357,7 +394,22 @@ export const cancelSale = async (req, res) => {
                     const product = await Product.findByPk(prodId, { transaction });
                     if (product) {
                         const qty = Number(item.quantity) || Number(item.cantidad) || 0;
+                        const stockAnterior = product.stock;
+                        const stockNuevo = stockAnterior + qty;
+
                         await product.increment('stock', { by: qty, transaction });
+
+                        await StockMovement.create({
+                            productId: product.id,
+                            storeId: storeId,
+                            tipo: 'RETURN',
+                            cantidad: qty,
+                            stockAnterior: stockAnterior,
+                            stockNuevo: stockNuevo,
+                            motivo: `Cancelación Venta #${sale.id.substring(0, 8)}`,
+                            referenciaId: sale.id,
+                            registradoPor: req.usuario || req.user?.username || 'Sistema'
+                        }, { transaction });
                     }
                 }
             }
@@ -370,5 +422,39 @@ export const cancelSale = async (req, res) => {
         await transaction.rollback();
         console.error('❌ Cancel Sale Error:', error);
         res.status(500).json({ success: false, message: 'Error cancelando venta', error: error.message });
+    }
+};
+
+// ==========================================
+// 5. Actualizar Estado de Venta
+// ==========================================
+export const updateSaleStatus = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { status } = req.body;
+        const { storeId, role } = req;
+
+        const sale = await Sale.findByPk(id);
+
+        if (!sale) {
+            return res.status(404).json({ success: false, message: 'Venta no encontrada' });
+        }
+
+        if (role !== 'SUPER_ADMIN' && sale.storeId !== storeId) {
+            return res.status(403).json({ success: false, message: 'No tienes permiso' });
+        }
+
+        const validStatuses = ['ACTIVE', 'CANCELLED', 'PENDING_SYNC', 'PENDING', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'COMPLETED'];
+        if (!validStatuses.includes(status)) {
+            return res.status(400).json({ success: false, message: 'Estado inválido' });
+        }
+
+        sale.status = status;
+        await sale.save();
+
+        res.json({ success: true, message: `Estado actualizado a ${status}`, sale });
+    } catch (error) {
+        console.error('❌ Error updating sale status:', error);
+        res.status(500).json({ success: false, message: 'Error actualizando estado', error: error.message });
     }
 };

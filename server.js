@@ -27,9 +27,13 @@ pool.connect()
 
 // Importar controladores
 import { getDashboardSummary } from './controllers/dashboardController.js';
-import { getCashCloseDetails, cancelSale, createSale, syncSales } from './controllers/salesController.js';
+import { getCashCloseDetails, cancelSale, createSale, syncSales, updateSaleStatus } from './controllers/salesController.js';
 import { createStore, getStores, deleteStore } from './controllers/storeController.js';
 import { startShift, endShift, getCurrentShift } from './controllers/shiftController.js';
+import { getInventoryMovements, createInventoryMovement } from './controllers/inventoryController.js';
+import { getSuppliers, getSupplierById, createSupplier, updateSupplier, deleteSupplier } from './controllers/supplierController.js';
+import { getPurchases, getPurchaseById, createPurchase, receivePurchase } from './controllers/purchaseController.js';
+import { getReceivables, getPayables, payReceivable, payPayable } from './controllers/financialController.js';
 
 import {
     sequelize,
@@ -525,6 +529,56 @@ app.get('/api/stores/:id/goal-history', authenticateToken, async (req, res) => {
     }
 });
 
+// GET /api/stores/:id/sales-history - Get monthly sales history for a year
+app.get('/api/stores/:id/sales-history', authenticateToken, async (req, res) => {
+    try {
+        const { id: storeId } = req.params;
+        const { year } = req.query;
+
+        // Check permissions
+        if (req.role !== 'SUPER_ADMIN' && req.storeId !== storeId) {
+            return res.status(403).json({ error: 'Acceso denegado' });
+        }
+
+        const targetYear = parseInt(year) || new Date().getFullYear();
+        const startOfYear = new Date(targetYear, 0, 1);
+        const endOfYear = new Date(targetYear, 11, 31, 23, 59, 59, 999);
+
+        // Fetch all active sales in the year
+        const sales = await Sale.findAll({
+            where: {
+                storeId,
+                status: 'ACTIVE',
+                createdAt: {
+                    [sequelize.Sequelize.Op.between]: [startOfYear, endOfYear]
+                }
+            },
+            attributes: ['createdAt', 'total'],
+            raw: true
+        });
+
+        // Calculate totals manually by month
+        const monthlyTotals = Array(12).fill(0);
+        for (const sale of sales) {
+            const date = new Date(sale.createdAt);
+            const monthIndex = date.getMonth(); // 0-11
+            monthlyTotals[monthIndex] += parseFloat(sale.total || 0);
+        }
+
+        // Format to array of 12 months with 0 if no sales
+        const monthlySales = monthlyTotals.map((total, index) => ({
+            month: index + 1,
+            year: targetYear,
+            totalSales: total
+        }));
+
+        res.json(monthlySales);
+    } catch (error) {
+        console.error('Error al obtener ventas mensuales:', error);
+        res.status(500).json({ error: 'Error interno al obtener ventas mensuales' });
+    }
+});
+
 // GET /api/admin/migrate-goals - Migrate existing goals to history (one-time)
 app.get('/api/admin/migrate-goals', authenticateToken, async (req, res) => {
     try {
@@ -734,9 +788,10 @@ app.put('/api/me/profile', authenticateToken, async (req, res) => {
 });
 
 // ==========================================
-// CANCELAR VENTA API
+// CANCELAR Y ACTUALIZAR VENTA API
 // ==========================================
 app.put('/api/ventas/:id/cancel', authenticateToken, cancelSale);
+app.put('/api/ventas/:id/status', authenticateToken, updateSaleStatus);
 
 // ==========================================
 // SHIFTS (TURNOS DE CAJA) API
@@ -807,6 +862,37 @@ app.post('/api/auth/request-password-reset', async (req, res) => {
         res.status(500).json({ error: 'Error al procesar la solicitud' });
     }
 });
+
+// ==========================================
+// ENDPOINTS DE INVENTARIO Y MOVIMIENTOS
+// ==========================================
+app.get('/api/inventory/movements', authenticateToken, getInventoryMovements);
+app.post('/api/inventory/movements', authenticateToken, createInventoryMovement);
+
+// ==========================================
+// ENDPOINTS DE PROVEEDORES
+// ==========================================
+app.get('/api/suppliers', authenticateToken, getSuppliers);
+app.get('/api/suppliers/:id', authenticateToken, getSupplierById);
+app.post('/api/suppliers', authenticateToken, createSupplier);
+app.put('/api/suppliers/:id', authenticateToken, updateSupplier);
+app.delete('/api/suppliers/:id', authenticateToken, deleteSupplier);
+
+// ==========================================
+// ENDPOINTS DE COMPRAS
+// ==========================================
+app.get('/api/purchases', authenticateToken, getPurchases);
+app.get('/api/purchases/:id', authenticateToken, getPurchaseById);
+app.post('/api/purchases', authenticateToken, createPurchase);
+app.put('/api/purchases/:id/receive', authenticateToken, receivePurchase);
+
+// ==========================================
+// ENDPOINTS FINANCIEROS (CxC / CxP)
+// ==========================================
+app.get('/api/financials/receivables', authenticateToken, getReceivables);
+app.get('/api/financials/payables', authenticateToken, getPayables);
+app.post('/api/financials/receivables/:id/pay', authenticateToken, payReceivable);
+app.post('/api/financials/payables/:id/pay', authenticateToken, payPayable);
 
 // GET /api/productos - Listar productos de la store (con agrupación por categoría)
 app.get('/api/productos', authenticateToken, async (req, res) => {

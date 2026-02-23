@@ -1,6 +1,7 @@
 
-
 import React, { useState, useEffect } from 'react';
+import GoalComparative from '../src/components/Analytics/GoalComparative';
+
 import { DollarSign, Target, Save, Calculator, AlertTriangle, CheckCircle2, Eye, User, Clock, TrendingUp } from 'lucide-react';
 import { Button } from '../src/components/ui';
 import { getAuthToken, API_URL, getCurrentUserFromToken } from '../utils/api';
@@ -37,12 +38,19 @@ const StoreOperations: React.FC<StoreOperationsProps> = ({ storeId, mode = 'cash
 
     const loadConfig = async () => {
         try {
-            const res = await fetch(`${API_URL}/api/config`, { headers: getHeaders() });
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = now.getMonth() + 1;
+
+            const res = await fetch(`${API_URL}/api/stores/${storeId}/goal-history?year=${year}`, { headers: getHeaders() });
             if (res.ok) {
                 const data = await res.json();
-                setGoal(data.breakEvenGoal || '');
+                const currentMonthGoal = data.find((g: any) => g.month === month && g.year === year);
+                setGoal(currentMonthGoal ? currentMonthGoal.amount : '');
             }
-        } catch (e) { console.error(e); }
+        } catch (e) {
+            console.error('Error loading goal history:', e);
+        }
     };
 
     const loadSummary = async () => {
@@ -67,14 +75,29 @@ const StoreOperations: React.FC<StoreOperationsProps> = ({ storeId, mode = 'cash
     const savedGoal = async () => {
         setIsSaving(true);
         try {
-            await fetch(`${API_URL}/api/config`, {
+            const amount = parseFloat(goal);
+            if (isNaN(amount) || amount < 0) {
+                alert('Por favor ingresa un monto válido mayor o igual a 0');
+                return;
+            }
+
+            const res = await fetch(`${API_URL}/api/stores/${storeId}/goal`, {
                 method: 'PUT',
                 headers: getHeaders(),
-                body: JSON.stringify({ breakEvenGoal: parseFloat(goal) || 0 })
+                body: JSON.stringify({ amount })
             });
-            alert('Meta actualizada correctamente');
-        } catch (e) { alert('Error al guardar meta'); }
-        finally { setIsSaving(false); }
+
+            if (res.ok) {
+                alert('Meta mensual actualizada correctamente');
+                // Disparo de evento para que GoalComparative se actualice si es necesario
+                window.dispatchEvent(new Event('goalUpdated'));
+            } else {
+                throw new Error('Error en respuesta del servidor');
+            }
+        } catch (e) {
+            console.error('Error al guardar meta:', e);
+            alert('Error al guardar meta mensual');
+        } finally { setIsSaving(false); }
     };
 
     const handleCloseShift = () => {
@@ -146,6 +169,9 @@ const StoreOperations: React.FC<StoreOperationsProps> = ({ storeId, mode = 'cash
                         </div>
                     )}
                 </div>
+
+                {/* VISTA COMPARATIVA DE METAS Y VENTAS */}
+                <GoalComparative storeId={storeId} />
             </div>
         );
     }
