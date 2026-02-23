@@ -731,7 +731,7 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         body: JSON.stringify({
           storeId: currentUser.storeId,
           initialAmount: startBalance,
-          openedBy: currentUser.username
+          openedBy: currentUser.id
         }),
         signal: controller.signal
       });

@@ -23,6 +23,10 @@ export const startShift = async (req, res) => {
             });
         }
 
+        if (!openedBy) {
+            return res.status(400).json({ success: false, message: 'openedBy (ID del usuario) es requerido' });
+        }
+
         const startBal = initialAmount !== undefined ? initialAmount : (req.body.startBalance || 0);
 
         // Crear nuevo turno
@@ -31,7 +35,7 @@ export const startShift = async (req, res) => {
             startTime: new Date(),
             startBalance: startBal,
             status: 'OPEN',
-            openedBy: openedBy || 'Sistema'
+            openedBy: openedBy
         });
 
         res.status(201).json(newShift);
@@ -75,7 +79,6 @@ export const endShift = async (req, res) => {
         shift.transferReceived = totalTransfer;
         shift.difference = difference;
         shift.notes = notes || '';
-        shift.closedBy = closedBy || req.usuario || 'Sistema';
         shift.status = 'CLOSED';
 
         await shift.save();
