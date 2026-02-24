@@ -638,45 +638,71 @@ const StockMovement = sequelize.define('StockMovement', {
         },
         field: 'store_id'
     },
-    tipo: {
-        type: DataTypes.ENUM('SALE', 'PURCHASE', 'ADJUSTMENT', 'THEFT', 'RETURN', 'TRANSFER', 'SHRINKAGE', 'ADMIN_CORRECTION'),
-        allowNull: false
+    type: {
+        type: DataTypes.ENUM('IN', 'OUT', 'ADJUST'),
+        allowNull: false,
+        field: 'type'
     },
-    cantidad: {
-        type: DataTypes.INTEGER,
-        allowNull: false
+    reason: {
+        type: DataTypes.ENUM('SALE', 'RETURN', 'PURCHASE', 'SHRINKAGE', 'THEFT', 'ADMIN_CORRECTION', 'INITIAL_STOCK'),
+        allowNull: false,
+        field: 'reason'
     },
-    stockAnterior: {
+    quantity: {
         type: DataTypes.INTEGER,
         allowNull: false,
-        field: 'stock_anterior'
+        field: 'quantity'
     },
-    stockNuevo: {
+    previousStock: {
         type: DataTypes.INTEGER,
         allowNull: false,
-        field: 'stock_nuevo'
+        field: 'previous_stock'
     },
-    motivo: {
-        type: DataTypes.STRING,
-        allowNull: false
+    newStock: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        field: 'new_stock'
     },
-    referenciaId: {
+    referenceId: {
         type: DataTypes.UUID,
         allowNull: true,
-        field: 'referencia_id'
+        field: 'reference_id'
     },
-    registradoPor: {
-        type: DataTypes.STRING,
-        allowNull: false,
-        field: 'registrado_por'
+    notes: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+        field: 'notes'
+    },
+    createdBy: {
+        type: DataTypes.UUID,
+        allowNull: true,
+        references: {
+            model: 'users',
+            key: 'id'
+        },
+        field: 'created_by'
+    },
+    createdAt: {
+        type: DataTypes.DATE,
+        defaultValue: DataTypes.NOW,
+        field: 'created_at'
     }
 }, {
-    tableName: 'stock_movements',
+    tableName: 'inventory_movements',
     timestamps: true,
     updatedAt: false,
     indexes: [
         {
             fields: ['store_id']
+        },
+        {
+            fields: ['product_id']
+        },
+        {
+            fields: ['type']
+        },
+        {
+            fields: ['created_at']
         }
     ]
 });

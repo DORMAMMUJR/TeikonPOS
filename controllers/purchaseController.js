@@ -138,14 +138,15 @@ export const receivePurchase = async (req, res) => {
                     // Register Stock Movement
                     await StockMovement.create({
                         storeId,
-                        productId: inventoryItem.catalogProductId, // LEGACY/COMPATIBILITY: Since there's no `inventoryItemId` in StockMovement yet, we use product_id mapped to catalog
-                        tipo: 'PURCHASE',
-                        cantidad: item.cantidad,
-                        stockAnterior,
-                        stockNuevo: nuevoStock,
-                        motivo: `Recepcion OC #${purchase.id.substring(0, 8)}`,
-                        referenciaId: purchase.id,
-                        registradoPor: req.username || 'System'
+                        productId: inventoryItem.catalogProductId,
+                        type: 'IN',
+                        reason: 'PURCHASE',
+                        quantity: item.cantidad,
+                        previousStock,
+                        newStock: nuevoStock,
+                        notes: `Recepcion OC #${purchase.id.substring(0, 8)}`,
+                        referenceId: purchase.id,
+                        createdBy: req.user?.id || null
                     }, { transaction: t });
                 }
             }

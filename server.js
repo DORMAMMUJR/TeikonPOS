@@ -1337,12 +1337,13 @@ app.post('/api/products/bulk', authenticateToken, async (req, res) => {
                     await StockMovement.create({
                         productId: newProduct.id,
                         storeId: targetStoreId,
-                        tipo: 'PURCHASE',
-                        cantidad: stock,
-                        stockAnterior: 0,
-                        stockNuevo: stock,
-                        motivo: 'Importación Masiva',
-                        registradoPor: req.usuario || 'Sistema'
+                        type: 'IN',
+                        reason: 'INITIAL_STOCK',
+                        quantity: stock,
+                        previousStock: 0,
+                        newStock: stock,
+                        notes: 'Importación Masiva',
+                        createdBy: req.user?.id || null
                     }, { transaction: t });
                 }
 

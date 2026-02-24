@@ -132,13 +132,14 @@ export const syncSales = async (req, res) => {
                                 await StockMovement.create({
                                     productId: product.id,
                                     storeId: storeId,
-                                    tipo: 'SALE',
-                                    cantidad: qtyToSubtract,
-                                    stockAnterior: stockAnterior,
-                                    stockNuevo: stockNuevo,
-                                    motivo: `Venta Sincronizada #${createdSale.id.substring(0, 8)}`,
-                                    referenciaId: createdSale.id,
-                                    registradoPor: sale.vendedor || 'Sistema'
+                                    type: 'OUT',
+                                    reason: 'SALE',
+                                    quantity: qtyToSubtract,
+                                    previousStock: stockAnterior,
+                                    newStock: stockNuevo,
+                                    notes: `Venta Sincronizada #${createdSale.id.substring(0, 8)}`,
+                                    referenceId: createdSale.id,
+                                    createdBy: null // Offline sales usually don't have user ID in the sync payload easily mapped to UUID here
                                 }, { transaction: saleTransaction });
                             }
                         }
@@ -263,13 +264,14 @@ export const createSale = async (req, res) => {
                         await StockMovement.create({
                             productId: product.id,
                             storeId: storeId,
-                            tipo: 'SALE',
-                            cantidad: qtyToSubtract,
-                            stockAnterior: stockAnterior,
-                            stockNuevo: stockNuevo,
-                            motivo: `Venta #${newSale.id.substring(0, 8)}`,
-                            referenciaId: newSale.id,
-                            registradoPor: vendedor || 'Sistema'
+                            type: 'OUT',
+                            reason: 'SALE',
+                            quantity: qtyToSubtract,
+                            previousStock: stockAnterior,
+                            newStock: stockNuevo,
+                            notes: `Venta #${newSale.id.substring(0, 8)}`,
+                            referenceId: newSale.id,
+                            createdBy: req.user?.id || null
                         }, { transaction });
                     }
                 }
@@ -402,13 +404,14 @@ export const cancelSale = async (req, res) => {
                         await StockMovement.create({
                             productId: product.id,
                             storeId: storeId,
-                            tipo: 'RETURN',
-                            cantidad: qty,
-                            stockAnterior: stockAnterior,
-                            stockNuevo: stockNuevo,
-                            motivo: `Cancelación Venta #${sale.id.substring(0, 8)}`,
-                            referenciaId: sale.id,
-                            registradoPor: req.usuario || req.user?.username || 'Sistema'
+                            type: 'IN',
+                            reason: 'RETURN',
+                            quantity: qty,
+                            previousStock: stockAnterior,
+                            newStock: stockNuevo,
+                            notes: `Cancelación Venta #${sale.id.substring(0, 8)}`,
+                            referenceId: sale.id,
+                            createdBy: req.user?.id || null
                         }, { transaction });
                     }
                 }

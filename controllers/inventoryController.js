@@ -22,7 +22,7 @@ export const getInventoryMovements = async (req, res) => {
         }
 
         if (type) {
-            whereClause.tipo = type;
+            whereClause.type = type;
         }
 
         if (startDate && endDate) {
@@ -121,12 +121,13 @@ export const createInventoryMovement = async (req, res) => {
         const movement = await StockMovement.create({
             productId: product.id,
             storeId: targetStoreId,
-            tipo: finalTipo,
-            cantidad: type === 'OUT' || quantity < 0 ? -parsedQuantity : parsedQuantity,
-            stockAnterior: stockAnterior,
-            stockNuevo: stockNuevo,
-            motivo: notes || reason,
-            registradoPor: req.usuario || 'Sistema'
+            type: type === 'IN' ? 'IN' : (type === 'OUT' ? 'OUT' : 'ADJUST'),
+            reason: reason, // Must be one of the enum values: 'SALE', 'RETURN', 'PURCHASE', 'SHRINKAGE', 'THEFT', 'ADMIN_CORRECTION', 'INITIAL_STOCK'
+            quantity: type === 'OUT' || (type === 'ADJUST' && quantity < 0) ? -parsedQuantity : parsedQuantity,
+            previousStock: stockAnterior,
+            newStock: stockNuevo,
+            notes: notes,
+            createdBy: req.user?.id || null
         });
 
         res.json({ success: true, message: 'Inventario ajustado correctamente.', data: movement, newStock: stockNuevo });
