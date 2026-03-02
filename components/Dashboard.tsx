@@ -80,25 +80,25 @@ const Dashboard: React.FC<DashboardProps> = ({ storeId }) => {
   return (
     <div className="space-y-6 pb-8">
       {/* HEADER WITH REFRESH BUTTON */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Dashboard</h2>
+      <div className="flex justify-between items-center gap-3">
+        <div className="min-w-0">
+          <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-slate-900 dark:text-white tracking-tight truncate">Dashboard</h2>
           {lastUpdate && (
-            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 font-medium">
-              Última actualización: {lastUpdate.toLocaleTimeString()}
+            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1 font-medium">
+              Actualizado: {lastUpdate.toLocaleTimeString()}
             </p>
           )}
         </div>
         <button
           onClick={handleManualRefresh}
           disabled={isRefreshing}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all shadow-lg ${isRefreshing
+          className={`flex items-center gap-2 px-3 sm:px-5 py-2 sm:py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all shadow-lg shrink-0 ${isRefreshing
             ? 'bg-slate-200 dark:bg-slate-700 text-slate-400 cursor-not-allowed'
             : 'bg-gradient-to-r from-purple-600 to-blue-600 text-white hover:from-purple-700 hover:to-blue-700 active:scale-95 shadow-purple-500/30'
             }`}
         >
           <RefreshCw size={16} className={isRefreshing ? 'animate-spin' : ''} />
-          {isRefreshing ? 'Actualizando...' : 'Actualizar'}
+          <span className="hidden sm:inline">{isRefreshing ? 'Actualizando...' : 'Actualizar'}</span>
         </button>
       </div>
 
@@ -122,10 +122,10 @@ const Dashboard: React.FC<DashboardProps> = ({ storeId }) => {
               </div>
 
               <div className="flex items-baseline gap-3">
-                <span className="text-6xl md:text-7xl font-black text-white tracking-tighter drop-shadow-lg">
+                <span className="text-4xl sm:text-5xl md:text-7xl font-black text-white tracking-tighter drop-shadow-lg">
                   ${(utilidadBruta || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                 </span>
-                <span className="text-lg font-bold text-white/80">MXN</span>
+                <span className="text-base sm:text-lg font-bold text-white/80">MXN</span>
               </div>
             </div>
 
@@ -222,7 +222,7 @@ const Dashboard: React.FC<DashboardProps> = ({ storeId }) => {
 
       {/* ALERTAS */}
       {lowStockProducts.length > 0 && (
-        <div className="bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-950/30 dark:to-red-950/30 border-2 border-orange-300 dark:border-orange-600/50 p-6 rounded-2xl flex items-center gap-5 shadow-lg">
+        <div className="bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-950/30 dark:to-red-950/30 border-2 border-orange-300 dark:border-orange-600/50 p-4 sm:p-6 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-5 shadow-lg">
           <div className="p-4 bg-gradient-to-br from-orange-500 to-red-600 rounded-2xl shadow-lg shadow-orange-500/30">
             <ShieldAlert className="text-white h-7 w-7" />
           </div>

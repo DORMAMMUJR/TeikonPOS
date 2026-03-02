@@ -75,7 +75,7 @@ const Settings: React.FC = () => {
             onClick={toggleTheme}
             aria-label="Cambiar modo de tema"
             title="Cambiar entre modo claro y oscuro"
-            className={`w-16 h-8 rounded-full transition-all duration-300 relative px-1 flex items-center shrink-0 min-h-[44px] ${theme === 'dark' ? 'bg-indigo-600' : 'bg-slate-300 dark:bg-slate-800'
+            className={`w-16 h-11 rounded-full transition-all duration-300 relative px-1 flex items-center shrink-0 ${theme === 'dark' ? 'bg-indigo-600' : 'bg-slate-300 dark:bg-slate-800'
               }`}
           >
             <div className={`w-6 h-6 bg-white rounded-full shadow-md transform transition-transform duration-300 ${theme === 'dark' ? 'translate-x-8' : 'translate-x-0'

@@ -172,7 +172,7 @@ const InventoryTable: React.FC<InventoryTableProps> = ({ inventory }) => {
                         <td className="px-6 py-4 whitespace-nowrap" style={{ minWidth: '150px' }}>
                           <div className="flex items-center gap-4">
                             {/* Contenedor con borde rojo para que lo veas sí o sí en la demo */}
-                            <div className="relative w-14 h-14 border-2 border-red-500 rounded-xl overflow-hidden bg-slate-100 flex items-center justify-center">
+                            <div className="relative w-14 h-14 border-2 border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
 
                               {/* EL INPUT: Ahora tiene z-[9999] para que nada lo tape */}
                               <input

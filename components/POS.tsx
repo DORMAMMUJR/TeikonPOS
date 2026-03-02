@@ -274,7 +274,7 @@ const POS: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col gap-6 h-[calc(100vh-80px)] md:h-[calc(100vh-140px)] overflow-hidden">
+    <div className="flex flex-col gap-4 md:gap-6 h-[calc(100dvh-114px)] md:h-[calc(100dvh-80px)] lg:h-[calc(100dvh-140px)] overflow-hidden">
       {/* POS HEADER */}
       <POSHeader
         searchTerm={searchTerm}
@@ -289,7 +289,7 @@ const POS: React.FC = () => {
         {/* Mobile: Full height with bottom padding for sticky bar */}
         {/* Desktop: 2/3 width with normal height */}
         <div className="flex-1 flex flex-col lg:w-2/3 card-premium overflow-hidden border-t-4 border-t-brand-emerald bg-white dark:bg-slate-900 shadow-xl min-h-0 pb-0 relative">
-          <div className="absolute inset-0 overflow-y-auto p-4 grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-3 md:gap-4 content-start pb-[100px] lg:pb-4 custom-scrollbar">
+          <div className="absolute inset-0 overflow-y-auto p-3 sm:p-4 grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-3 md:gap-4 content-start pb-[110px] lg:pb-4 custom-scrollbar">
             {filteredProducts.map((p, idx) => (
               <div
                 key={p.id}
@@ -544,7 +544,7 @@ const POS: React.FC = () => {
             </label>
             <input
               type="number"
-              className="w-full py-5 text-4xl font-black bg-slate-50 dark:bg-slate-950 border-4 border-slate-100 dark:border-slate-800 rounded-[2rem] outline-none focus:border-brand-emerald text-center"
+              className="w-full py-4 text-3xl md:text-4xl font-black bg-slate-50 dark:bg-slate-950 border-4 border-slate-100 dark:border-slate-800 rounded-[2rem] outline-none focus:border-brand-emerald text-center"
               value={amountReceived}
               onChange={e => setAmountReceived(e.target.value)}
               placeholder="0"

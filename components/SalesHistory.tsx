@@ -150,7 +150,7 @@ const SalesHistory: React.FC<SalesHistoryProps> = ({ targetStoreId }) => {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-center gap-4 bg-pink-50 dark:bg-pink-950/10 p-8 rounded-3xl border border-pink-100 dark:border-pink-900/30 shadow-sm border-t-4 border-t-brand-pink">
+      <div className="flex flex-col sm:flex-row justify-between items-center gap-4 bg-pink-50 dark:bg-pink-950/10 p-5 sm:p-8 rounded-3xl border border-pink-100 dark:border-pink-900/30 shadow-sm border-t-4 border-t-brand-pink">
         <div className="flex items-center gap-4">
           <div className="p-3 bg-brand-pink text-white rounded-2xl shadow-lg shadow-brand-pink/20">
             <HistoryIcon className="h-6 w-6" />
@@ -190,12 +190,12 @@ const SalesHistory: React.FC<SalesHistoryProps> = ({ targetStoreId }) => {
           <table className="min-w-full divide-y divide-brand-border">
             <thead className="bg-pink-50/50 dark:bg-pink-950/20">
               <tr>
-                <th className="px-8 py-5 text-left text-[10px] font-black text-brand-pink dark:text-pink-400 uppercase tracking-widest">Fecha y Hora</th>
-                <th className="px-8 py-5 text-left text-[10px] font-black text-brand-pink dark:text-pink-400 uppercase tracking-widest">Transacción</th>
-                <th className="px-8 py-5 text-left text-[10px] font-black text-brand-pink dark:text-pink-400 uppercase tracking-widest">Agente</th>
-                <th className="px-8 py-5 text-right text-[10px] font-black text-brand-pink dark:text-pink-400 uppercase tracking-widest">Total</th>
-                <th className="px-8 py-5 text-center text-[10px] font-black text-brand-pink dark:text-pink-400 uppercase tracking-widest">Estado</th>
-                <th className="px-8 py-5 text-center text-[10px] font-black text-brand-pink dark:text-pink-400 uppercase tracking-widest">Acción</th>
+                <th className="px-4 sm:px-8 py-4 sm:py-5 text-left text-[10px] font-black text-brand-pink dark:text-pink-400 uppercase tracking-widest">Fecha y Hora</th>
+                <th className="px-4 sm:px-8 py-4 sm:py-5 text-left text-[10px] font-black text-brand-pink dark:text-pink-400 uppercase tracking-widest">Transacción</th>
+                <th className="hidden sm:table-cell px-4 sm:px-8 py-4 sm:py-5 text-left text-[10px] font-black text-brand-pink dark:text-pink-400 uppercase tracking-widest">Agente</th>
+                <th className="px-4 sm:px-8 py-4 sm:py-5 text-right text-[10px] font-black text-brand-pink dark:text-pink-400 uppercase tracking-widest">Total</th>
+                <th className="hidden md:table-cell px-4 sm:px-8 py-4 sm:py-5 text-center text-[10px] font-black text-brand-pink dark:text-pink-400 uppercase tracking-widest">Estado</th>
+                <th className="px-4 sm:px-8 py-4 sm:py-5 text-center text-[10px] font-black text-brand-pink dark:text-pink-400 uppercase tracking-widest">Acción</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-brand-border">
@@ -210,24 +210,24 @@ const SalesHistory: React.FC<SalesHistoryProps> = ({ targetStoreId }) => {
                 </tr>
               ) : filteredSales.map(sale => (
                 <tr key={sale.id} className={`transition-all ${sale.status === 'CANCELLED' ? 'opacity-40' : 'hover:bg-brand-pink/5'}`}>
-                  <td className="px-8 py-5 whitespace-nowrap text-sm font-medium text-brand-muted">
+                  <td className="px-4 sm:px-8 py-3 sm:py-5 whitespace-nowrap text-xs sm:text-sm font-medium text-brand-muted">
                     {new Date(sale.date).toLocaleString()}
                   </td>
-                  <td className="px-8 py-5 whitespace-nowrap text-xs font-black text-slate-800 dark:text-brand-text font-mono">
+                  <td className="px-4 sm:px-8 py-3 sm:py-5 whitespace-nowrap text-xs font-black text-slate-800 dark:text-brand-text font-mono">
                     #{String(sale.id || (sale as any)._id || '').slice(0, 8).toUpperCase()}
                   </td>
-                  <td className="px-8 py-5 whitespace-nowrap text-xs font-bold text-brand-muted uppercase">
+                  <td className="hidden sm:table-cell px-4 sm:px-8 py-3 sm:py-5 whitespace-nowrap text-xs font-bold text-brand-muted uppercase">
                     {sale.sellerId}
                   </td>
-                  <td className={`px-8 py-5 whitespace-nowrap text-lg text-right font-black ${sale.status === 'CANCELLED' ? 'line-through' : 'text-brand-pink'}`}>
+                  <td className={`px-4 sm:px-8 py-3 sm:py-5 whitespace-nowrap text-base sm:text-lg text-right font-black ${sale.status === 'CANCELLED' ? 'line-through' : 'text-brand-pink'}`}>
                     ${formatMoney(sale.total)}
                   </td>
-                  <td className="px-8 py-5 whitespace-nowrap text-center">
+                  <td className="hidden md:table-cell px-4 sm:px-8 py-3 sm:py-5 whitespace-nowrap text-center">
                     <div className="flex flex-col items-center gap-1">
                       <span className={`px-4 py-1 rounded-full text-[9px] font-black uppercase ${sale.status === 'ACTIVE' ? 'bg-emerald-500/10 text-emerald-500' :
-                          sale.status === 'PENDING' ? 'bg-amber-500/10 text-amber-500' :
-                            sale.status === 'DELIVERED' || sale.status === 'COMPLETED' ? 'bg-blue-500/10 text-blue-500' :
-                              'bg-red-500/10 text-red-500'
+                        sale.status === 'PENDING' ? 'bg-amber-500/10 text-amber-500' :
+                          sale.status === 'DELIVERED' || sale.status === 'COMPLETED' ? 'bg-blue-500/10 text-blue-500' :
+                            'bg-red-500/10 text-red-500'
                         }`}>
                         {sale.status === 'ACTIVE' ? 'Aprobada' :
                           sale.status === 'PENDING' ? 'Pendiente' :
@@ -241,8 +241,8 @@ const SalesHistory: React.FC<SalesHistoryProps> = ({ targetStoreId }) => {
                       )}
                     </div>
                   </td>
-                  <td className="px-8 py-5 whitespace-nowrap text-center">
-                    <div className="flex justify-center gap-2">
+                  <td className="px-4 sm:px-8 py-3 sm:py-5 whitespace-nowrap text-center">
+                    <div className="flex flex-wrap justify-center gap-1.5">
                       <Button
                         variant="secondary"
                         onClick={() => handleViewDetails(sale)}

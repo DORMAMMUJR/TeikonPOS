@@ -176,7 +176,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     };
 
     return (
-        <div className="h-screen w-64 bg-[#0f172a] flex flex-col border-r border-gray-800 overflow-y-auto overflow-x-hidden transition-all duration-300 custom-scrollbar">
+        <div className="h-[100dvh] w-64 bg-[#0f172a] flex flex-col border-r border-gray-800 overflow-y-auto overflow-x-hidden transition-all duration-300 custom-scrollbar">
 
             {/* Logo */}
             <div className="h-20 flex items-center px-8 border-b border-gray-800 shrink-0">

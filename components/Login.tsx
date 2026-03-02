@@ -131,19 +131,19 @@ const Login: React.FC = () => {
     <>
       <div className="min-h-screen flex items-center justify-center bg-brand-bg px-4 overflow-hidden relative">
         {/* Background Elements */}
-        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-brand-purple/5 blur-[120px] rounded-full -mr-40 -mt-40 pointer-events-none"></div>
-        <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-brand-pink/5 blur-[120px] rounded-full -ml-40 -mb-40 pointer-events-none"></div>
+        <div className="absolute top-0 right-0 w-[250px] sm:w-[500px] h-[250px] sm:h-[500px] bg-brand-purple/5 blur-[120px] rounded-full -mr-20 sm:-mr-40 -mt-20 sm:-mt-40 pointer-events-none"></div>
+        <div className="absolute bottom-0 left-0 w-[200px] sm:w-[400px] h-[200px] sm:h-[400px] bg-brand-pink/5 blur-[120px] rounded-full -ml-20 sm:-ml-40 -mb-20 sm:-mb-40 pointer-events-none"></div>
 
         <div className="max-w-md w-full relative z-10">
-          <div className="flex flex-col items-center mb-10 text-center">
-            <TeikonLogo size={80} className="mb-6" />
+          <div className="flex flex-col items-center mb-6 sm:mb-10 text-center">
+            <TeikonLogo size={64} className="mb-4 sm:mb-6" />
             <TeikonWordmark height={24} className="text-slate-900 dark:text-white" />
             <p className="text-[10px] font-black text-brand-muted uppercase tracking-[0.4em] mt-4">
               INVENTORY SOFTWARE
             </p>
           </div>
 
-          <div className="bg-white dark:bg-brand-panel backdrop-blur-md p-8 border border-slate-200 dark:border-brand-border rounded-3xl shadow-2xl transition-all duration-300">
+          <div className="bg-white dark:bg-brand-panel backdrop-blur-md p-5 sm:p-8 border border-slate-200 dark:border-brand-border rounded-3xl shadow-2xl transition-all duration-300">
             <form onSubmit={handleSubmit} className="space-y-4">
 
 
