@@ -32,8 +32,10 @@ export const CartPanel: React.FC<CartPanelProps> = ({ onOpenCheckout }) => {
   const setQuantity = useCartStore((state) => state.setQuantity);
   const removeProduct = useCartStore((state) => state.removeProduct);
   
-  // Selector estable para totales
-  const totals = useCartStore((state) => state.getTotals());
+  // FIX: Obtenemos la referencia a la función constructora en lugar de ejecutarla en el selector,
+  // porque Zustand usa useSyncExternalStore y devolver un objeto nuevo en cada pasada crashea React (Error 185)
+  const getTotals = useCartStore((state) => state.getTotals);
+  const totals = getTotals();
 
   // Convertimos el diccionario a un arreglo para iterarlo
   const cartItems = Object.values(cartDict);

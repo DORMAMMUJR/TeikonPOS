@@ -52,7 +52,11 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose })
   // Solo leemos lo estrictamente necesario para calcular el cobro.
   const cartDict = useCartStore((state) => state.cart);
   const cartItems = Object.values(cartDict);
-  const { total } = useCartStore((state) => state.getTotals());
+  
+  // FIX: Evita bucles infinitos en Zustand devolviendo la refención exacta de getTotals 
+  // antes de generar el objeto dinámico.
+  const getTotals = useCartStore((state) => state.getTotals);
+  const { total } = getTotals();
 
   // ─── Estado Local: Método de Pago ────────────────────────────────────────────
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('CASH');
