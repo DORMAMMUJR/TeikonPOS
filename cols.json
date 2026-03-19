@@ -1,0 +1,41 @@
+[
+  {
+    "column_name": "id"
+  },
+  {
+    "column_name": "productId"
+  },
+  {
+    "column_name": "storeId"
+  },
+  {
+    "column_name": "type"
+  },
+  {
+    "column_name": "reason"
+  },
+  {
+    "column_name": "quantity"
+  },
+  {
+    "column_name": "previousStock"
+  },
+  {
+    "column_name": "newStock"
+  },
+  {
+    "column_name": "notes"
+  },
+  {
+    "column_name": "referenceId"
+  },
+  {
+    "column_name": "createdBy"
+  },
+  {
+    "column_name": "createdAt"
+  },
+  {
+    "column_name": "updatedAt"
+  }
+]
