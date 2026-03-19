@@ -97,7 +97,9 @@ const POS: React.FC = () => {
 
     if (e.key === 'Enter') {
       e.preventDefault();
-      const code = searchTerm.trim();
+      // Read directly from the DOM element to avoid stale React state
+      // caused by the scanner injecting characters faster than re-renders.
+      const code = e.currentTarget.value.trim();
 
       if (!code) return;
 

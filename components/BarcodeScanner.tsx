@@ -40,6 +40,7 @@ const BarcodeScanner: React.FC<BarcodeScannerProps> = ({
     const inputRef = useRef<HTMLInputElement>(null);
     const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const lastKeypressRef = useRef<number>(0);
+    const lastScanTimeRef = useRef<number>(0);
     const inputBufferRef = useRef<string>('');
 
     /**
@@ -77,11 +78,13 @@ const BarcodeScanner: React.FC<BarcodeScannerProps> = ({
 
         const normalizedSKU = sku.trim().toUpperCase();
 
-        // IMPROVED: Reduced throttle from 1000ms to 300ms for faster consecutive scans
-        if (normalizedSKU === lastScannedSKU && Date.now() - lastKeypressRef.current < 300) {
+        // Anti-duplicate throttle: uses a dedicated ref that is only updated on confirmed scans,
+        // not on every character injected by the scanner hardware.
+        if (normalizedSKU === lastScannedSKU && Date.now() - lastScanTimeRef.current < 500) {
             console.log('⏭️ Skipping duplicate scan:', normalizedSKU);
             return;
         }
+        lastScanTimeRef.current = Date.now();
 
         setStatus('scanning');
         setErrorType(null);
@@ -190,8 +193,11 @@ const BarcodeScanner: React.FC<BarcodeScannerProps> = ({
                 clearTimeout(searchTimeoutRef.current);
             }
 
-            if (inputValue.trim() !== '') {
-                searchProduct(inputValue);
+            // Read from the DOM element directly to avoid stale state caused by
+            // the scanner injecting characters faster than React re-renders.
+            const currentCode = e.currentTarget.value;
+            if (currentCode.trim() !== '') {
+                searchProduct(currentCode);
             }
         }
     };
