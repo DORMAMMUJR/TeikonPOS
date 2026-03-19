@@ -4,6 +4,7 @@ import { ThemeProvider } from './context/ThemeContext';
 import Layout from './components/Layout';
 import Dashboard from './components/Dashboard';
 import POS from './components/POS';
+import POS_v2 from './components/POS_v2';
 import ProductList from './components/ProductList';
 import Settings from './components/Settings';
 import SalesHistory from './components/SalesHistory';
@@ -46,11 +47,12 @@ const AppContent: React.FC = () => {
 
             {activeTab === 'dashboard' && <Dashboard />}
 
-            {/* CAMBIO 3: El bloqueo AHORA vive solo aquí, protegiendo al POS */}
+            {/* CAMBIO 3: Rutas en paralelo (A/B testing manual) */}
             {activeTab === 'pos' && (
               <StoreGuard>
                 <CashRegisterGuard>
-                  <POS />
+                  {/* Lee la URL neta para no interferir con tu diseño de activeTabs */}
+                  {window.location.pathname === '/pos-legacy' ? <POS /> : <POS_v2 />}
                 </CashRegisterGuard>
               </StoreGuard>
             )}

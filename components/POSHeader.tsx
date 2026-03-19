@@ -1,23 +1,24 @@
 import React from 'react';
 import { Search } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
+import { useSearchStore } from '../store/searchStore';
 
 interface POSHeaderProps {
-    searchTerm: string;
-    setSearchTerm: (term: string) => void;
     searchInputRef: React.RefObject<HTMLInputElement | null>;
     onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
     onCloseShift?: () => void;
 }
 
 const POSHeader: React.FC<POSHeaderProps> = ({
-    searchTerm,
-    setSearchTerm,
     searchInputRef,
     onKeyDown,
     onCloseShift
 }) => {
     const { sales, settings } = useStore();
+    
+    // Suscripción al store de búsqueda aislado
+    const searchTerm = useSearchStore((state) => state.searchTerm);
+    const setSearchTerm = useSearchStore((state) => state.setSearchTerm);
 
     // ------------------------------------------------------------------
     // BARRA DE SALUD FINANCIERA (Financial Health / Break-Even Point)

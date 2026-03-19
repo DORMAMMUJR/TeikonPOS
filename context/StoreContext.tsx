@@ -40,6 +40,7 @@ interface StoreContextType {
       shippingAddress?: string;
       ecommerceOrderId?: string;
       status?: 'ACTIVE' | 'PENDING';
+      transactionId?: string; // Clave de idempotencia
     }
   ) => Promise<SaleResult>;
   cancelSale: (saleId: string) => Promise<void>;
@@ -944,6 +945,7 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       shippingAddress?: string;
       ecommerceOrderId?: string;
       status?: 'ACTIVE' | 'PENDING';
+      transactionId?: string; // Clave de idempotencia para evitar ventas duplicadas
     }
   ): Promise<SaleResult> => {
     if (!currentUser) return { totalRevenueAdded: 0, totalProfitAdded: 0, success: false };
@@ -994,7 +996,8 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         shippingAddress: options?.shippingAddress,
         ecommerceOrderId: options?.ecommerceOrderId,
         items: saleItems,
-        syncedAt: isOnline ? new Date() : null
+        syncedAt: isOnline ? new Date() : null,
+        transactionId: options?.transactionId || null
       };
 
       let finalSale: Sale | undefined;

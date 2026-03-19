@@ -436,6 +436,12 @@ const Sale = sequelize.define('Sale', {
         type: DataTypes.DATE,
         allowNull: true,
         field: 'synced_at'
+    },
+    transactionId: {
+        type: DataTypes.STRING(100),
+        allowNull: true,        // Permite nulos para no romper historial previo
+        unique: true,           // Único a nivel de modelo (complementa el índice parcial)
+        field: 'transaction_id'
     }
 }, {
     tableName: 'sales',

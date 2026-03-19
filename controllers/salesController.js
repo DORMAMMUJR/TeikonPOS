@@ -2,48 +2,79 @@ import { sequelize, Sale, Shift, Product, StockMovement } from '../models.js';
 import { Op } from 'sequelize';
 
 // ==========================================
-// HELPER: VALIDACIÓN DE STOCK (Pessimistic Locking)
+// HELPER: FETCH + VALIDATE + PRICE (Zero Trust, Single Query per Item)
 // ==========================================
-async function validateStockAvailability(items, transaction) {
-    const insufficientStock = [];
+/**
+ * Para cada item del carrito:
+ *   1. Hace UN SOLO findByPk con LOCK.UPDATE (pesimista).
+ *   2. Valida stock suficiente.
+ *   3. Extrae precio (salePrice) y costo (costPrice) REALES de la BD.
+ *      IGNORA cualquier precio que venga del body del request.
+ *
+ * Retorna:
+ *   {
+ *     errors: [],         // Productos con problema (venta se aborta si length > 0)
+ *     verifiedItems: [],  // Items con precios reales y cantidades validadas
+ *   }
+ */
+async function validateAndFetchProducts(items, transaction) {
+    const errors = [];
+    const verifiedItems = [];
 
-    if (!items || !Array.isArray(items)) return [];
+    if (!items || !Array.isArray(items)) {
+        return { errors: [{ reason: 'INVALID_ITEMS', message: 'La lista de items es inválida.' }], verifiedItems: [] };
+    }
 
     for (const item of items) {
         const productId = item.id || item.productId;
-        const requestedQty = Number(item.quantity) || Number(item.cantidad) || 1;
+        const qty = Number(item.quantity) || Number(item.cantidad) || 1;
 
-        if (!productId) continue;
+        if (!productId) {
+            errors.push({ reason: 'MISSING_PRODUCT_ID', message: 'Un item no tiene productId.' });
+            continue;
+        }
 
-        // Buscamos el producto y BLOQUEAMOS la fila para que nadie más la modifique
-        // mientras dura esta transacción.
+        // ─ UN SOLO QUERY POR PRODUCTO, con lock pesimista ─
         const product = await Product.findByPk(productId, {
             transaction,
             lock: transaction.LOCK.UPDATE
         });
 
         if (!product) {
-            insufficientStock.push({
-                productId,
-                productName: 'Producto no encontrado',
-                reason: 'PRODUCT_NOT_FOUND'
+            errors.push({ productId, reason: 'PRODUCT_NOT_FOUND', productName: 'Desconocido' });
+            continue;
+        }
+
+        if (product.stock < qty) {
+            errors.push({
+                productId: product.id,
+                productName: product.nombre,
+                sku:        product.sku,
+                requested:  qty,
+                available:  product.stock,
+                reason:     'INSUFFICIENT_STOCK'
             });
             continue;
         }
 
-        if (product.stock < requestedQty) {
-            insufficientStock.push({
-                productId: product.id,
-                productName: product.nombre,
-                sku: product.sku,
-                requested: requestedQty,
-                available: product.stock,
-                reason: 'INSUFFICIENT_STOCK'
-            });
-        }
+        // ─ PRECIOS REALES DE LA BD — el frontend no tiene voz aquí ─
+        const realSalePrice = Number(product.salePrice);
+        const realCostPrice = Number(product.costPrice) || 0;
+
+        verifiedItems.push({
+            product,           // Instancia Sequelize (para decrement)
+            productId:  product.id,
+            productName: product.nombre,
+            sku:        product.sku,
+            quantity:   qty,
+            unitPrice:  realSalePrice,
+            unitCost:   realCostPrice,
+            subtotal:   realSalePrice * qty,
+            profit:     (realSalePrice - realCostPrice) * qty,
+        });
     }
 
-    return insufficientStock;
+    return { errors, verifiedItems };
 }
 
 // ==========================================
@@ -177,19 +208,37 @@ export const syncSales = async (req, res) => {
 };
 
 // ==========================================
-// 2. Creación de Venta Online (Normal)
+// 2. Creación de Venta Online (Blindada)
 // ==========================================
 export const createSale = async (req, res) => {
     const {
-        total, subtotal, items, paymentMethod,
-        storeId, netProfit, totalCost, vendedor,
-        clientId, saleType, deliveryDate, shippingAddress, ecommerceOrderId, status
+        items, paymentMethod,
+        storeId, vendedor,
+        clientId, saleType, deliveryDate, shippingAddress, ecommerceOrderId, status,
+        transactionId  // 🔑 Clave de idempotencia generada en el frontend
+        // 🚫 IGNORADOS intencionalmente: total, subtotal, netProfit, totalCost
+        //    y cualquier precio por item. Los precios reales vienen de la BD.
     } = req.body;
 
     const transaction = await sequelize.transaction();
 
     try {
-        // 1. Validar Turno
+        // ── REGLA 3: IDEMPOTENCIA ──────────────────────────────────────────────────
+        // Si ya existe una venta con este transactionId, la devolvemos tal cual.
+        // El frontend puede reintentar con seguridad: nunca habrá dos cobros.
+        if (transactionId) {
+            const existing = await Sale.findOne({ where: { transactionId } });
+            if (existing) {
+                await transaction.rollback();
+                console.log(`♻️  Idempotent hit: transactionId=${transactionId}`);
+                return res.status(200).json({
+                    ...existing.toJSON(),
+                    idempotent: true
+                });
+            }
+        }
+
+        // ── 1. Validar Turno ───────────────────────────────────────────────────────
         const activeShift = await Shift.findOne({
             where: { storeId, status: 'OPEN' },
             transaction
@@ -200,82 +249,79 @@ export const createSale = async (req, res) => {
             return res.status(403).json({ error: 'NO_OPEN_SHIFT', message: 'Caja cerrada.' });
         }
 
-        // 2. VALIDACIÓN DE STOCK (NUEVO)
-        // Esto bloqueará las filas de los productos hasta que termine la transacción
-        const stockErrors = await validateStockAvailability(items, transaction);
+        // ── REGLA 1+2: FETCH REAL + ZERO TRUST ────────────────────────────────────
+        // Una sola llamada por item. Valida stock Y extrae precios reales de la BD.
+        // Los valores total/subtotal/netProfit del req.body son descartados.
+        const { errors: stockErrors, verifiedItems } = await validateAndFetchProducts(items, transaction);
 
         if (stockErrors.length > 0) {
             await transaction.rollback();
-            return res.status(409).json({ // 409 Conflict
+            return res.status(409).json({
                 error: 'INSUFFICIENT_STOCK',
-                message: 'Stock insuficiente para completar la venta',
+                message: 'Stock insuficiente o producto no encontrado',
                 details: stockErrors
             });
         }
 
-        // 3. Preparar Totales
-        let finalTotal = Number(total);
-        let finalSubtotal = Number(subtotal);
+        // ── RECALCULAR TOTALES 100% DESDE LA BD ───────────────────────────────────
+        const computedSubtotal  = verifiedItems.reduce((s, i) => s + i.subtotal, 0);
+        const computedTotalCost = verifiedItems.reduce((s, i) => s + (i.unitCost * i.quantity), 0);
+        const computedNetProfit = verifiedItems.reduce((s, i) => s + i.profit, 0);
+        // Aquí puedes agregar lógica de impuestos/descuentos cuando sea necesario
+        const computedTotal     = computedSubtotal;
 
-        if (!finalTotal || finalTotal === 0) {
-            if (items && Array.isArray(items)) {
-                finalTotal = items.reduce((sum, item) => {
-                    const itemAmount = Number(item.subtotal) || Number(item.total) || (Number(item.price || item.precio) * Number(item.quantity || item.cantidad)) || 0;
-                    return sum + itemAmount;
-                }, 0);
-                finalSubtotal = finalTotal;
-            }
-        }
-        if (!finalSubtotal) finalSubtotal = finalTotal;
+        // ── CONSTRUIR SNAPSHOT DE ITEMS (guardado en JSONB) ───────────────────────
+        const saleItemsSnapshot = verifiedItems.map(i => ({
+            productId:  i.productId,
+            productName: i.productName,
+            sku:        i.sku,
+            quantity:   i.quantity,
+            unitPrice:  i.unitPrice,   // Precio REAL de BD
+            unitCost:   i.unitCost,    // Costo REAL de BD
+            discount:   0,
+            subtotal:   i.subtotal
+        }));
 
-        // 4. Crear Venta
+        // ── 4. Crear Venta ─────────────────────────────────────────────────────────
         const newSale = await Sale.create({
-            total: finalTotal || 0,
-            subtotal: finalSubtotal || 0,
-            items,
+            total:            computedTotal,
+            subtotal:         computedSubtotal,
+            items:            saleItemsSnapshot,
             paymentMethod,
-            shiftId: activeShift.id,
+            shiftId:          activeShift.id,
             storeId,
-            netProfit: netProfit || 0,
-            totalCost: totalCost || 0,
-            vendedor: vendedor || 'Sistema',
-            status: status || 'ACTIVE',
-            clientId: clientId || null,
-            saleType: saleType || 'RETAIL',
-            deliveryDate: deliveryDate || null,
-            shippingAddress: shippingAddress || null,
-            ecommerceOrderId: ecommerceOrderId || null
+            netProfit:        computedNetProfit,
+            totalCost:        computedTotalCost,
+            vendedor:         vendedor || req.user?.username || 'Sistema',
+            status:           status || 'ACTIVE',
+            clientId:         clientId || null,
+            saleType:         saleType || 'RETAIL',
+            deliveryDate:     deliveryDate || null,
+            shippingAddress:  shippingAddress || null,
+            ecommerceOrderId: ecommerceOrderId || null,
+            transactionId:    transactionId || null
         }, { transaction });
 
-        // 5. Descontar Stock y Registrar Movimiento
-        // Como ya tenemos el lock desde validateStockAvailability, es seguro descontar aquí
-        if (items && Array.isArray(items)) {
-            for (const item of items) {
-                const productId = item.id || item.productId;
-                if (productId) {
-                    const product = await Product.findByPk(productId, { transaction });
-                    if (product) {
-                        const qtyToSubtract = Number(item.quantity) || Number(item.cantidad) || 1;
-                        const stockAnterior = product.stock;
-                        const stockNuevo = stockAnterior - qtyToSubtract;
+        // ── 5. Descontar Stock + Kardex (ya validado y bloqueado arriba) ───────────
+        for (const item of verifiedItems) {
+            const { product, quantity } = item;
+            const stockAnterior = product.stock;
+            const stockNuevo    = stockAnterior - quantity;
 
-                        await product.decrement('stock', { by: qtyToSubtract, transaction });
+            await product.decrement('stock', { by: quantity, transaction });
 
-                        await StockMovement.create({
-                            productId: product.id,
-                            storeId: storeId,
-                            type: 'OUT',
-                            reason: 'SALE',
-                            quantity: qtyToSubtract,
-                            previousStock: stockAnterior,
-                            newStock: stockNuevo,
-                            notes: `Venta #${newSale.id.substring(0, 8)}`,
-                            referenceId: newSale.id,
-                            createdBy: req.user?.id || null
-                        }, { transaction });
-                    }
-                }
-            }
+            await StockMovement.create({
+                productId:     product.id,
+                storeId,
+                type:          'OUT',
+                reason:        'SALE',
+                quantity,
+                previousStock: stockAnterior,
+                newStock:      stockNuevo,
+                notes:         `Venta #${newSale.id.substring(0, 8)}`,
+                referenceId:   newSale.id,
+                createdBy:     req.user?.id || null
+            }, { transaction });
         }
 
         await transaction.commit();
