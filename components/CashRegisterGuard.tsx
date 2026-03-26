@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useStore } from '../context/StoreContext';
 import { Lock, DollarSign } from 'lucide-react';
-import CashRegisterModal from './CashRegisterModal';
+import OpenCashRegisterModal from './OpenCashRegisterModal';
 
 interface CashRegisterGuardProps {
     children: React.ReactNode;
@@ -90,9 +90,9 @@ const CashRegisterGuard: React.FC<CashRegisterGuardProps> = ({ children }) => {
                 </div>
 
                 {/* Cash Register Modal */}
-                <CashRegisterModal
+                <OpenCashRegisterModal
                     isOpen={isOpenCashModalOpen}
-                    onClose={() => setIsOpenCashModalOpen(false)}
+                    onSuccess={() => setIsOpenCashModalOpen(false)}
                 />
             </>
         );
