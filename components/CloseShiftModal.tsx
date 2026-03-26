@@ -51,7 +51,14 @@ const CloseShiftModal: React.FC<CloseShiftModalProps> = ({ isOpen, onClose, onSh
         setLoading(true);
         setError(null);
         try {
-            const response = await fetch(`${API_URL}/api/shifts/current`, {
+            const storeId = localStorage.getItem('storeId');
+            if (!storeId) {
+                setError('No se encontró el ID de la tienda');
+                setShiftData(null);
+                return;
+            }
+
+            const response = await fetch(`${API_URL}/api/cash-register/summary?storeId=${storeId}`, {
                 headers: getHeaders()
             });
 
@@ -66,7 +73,15 @@ const CloseShiftModal: React.FC<CloseShiftModalProps> = ({ isOpen, onClose, onSh
             }
 
             const data = await response.json();
-            setShiftData(data);
+            // Map the response to match the expected ShiftData interface
+            setShiftData({
+                id: data.shiftId,
+                montoInicial: data.initialAmount,
+                ventasEfectivo: data.cashSales,
+                gastos: data.expenses,
+                montoEsperado: data.expectedAmount,
+                ventasTotales: data.totalSales
+            });
         } catch (err) {
             console.error(err);
             setError('Error de conexión con el servidor');
@@ -79,28 +94,34 @@ const CloseShiftModal: React.FC<CloseShiftModalProps> = ({ isOpen, onClose, onSh
         if (!shiftData) return;
 
         const realAmount = toNumber(montoReal);
-        // We allow 0, but check for negative? The request says just validate number.
-        // The original logic checked for isNaN which toNumber handles (returns 0).
+        const storeId = localStorage.getItem('storeId');
+
+        if (!storeId) {
+            setError('No se encontró el ID de la tienda');
+            return;
+        }
 
         setLoading(true);
         try {
-            const response = await fetch(`${API_URL}/api/shifts/end`, {
+            const response = await fetch(`${API_URL}/api/cash-register/close`, {
                 method: 'POST',
                 headers: getHeaders(),
                 body: JSON.stringify({
-                    shiftId: shiftData.id,
-                    montoReal: realAmount,
-                    notas
+                    storeId,
+                    realAmount,
+                    notes: notas
                 })
             });
 
             if (!response.ok) {
                 const errorData = await response.json();
-                throw new Error(errorData.message || 'Error al cerrar el turno');
+                throw new Error(errorData.error || 'Error al cerrar el turno');
             }
 
+            const result = await response.json();
+
             // Success
-            alert('✅ Turno cerrado exitosamente');
+            alert(`✅ ${result.message || 'Turno cerrado exitosamente'}`);
 
             // Clean up local storage if you were using it for backup
             localStorage.removeItem('currentShiftId');

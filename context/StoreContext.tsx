@@ -13,6 +13,7 @@ interface StoreContextType {
   currentUser: User | null;
   currentUserRole: Role | undefined;
   currentSession: CashSession | null;
+  isCashRegisterOpen: boolean; // NEW: Derived state for cash register status
   isOnline: boolean;
   isLoading: boolean;
   isRecoveringSession: boolean; // NEW: Prevents showing modal before recovery completes
@@ -1159,7 +1160,9 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
   return (
     <StoreContext.Provider value={{
-      products, sales, allSessions, settings, currentUser, currentUserRole: currentUser?.role, currentSession, isOnline, isLoading, isRecoveringSession, isOpeningSession: isOpeningSessionState, error,
+      products, sales, allSessions, settings, currentUser, currentUserRole: currentUser?.role, currentSession,
+      isCashRegisterOpen: currentSession !== null && currentSession.status === 'OPEN', // Derived state
+      isOnline, isLoading, isRecoveringSession, isOpeningSession: isOpeningSessionState, error,
       login, logout, updateCurrentUser, openSession, closeSession, addProduct, updateProduct, deleteProduct, processSaleAndContributeToGoal, cancelSale, updateSettings, getDashboardStats, calculateTotalInventoryValue, syncData, searchProductBySKU
     }}>
       {children}

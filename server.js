@@ -1601,7 +1601,26 @@ app.post('/api/ventas/sync', authenticateToken, async (req, res) => {
             return res.status(200).json({ message: 'Sin datos' });
         }
 
-        const results = [];
+        // ==========================================
+        // VALIDACIÓN: Turno de Caja Activo (CRÍTICO)
+        // ==========================================
+        // Las ventas offline también deben vincularse a una sesión activa
+        const activeShift = await Shift.findOne({
+            where: { storeId: req.storeId, status: 'OPEN' }
+        });
+
+        if (!activeShift) {
+            console.warn(`⚠️ [POST /api/ventas/sync] No hay turno abierto para store ${req.storeId}`);
+            console.warn(`   Intentando sincronizar ${ventas.length} ventas offline`);
+            return res.status(403).json({
+                error: 'NO_OPEN_SHIFT',
+                message: 'Debes abrir un turno de caja antes de sincronizar ventas offline',
+                pendingSales: ventas.length
+            });
+        }
+
+        console.log(`✅ [POST /api/ventas/sync] Shift activo: ${activeShift.id}`);
+        console.log(`   Sincronizando ${ventas.length} ventas offline para store ${req.storeId}`);
 
         for (const ventaData of ventas) {
             try {
@@ -1669,6 +1688,7 @@ app.post('/api/ventas/sync', authenticateToken, async (req, res) => {
                 const sale = await sequelize.transaction(async (t) => {
                     const newSale = await Sale.create({
                         storeId: req.storeId,
+                        shiftId: activeShift.id, // ✅ Vincular a sesión activa
                         vendedor: ventaData.vendedor,
                         subtotal: ventaData.total,
                         totalDiscount: 0,
@@ -1757,13 +1777,24 @@ app.post('/api/gastos', authenticateToken, async (req, res) => {
             return res.status(400).json({ error: 'Faltan campos requeridos' });
         }
 
+        // ==========================================
+        // VALIDACIÓN: Turno de Caja Activo (CRÍTICO)
+        // ==========================================
         const activeShift = await Shift.findOne({
             where: { storeId: req.storeId, status: 'OPEN' }
         });
 
         if (!activeShift) {
-            return res.status(403).json({ error: 'Debes abrir caja para registrar gastos.' });
+            console.warn(`⚠️ [POST /api/gastos] No hay turno abierto para store ${req.storeId}`);
+            console.warn(`   Usuario: ${req.usuario}, Categoría: ${categoria}, Monto: ${monto}`);
+            return res.status(403).json({
+                error: 'NO_OPEN_SHIFT',
+                message: 'Debes abrir un turno de caja antes de registrar gastos'
+            });
         }
+
+        console.log(`✅ [POST /api/gastos] Shift activo: ${activeShift.id} para store ${req.storeId}`);
+        console.log(`   Usuario: ${req.usuario}, Categoría: ${categoria}, Monto: ${monto}`);
 
         const expense = await Expense.create({
             storeId: req.storeId,
@@ -3184,6 +3215,183 @@ const startServer = async () => {
             }
         });
 
+
+        // ==========================================
+        // ENDPOINTS DE CAJA (CASH REGISTER)
+        // ==========================================
+
+        /**
+         * GET /api/cash-register/summary
+         * Purpose: Calculate cash register summary for the current open shift
+         * Query Parameters: ?storeId=<uuid>
+         * Response: 200 OK with summary details | 404 Not Found | 400 Bad Request
+         */
+        app.get('/api/cash-register/summary', authenticateToken, async (req, res) => {
+            try {
+                const { storeId } = req.query;
+
+                // Validate storeId
+                if (!storeId) {
+                    return res.status(400).json({
+                        error: 'El parámetro storeId es requerido'
+                    });
+                }
+
+                // Security: Non-SUPER_ADMIN can only access their own store
+                if (req.role !== 'SUPER_ADMIN' && req.storeId !== storeId) {
+                    return res.status(403).json({ error: 'Acceso denegado' });
+                }
+
+                // Find the current OPEN shift for this store
+                const currentShift = await Shift.findOne({
+                    where: {
+                        storeId,
+                        status: 'OPEN'
+                    },
+                    order: [['startTime', 'DESC']]
+                });
+
+                if (!currentShift) {
+                    return res.status(404).json({
+                        error: 'No hay un turno abierto para esta tienda'
+                    });
+                }
+
+                // Calculate totals from the shift
+                const initialAmount = parseFloat(currentShift.initialAmount) || 0;
+                const cashSales = parseFloat(currentShift.cashSales) || 0;
+                const cardSales = parseFloat(currentShift.cardSales) || 0;
+                const transferSales = parseFloat(currentShift.transferSales) || 0;
+                const expenses = parseFloat(currentShift.expensesTotal) || 0;
+
+                // Calculate expected amount in cash register
+                // Formula: Initial Amount + Cash Sales - Expenses
+                const expectedAmount = initialAmount + cashSales - expenses;
+
+                // Total sales (all payment methods)
+                const totalSales = cashSales + cardSales + transferSales;
+
+                // Return summary
+                res.json({
+                    shiftId: currentShift.id,
+                    openedBy: currentShift.openedBy,
+                    startTime: currentShift.startTime,
+                    initialAmount,
+                    cashSales,
+                    cardSales,
+                    transferSales,
+                    totalSales,
+                    expenses,
+                    expectedAmount,
+                    summary: {
+                        fondoInicial: initialAmount,
+                        ventasEfectivo: cashSales,
+                        ingresosExtras: 0, // Can be extended in the future
+                        gastos: expenses,
+                        totalEsperado: expectedAmount
+                    }
+                });
+
+            } catch (error) {
+                console.error('❌ Error al obtener resumen de caja:', error);
+                res.status(500).json({ error: 'Error interno al obtener resumen de caja' });
+            }
+        });
+
+        /**
+         * POST /api/cash-register/close
+         * Purpose: Close the current cash register shift
+         * Request Body: { storeId, realAmount, notes }
+         * Response: 200 OK with closed shift details | 404 Not Found | 400 Bad Request
+         */
+        app.post('/api/cash-register/close', authenticateToken, async (req, res) => {
+            try {
+                const { storeId, realAmount, notes } = req.body;
+
+                // Validate required fields
+                if (!storeId || realAmount === undefined) {
+                    return res.status(400).json({
+                        error: 'Campos requeridos: storeId, realAmount'
+                    });
+                }
+
+                // Validate realAmount is a valid number
+                const parsedRealAmount = parseFloat(realAmount);
+                if (isNaN(parsedRealAmount) || parsedRealAmount < 0) {
+                    return res.status(400).json({
+                        error: 'El monto real debe ser un número positivo o cero'
+                    });
+                }
+
+                // Security: Non-SUPER_ADMIN can only close their own store's shift
+                if (req.role !== 'SUPER_ADMIN' && req.storeId !== storeId) {
+                    return res.status(403).json({ error: 'Acceso denegado' });
+                }
+
+                // Find the current OPEN shift
+                const currentShift = await Shift.findOne({
+                    where: {
+                        storeId,
+                        status: 'OPEN'
+                    },
+                    order: [['startTime', 'DESC']]
+                });
+
+                if (!currentShift) {
+                    return res.status(404).json({
+                        error: 'No hay un turno abierto para cerrar'
+                    });
+                }
+
+                // Calculate expected amount
+                const initialAmount = parseFloat(currentShift.initialAmount) || 0;
+                const cashSales = parseFloat(currentShift.cashSales) || 0;
+                const expenses = parseFloat(currentShift.expensesTotal) || 0;
+                const expectedAmount = initialAmount + cashSales - expenses;
+
+                // Calculate difference
+                const difference = parsedRealAmount - expectedAmount;
+
+                // Update shift with closing data
+                currentShift.endTime = new Date();
+                currentShift.finalAmount = parsedRealAmount;
+                currentShift.expectedAmount = expectedAmount;
+                currentShift.difference = difference;
+                currentShift.notes = notes || null;
+                currentShift.status = 'CLOSED';
+
+                await currentShift.save();
+
+                console.log(`✅ Cash register closed for shift ${currentShift.id}`);
+                console.log(`   Expected: $${expectedAmount.toFixed(2)}, Real: $${parsedRealAmount.toFixed(2)}, Difference: $${difference.toFixed(2)}`);
+
+                // Return closed shift details
+                res.json({
+                    message: 'Turno cerrado exitosamente',
+                    shift: {
+                        id: currentShift.id,
+                        storeId: currentShift.storeId,
+                        openedBy: currentShift.openedBy,
+                        startTime: currentShift.startTime,
+                        endTime: currentShift.endTime,
+                        initialAmount,
+                        finalAmount: parsedRealAmount,
+                        expectedAmount,
+                        difference,
+                        cashSales,
+                        cardSales: parseFloat(currentShift.cardSales) || 0,
+                        transferSales: parseFloat(currentShift.transferSales) || 0,
+                        expenses,
+                        notes: currentShift.notes,
+                        status: currentShift.status
+                    }
+                });
+
+            } catch (error) {
+                console.error('❌ Error al cerrar caja:', error);
+                res.status(500).json({ error: 'Error interno al cerrar caja' });
+            }
+        });
 
         // ==========================================
         // SERVIR FRONTEND EN PRODUCCIÓN
