@@ -42,27 +42,19 @@ const AppContent: React.FC = () => {
       {/* Store User Routes */}
       <Route path="/*" element={
         <ProtectedRoute>
-          {/* CAMBIO 2: Eliminamos StoreGuard de aquí. El Layout es libre. */}
-          <Layout activeTab={activeTab} onTabChange={setActiveTab}>
-
-            {activeTab === 'dashboard' && <Dashboard />}
-
-            {/* CAMBIO 3: Rutas en paralelo (A/B testing manual) */}
-            {activeTab === 'pos' && (
-              <StoreGuard>
+          <StoreGuard>
+            <Layout activeTab={activeTab} onTabChange={setActiveTab}>
+              {activeTab === 'dashboard' && <Dashboard />}
+              {activeTab === 'pos' && (
                 <CashRegisterGuard>
-                  {/* Lee la URL neta para no interferir con tu diseño de activeTabs */}
-                  {window.location.pathname === '/pos-legacy' ? <POS /> : <POS_v2 />}
+                  <POS />
                 </CashRegisterGuard>
-              </StoreGuard>
-            )}
-
-            {/* El resto de pestañas son accesibles sin abrir caja */}
-            {activeTab === 'history' && <SalesHistory />}
-            {activeTab === 'products' && <ProductList />}
-            {activeTab === 'settings' && <Settings />}
-
-          </Layout>
+              )}
+              {activeTab === 'history' && <SalesHistory />}
+              {activeTab === 'products' && <ProductList />}
+              {activeTab === 'settings' && <Settings />}
+            </Layout>
+          </StoreGuard>
         </ProtectedRoute>
       } />
     </Routes>
