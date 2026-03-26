@@ -10,6 +10,11 @@ export const startShift = async (req, res) => {
             return res.status(400).json({ success: false, message: 'storeId es requerido' });
         }
 
+        // ── AUTORIZACIÓN: Solo puede abrir turno para su propia tienda ──
+        if (req.role !== 'SUPER_ADMIN' && req.storeId !== storeId) {
+            return res.status(403).json({ success: false, message: 'No tienes permiso para abrir turno en esta tienda' });
+        }
+
         // Revisar si ya hay un turno abierto
         const activeShift = await Shift.findOne({
             where: { storeId, status: 'OPEN' }
@@ -23,19 +28,22 @@ export const startShift = async (req, res) => {
             });
         }
 
-        if (!openedBy) {
+        // openedBy puede venir del body o del token (req.user.userId)
+        const openedById = openedBy || req.user?.userId;
+        if (!openedById) {
             return res.status(400).json({ success: false, message: 'openedBy (ID del usuario) es requerido' });
         }
 
-        const startBal = initialAmount !== undefined ? initialAmount : (req.body.startBalance || 0);
+        // FIX CRÍTICO: usar el campo correcto del modelo (initialAmount, no startBalance)
+        const startBal = initialAmount !== undefined ? Number(initialAmount) : (req.body.startBalance !== undefined ? Number(req.body.startBalance) : 0);
 
         // Crear nuevo turno
         const newShift = await Shift.create({
             storeId,
             startTime: new Date(),
-            startBalance: startBal,
+            initialAmount: startBal,   // ← campo correcto en models.js
             status: 'OPEN',
-            openedBy: openedBy
+            openedBy: openedById
         });
 
         res.status(201).json(newShift);

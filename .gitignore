@@ -25,3 +25,21 @@ dist-ssr
 *.sw?
 
 .env
+
+# Sensitive files — NEVER commit these
+CREDENTIALS.txt
+*.credentials.*
+seed_output.txt
+debug-*.cjs
+create_admin.js
+createSuperAdmin.js
+reset_db.js
+check_columns.js
+cleanup.js
+rename_columns.js
+migrate_catalog.js
+seedRealStores.js
+seed_final.js
+backend_add_sales_history.js
+delete_sales_history.js
+verify_multitenant.js

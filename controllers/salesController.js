@@ -87,15 +87,8 @@ export const syncSales = async (req, res) => {
         return res.status(400).json({ error: 'BAD_REQUEST', message: 'No hay datos de ventas.' });
     }
 
-    // Nota: No usamos una transacción global para todo el lote,
-    // sino una por venta para permitir "Éxito Parcial".
-
-    const results = {
-        success: true,
-        synced: 0,
-        failed: 0,
-        failedSales: []
-    };
+    // Una transacción por venta para permitir "Éxito Parcial"
+    const results = { success: true, synced: 0, failed: 0, failedSales: [] };
 
     try {
         // Verificar turno activo una sola vez
@@ -115,66 +108,66 @@ export const syncSales = async (req, res) => {
             const saleTransaction = await sequelize.transaction();
 
             try {
-                // 1. Validar Stock
-                const stockErrors = await validateStockAvailability(sale.items, saleTransaction);
+                // ── ZERO TRUST: Validar stock Y reescribir precios desde BD ──
+                // Igual que createSale — el cliente offline NO tiene voz sobre precios.
+                const { errors: stockErrors, verifiedItems } = await validateAndFetchProducts(sale.items, saleTransaction);
 
                 if (stockErrors.length > 0) {
                     throw { status: 'INSUFFICIENT_STOCK', details: stockErrors };
                 }
 
-                // 2. Preparar Datos
-                let finalTotal = Number(sale.total) || 0;
-                let finalSubtotal = Number(sale.subtotal) || finalTotal;
+                // Recalcular totales desde BD, ignorando lo que envió el cliente
+                const computedSubtotal  = verifiedItems.reduce((s, i) => s + i.subtotal, 0);
+                const computedTotalCost = verifiedItems.reduce((s, i) => s + (i.unitCost * i.quantity), 0);
+                const computedNetProfit = verifiedItems.reduce((s, i) => s + i.profit, 0);
+                const computedTotal     = computedSubtotal;
 
-                if (finalTotal === 0 && Array.isArray(sale.items)) {
-                    finalTotal = sale.items.reduce((sum, item) => sum + (Number(item.subtotal) || Number(item.total) || 0), 0);
-                    finalSubtotal = finalTotal;
-                }
+                const saleItemsSnapshot = verifiedItems.map(i => ({
+                    productId:   i.productId,
+                    productName: i.productName,
+                    sku:         i.sku,
+                    quantity:    i.quantity,
+                    unitPrice:   i.unitPrice,   // Precio REAL de BD
+                    unitCost:    i.unitCost,
+                    discount:    0,
+                    subtotal:    i.subtotal
+                }));
 
-                // 3. Crear Venta
+                // Crear Venta con datos verificados
                 const createdSale = await Sale.create({
-                    total: finalTotal,
-                    subtotal: finalSubtotal,
-                    items: sale.items,
+                    total:         computedTotal,
+                    subtotal:      computedSubtotal,
+                    items:         saleItemsSnapshot,
                     paymentMethod: sale.paymentMethod,
-                    shiftId: activeShift.id,
-                    storeId: storeId,
-                    netProfit: sale.netProfit || 0,
-                    totalCost: sale.totalCost || 0,
-                    vendedor: sale.vendedor || 'Sistema',
-                    status: 'ACTIVE',
-                    createdAt: new Date(), // Usar fecha actual de sync o la original si se prefiere
-                    updatedAt: new Date()
+                    shiftId:       activeShift.id,
+                    storeId:       storeId,
+                    netProfit:     computedNetProfit,
+                    totalCost:     computedTotalCost,
+                    vendedor:      sale.vendedor || req.usuario || 'Sistema',
+                    status:        'ACTIVE',
+                    transactionId: sale.transactionId || sale.tempId || null // idempotencia offline
                 }, { transaction: saleTransaction });
 
-                // 4. Descontar Stock y Registrar Movimiento (Ya validado y bloqueado arriba)
-                if (sale.items && Array.isArray(sale.items)) {
-                    for (const item of sale.items) {
-                        const productId = item.id || item.productId;
-                        if (productId) {
-                            const product = await Product.findByPk(productId, { transaction: saleTransaction });
-                            if (product) {
-                                const qtyToSubtract = item.quantity || 1;
-                                const stockAnterior = product.stock;
-                                const stockNuevo = stockAnterior - qtyToSubtract;
+                // Descontar Stock + Registrar Kardex (ya con lock obtenido en validateAndFetchProducts)
+                for (const item of verifiedItems) {
+                    const { product, quantity } = item;
+                    const stockAnterior = product.stock;
+                    const stockNuevo    = stockAnterior - quantity;
 
-                                await product.decrement('stock', { by: qtyToSubtract, transaction: saleTransaction });
+                    await product.decrement('stock', { by: quantity, transaction: saleTransaction });
 
-                                await StockMovement.create({
-                                    productId: product.id,
-                                    storeId: storeId,
-                                    type: 'OUT',
-                                    reason: 'SALE',
-                                    quantity: qtyToSubtract,
-                                    previousStock: stockAnterior,
-                                    newStock: stockNuevo,
-                                    notes: `Venta Sincronizada #${createdSale.id.substring(0, 8)}`,
-                                    referenceId: createdSale.id,
-                                    createdBy: null // Offline sales usually don't have user ID in the sync payload easily mapped to UUID here
-                                }, { transaction: saleTransaction });
-                            }
-                        }
-                    }
+                    await StockMovement.create({
+                        productId:     product.id,
+                        storeId:       storeId,
+                        type:          'OUT',
+                        reason:        'SALE',
+                        quantity,
+                        previousStock: stockAnterior,
+                        newStock:      stockNuevo,
+                        notes:         `Sync Offline #${createdSale.id.substring(0, 8)}`,
+                        referenceId:   createdSale.id,
+                        createdBy:     req.user?.userId || null
+                    }, { transaction: saleTransaction });
                 }
 
                 await saleTransaction.commit();
@@ -183,8 +176,6 @@ export const syncSales = async (req, res) => {
             } catch (error) {
                 await saleTransaction.rollback();
                 results.failed++;
-
-                // Loguear error específico
                 results.failedSales.push({
                     saleId: sale.tempId || 'unknown',
                     reason: error.status || 'SYNC_ERROR',
@@ -206,6 +197,7 @@ export const syncSales = async (req, res) => {
         res.status(500).json({ error: 'INTERNAL_ERROR', details: error.message });
     }
 };
+
 
 // ==========================================
 // 2. Creación de Venta Online (Blindada)
@@ -409,9 +401,10 @@ export const cancelSale = async (req, res) => {
         const { id } = req.params;
         const { storeId, role } = req;
 
+        // FIX: Sale.items es un campo JSONB, no una asociación ORM.
+        // No se usa include[] aquí — los items vienen en sale.items directamente.
         const sale = await Sale.findOne({
             where: { id },
-            include: [{ model: Sale.associations.items?.target || Sale, as: 'items' }],
             transaction
         });
 
@@ -473,6 +466,7 @@ export const cancelSale = async (req, res) => {
         res.status(500).json({ success: false, message: 'Error cancelando venta', error: error.message });
     }
 };
+
 
 // ==========================================
 // 5. Actualizar Estado de Venta

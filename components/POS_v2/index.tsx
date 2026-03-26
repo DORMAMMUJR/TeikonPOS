@@ -10,7 +10,6 @@ import { ProductGrid } from './ProductGrid';
 import { CartPanel } from './CartPanel';
 import { CheckoutModal } from './CheckoutModal';
 import SalesGoalModal from '../SalesGoalModal';
-import CashRegisterModal from '../CashRegisterModal';
 import CloseShiftModal from '../CloseShiftModal';
 import SupportTicketModal from '../SupportTicketModal';
 import { useSearchStore } from '../../store/searchStore';
@@ -36,7 +35,6 @@ export const POS_v2: React.FC = () => {
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [isCloseModalOpen, setIsCloseModalOpen] = useState(false);
   const [isGoalModalOpen, setIsGoalModalOpen] = useState(false);
-  const [isCashCloseOpen, setIsCashCloseOpen] = useState(false);
   const [isSupportOpen, setIsSupportOpen] = useState(false);
 
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -133,7 +131,6 @@ export const POS_v2: React.FC = () => {
       />
       
       <SalesGoalModal isOpen={isGoalModalOpen} onClose={() => setIsGoalModalOpen(false)} />
-      <CashRegisterModal isOpen={isCashCloseOpen} onClose={() => setIsCashCloseOpen(false)} />
       <SupportTicketModal isOpen={isSupportOpen} onClose={() => setIsSupportOpen(false)} />
       <CloseShiftModal
         isOpen={isCloseModalOpen}

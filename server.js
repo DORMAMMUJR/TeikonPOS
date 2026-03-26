@@ -91,41 +91,41 @@ console.log(`🔐 JWT Expiration configurado a: ${JWT_EXPIRATION}`);
 // MIDDLEWARE
 // ==========================================
 
-// CORS Configuration - Permitir credenciales y headers de autorización
-// Configuración mejorada para producción en Seenode
+// CORS Configuration
 const allowedOrigins = [
     'http://localhost:5173',
     'http://localhost:8080',
     process.env.PRODUCTION_URL
-].filter(Boolean); // Eliminar valores undefined
+].filter(Boolean);
 
 app.use(cors({
     origin: (origin, callback) => {
-        // Permitir requests sin origin (mobile apps, Postman, etc.)
+        // Permitir requests sin origin (Postman, mobile apps, curl)
         if (!origin) return callback(null, true);
 
-        // En desarrollo, permitir cualquier origen
-        if (process.env.NODE_ENV !== 'production') {
+        // En desarrollo con flag explícito, permitir cualquier origen
+        // Requiere ALLOW_ALL_CORS=true en .env — NUNCA usar en producción
+        if (process.env.ALLOW_ALL_CORS === 'true' && process.env.NODE_ENV !== 'production') {
             return callback(null, true);
         }
 
-        // En producción, verificar lista de orígenes permitidos
+        // Verificar lista de orígenes permitidos
         if (allowedOrigins.indexOf(origin) !== -1) {
             callback(null, true);
         } else {
-            console.log('Bloqueado por CORS:', origin);
+            console.warn('⚠️ Bloqueado por CORS:', origin);
             callback(new Error('No permitido por CORS'));
         }
     },
-    credentials: true, // Permite cookies y credenciales
+    credentials: true,
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
     exposedHeaders: ['Authorization'],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
 }));
 
-// Aumentar límite para subida de imágenes en Base64
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ limit: '50mb', extended: true }));
+// Límite razonable para requests. Sube imágenes como URL, no Base64 directamente, para requests más grandes.
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
 // Middleware de autenticación
 const authenticateToken = (req, res, next) => {
@@ -178,11 +178,24 @@ app.post('/api/auth/login', async (req, res) => {
                 return res.status(401).json({ error: 'Credenciales inválidas' });
             }
 
+            // Obtener nombre de la tienda para incluirlo en el token
+            let storeName = 'Teikon HQ';
+            let organizationId = null;
+            if (user.storeId) {
+                const store = await Store.findByPk(user.storeId, { attributes: ['nombre', 'organizationId'] });
+                if (store) {
+                    storeName = store.nombre;
+                    organizationId = store.organizationId;
+                }
+            }
+
             const token = jwt.sign({
                 userId: user.id,
-                storeId: user.storeId, // Puede ser null si es SUPER_ADMIN
-                role: user.role,
-                username: user.username
+                storeId: user.storeId,       // null para SUPER_ADMIN
+                organizationId,
+                storeName,
+                username: user.username,
+                role: user.role
             }, JWT_SECRET, { expiresIn: JWT_EXPIRATION });
 
             return res.json({
@@ -192,8 +205,8 @@ app.post('/api/auth/login', async (req, res) => {
                     username: user.username,
                     role: user.role,
                     storeId: user.storeId,
-                    store_id: user.storeId, // Explicit field requested
-                    storeName: user.storeId ? 'Store' : 'Teikon HQ'
+                    store_id: user.storeId,
+                    storeName
                 }
             });
         }
@@ -210,13 +223,14 @@ app.post('/api/auth/login', async (req, res) => {
             return res.status(401).json({ error: 'Credenciales inválidas' });
         }
 
-        // Generar token JWT
+        // Generar token JWT — mismo payload que User para consistencia
         const token = jwt.sign({
+            userId: store.id,               // Alias para compatibilidad con req.user.userId
             storeId: store.id,
             organizationId: store.organizationId,
             storeName: store.nombre,
-            usuario: store.usuario,
-            role: 'ADMIN' // Asumimos rol admin para cuenta de tienda
+            username: store.usuario,         // Alias estandarizado
+            role: 'ADMIN'
         }, JWT_SECRET, { expiresIn: JWT_EXPIRATION });
 
         res.json({
@@ -227,7 +241,7 @@ app.post('/api/auth/login', async (req, res) => {
                 role: 'ADMIN',
                 storeId: store.id,
                 storeName: store.nombre,
-                organizationName: store.organization.nombre
+                organizationName: store.organization?.nombre || ''
             }
         });
 
